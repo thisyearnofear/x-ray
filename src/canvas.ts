@@ -6,6 +6,8 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js"
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js"
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js"
 import XRayEffect from "./components/x-ray-effect"
+import { XRayControls } from "./components/xray-controls"
+import { MobileCamera } from "./components/mobile-camera"
 
 export default class Canvas {
   element: HTMLCanvasElement
@@ -22,10 +24,17 @@ export default class Canvas {
   orbitControls: OrbitControls
   debug: GUI
   xRayEffect: XRayEffect
+  
+  // Enhanced mobile components
+  xrayControls: XRayControls
+  mobileCamera: MobileCamera
+  isMobile: boolean
 
   constructor() {
     this.element = document.getElementById("webgl") as HTMLCanvasElement
     this.time = 0
+    this.isMobile = window.innerWidth < 768
+    
     this.createClock()
     this.createScene()
     this.createCamera()
@@ -39,6 +48,7 @@ export default class Canvas {
     //this.createHelpers()
     this.createXRayEffect()
     this.createLights()
+    this.createMobileComponents()
     this.render()
   }
 
@@ -133,12 +143,13 @@ export default class Canvas {
       y: this.mouse.y,
     })
 
+    // Consolidated medical condition detection
+    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1
+    this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
     this.raycaster.setFromCamera(this.mouse, this.camera)
+    
     const intersects = this.raycaster.intersectObjects(this.scene.children)
-    const target = intersects[0]
-    if (target && "material" in target.object) {
-      const targetMesh = intersects[0].object as THREE.Mesh
-    }
+    this.xRayEffect?.handleMedicalConditionHover(intersects)
   }
 
   createHelpers() {
@@ -148,7 +159,17 @@ export default class Canvas {
 
   addEventListeners() {
     window.addEventListener("mousemove", this.onMouseMove.bind(this))
+    window.addEventListener("click", this.onMouseClick.bind(this))
     window.addEventListener("resize", this.onResize.bind(this))
+  }
+
+  onMouseClick(event: MouseEvent) {
+    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1
+    this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
+    this.raycaster.setFromCamera(this.mouse, this.camera)
+    
+    const intersects = this.raycaster.intersectObjects(this.scene.children)
+    this.xRayEffect?.handleMedicalConditionClick(intersects)
   }
 
   onResize() {
@@ -184,5 +205,52 @@ export default class Canvas {
     this.xRayEffect?.render()
 
     this.composer.render()
+  }
+  
+  // Enhanced mobile methods
+  private createMobileComponents(): void {
+    // Create X-ray effect controls
+    this.xrayControls = new XRayControls(
+      this.element,
+      this.camera,
+      this.renderer,
+      {
+        onScaleChange: (scale: number) => {
+          console.log('🔍 X-ray scale changed:', scale)
+          if (this.xRayEffect) {
+            this.xRayEffect.setScale(scale)
+          }
+        }
+      }
+    )
+
+    // Create mobile camera for face upload
+    this.mobileCamera = new MobileCamera({
+      onImageCaptured: (imageData: string, faceDetection: any) => {
+        console.log('📸 Face image captured:', { faceDetection })
+      },
+      onFaceDetected: (detection: any) => {
+        console.log('Face detected:', detection)
+      },
+      onError: (error: string) => {
+        console.error('📷 Camera error:', error)
+      },
+      onPermissionGranted: () => {
+        console.log('📷 Camera permission granted')
+      }
+    })
+  }
+
+  // Public API for accessing mobile components
+  public getXRayControls(): XRayControls {
+    return this.xrayControls
+  }
+
+  public getMobileCamera(): MobileCamera {
+    return this.mobileCamera
+  }
+
+  public isMobileDevice(): boolean {
+    return this.isMobile
   }
 }

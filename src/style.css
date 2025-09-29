@@ -138,6 +138,25 @@ table {
   mix-blend-mode: difference;
   color: white;
   padding: 2vmax;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.instructions {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.instructions:hover {
+  opacity: 1;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }
 
 body {

@@ -1,0 +1,41 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#0c0c0c" rx="64"/>
+  
+  <!-- Border -->
+  <rect x="8" y="8" width="496" height="496" fill="none" stroke="#00ff88" stroke-width="4" rx="60"/>
+  
+  <!-- X-Ray Symbol -->
+  <g transform="translate(256,256)">
+    <!-- Ribcage outline -->
+    <ellipse cx="0" cy="-20" rx="80" ry="120" fill="none" stroke="#00ff88" stroke-width="3" opacity="0.8"/>
+    
+    <!-- Ribs -->
+    <path d="M -60,-60 Q -80,-50 -85,-30 Q -80,-10 -60,0" fill="none" stroke="#00ff88" stroke-width="2" opacity="0.6"/>
+    <path d="M 60,-60 Q 80,-50 85,-30 Q 80,-10 60,0" fill="none" stroke="#00ff88" stroke-width="2" opacity="0.6"/>
+    <path d="M -50,-30 Q -70,-20 -75,0 Q -70,20 -50,30" fill="none" stroke="#00ff88" stroke-width="2" opacity="0.6"/>
+    <path d="M 50,-30 Q 70,-20 75,0 Q 70,20 50,30" fill="none" stroke="#00ff88" stroke-width="2" opacity="0.6"/>
+    <path d="M -40,0 Q -60,10 -65,30 Q -60,50 -40,60" fill="none" stroke="#00ff88" stroke-width="2" opacity="0.6"/>
+    <path d="M 40,0 Q 60,10 65,30 Q 60,50 40,60" fill="none" stroke="#00ff88" stroke-width="2" opacity="0.6"/>
+    
+    <!-- Spine -->
+    <line x1="0" y1="-80" x2="0" y2="80" stroke="#00ff88" stroke-width="3"/>
+    <circle cx="0" cy="-60" r="3" fill="#00ff88"/>
+    <circle cx="0" cy="-40" r="3" fill="#00ff88"/>
+    <circle cx="0" cy="-20" r="3" fill="#00ff88"/>
+    <circle cx="0" cy="0" r="3" fill="#00ff88"/>
+    <circle cx="0" cy="20" r="3" fill="#00ff88"/>
+    <circle cx="0" cy="40" r="3" fill="#00ff88"/>
+    <circle cx="0" cy="60" r="3" fill="#00ff88"/>
+    
+    <!-- Heart -->
+    <path d="M -15,-40 Q -25,-50 -35,-40 Q -25,-30 -15,-20 Q -5,-30 5,-40 Q 15,-50 25,-40 Q 15,-30 5,-20" 
+          fill="#ff4444" opacity="0.7" transform="scale(0.8)"/>
+  </g>
+  
+  <!-- Title -->
+  <text x="256" y="450" font-family="Arial, sans-serif" font-size="36" font-weight="bold" 
+        fill="#00ff88" text-anchor="middle">X-RAY</text>
+  <text x="256" y="485" font-family="Arial, sans-serif" font-size="24" 
+        fill="#00ffaa" text-anchor="middle" opacity="0.8">DIAGNOSTIC</text>
+</svg>

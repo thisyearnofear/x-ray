@@ -1,6 +1,8 @@
 import * as THREE from "three"
 import LeePerry from "./lee-perry"
 import Skeleton from "./skeleton"
+import { createDiagnosticUI, type DiagnosticUI } from "../domains/diagnostic/diagnostic-ui"
+import { MEDICAL_CONDITIONS } from "../domains/medical/medical-data"
 import { EffectComposer, ShaderPass } from "three/examples/jsm/Addons.js"
 import { XRayShader } from "../shaders/XRayShader"
 import xRayFragment from "../shaders/x-ray-fragment.glsl"
@@ -35,11 +37,15 @@ export default class XRayEffect {
   camera: THREE.PerspectiveCamera
   leePerry: LeePerry
   skeleton: Skeleton
+  medicalMarkers: Map<string, THREE.Mesh> = new Map()
+  diagnosticUI: DiagnosticUI
   mouse: {
     current: Position
     target: Position
   }
   expanded: boolean = false
+  // Add scale property for X-ray effect scaling
+  scale: number = 1.0
 
   constructor({ scene, composer, renderer, camera }: Props) {
     this.scene = scene
@@ -54,6 +60,11 @@ export default class XRayEffect {
     this.setupPostprocessing()
     this.createLeePerry()
     this.createSkeleton()
+    this.initializeMedicalMarkers()
+    this.diagnosticUI = createDiagnosticUI({
+      onStartDiagnosis: (conditionId: any) => console.log('🎯 Starting diagnosis for:', conditionId),
+      onCaseSelection: (caseId: any) => console.log('📋 Case selected:', caseId)
+    })
 
     window.addEventListener("keypress", (event) => {
       this.onPressKey(event)
@@ -61,13 +72,12 @@ export default class XRayEffect {
   }
 
   createRenderTargets() {
+    // Use original implementation to avoid distortion
     const sizes = {
       width:
         window.innerWidth * Math.ceil(Math.min(2, window.devicePixelRatio)),
-      //window.innerWidth,
       height:
         window.innerHeight * Math.ceil(Math.min(2, window.devicePixelRatio)),
-      //window.innerHeight,
     }
 
     this.renderTargetA = new THREE.WebGLRenderTarget(
@@ -119,7 +129,9 @@ export default class XRayEffect {
   }
 
   onPressKey(event: KeyboardEvent) {
-    if (event.key === "e" || event.key === "E") {
+    if (event.key === "c" || event.key === "C") {
+      this.toggleConditions()
+    } else if (event.key === "e" || event.key === "E") {
       if (this.expanded) {
         gsap.to(this.xRayPass.uniforms.expand, {
           value: 0,
@@ -147,6 +159,13 @@ export default class XRayEffect {
   createSkeleton() {
     this.skeleton = new Skeleton({
       scene: this.scene,
+    })
+  }
+
+  initializeMedicalMarkers() {
+    // DRY: Use single source of truth from medical-data
+    Object.values(MEDICAL_CONDITIONS).forEach(condition => {
+      this.createConditionMarker(condition)
     })
   }
 
@@ -189,6 +208,17 @@ export default class XRayEffect {
     this.xRayPass.uniforms.tDiffuse1.value = this.renderTargetA.texture
     this.xRayPass.uniforms.uMouse.value = this.mouse.target
 
+    // Update the expand uniform based on scale - this is the correct way to scale the X-ray effect
+    // The base size is 0.25, so we adjust the expand value based on scale
+    // Scale of 1.0 = expand of 0 (base size 0.25)
+    // Scale of 2.0 = expand of 0.25 (size 0.5)
+    // Scale of 0.3 = expand of -0.175 (size 0.075)
+    if (this.xRayPass.uniforms.expand) {
+      const baseSize = 0.25;
+      const targetSize = baseSize * this.scale;
+      this.xRayPass.uniforms.expand.value = targetSize - baseSize;
+    }
+
     //this.renderer.setClearColor(0x000000, 0) // Set clear color to transparent
 
     this.skeletonModel.rotation.y += 0.005
@@ -196,4 +226,71 @@ export default class XRayEffect {
 
     this.renderer.setRenderTarget(null)
   }
+
+  // CLEAN: Streamlined medical marker system
+  createConditionMarker(condition: any) {
+    const colors = { low: '#44ff88', medium: '#ffaa44', high: '#ff4444' }
+    const geometry = new THREE.SphereGeometry(0.05, 16, 16)
+    const material = new THREE.MeshBasicMaterial({
+      color: colors[condition.severity as keyof typeof colors] || colors.medium,
+      opacity: 0.0,
+      transparent: true
+    })
+    
+    const marker = new THREE.Mesh(geometry, material)
+    marker.position.set(condition.position.x, condition.position.y, condition.position.z)
+    marker.userData = { conditionId: condition.id }
+    
+    this.medicalMarkers.set(condition.id, marker)
+    this.scene.add(marker)
+  }
+
+  toggleConditions() {
+    const firstMarker = Array.from(this.medicalMarkers.values())[0]
+    const material = Array.isArray(firstMarker?.material) ? firstMarker?.material[0] : firstMarker?.material
+    const visible = (material as any)?.opacity === 0
+    
+    this.medicalMarkers.forEach(marker => {
+      if (marker.material instanceof THREE.MeshBasicMaterial) {
+        marker.material.opacity = visible ? 0.4 : 0
+      }
+    })
+  }
+
+  // MODULAR: Clean interaction handlers
+  handleMedicalConditionHover(intersects: THREE.Intersection[]) {
+    const medicalIntersect = intersects.find(i => 
+      Array.from(this.medicalMarkers.values()).includes(i.object as THREE.Mesh)
+    )
+    
+    document.body.style.cursor = medicalIntersect ? 'pointer' : 'default'
+  }
+
+  handleMedicalConditionClick(intersects: THREE.Intersection[]) {
+    const medicalIntersect = intersects.find(i => 
+      Array.from(this.medicalMarkers.values()).includes(i.object as THREE.Mesh)
+    )
+    
+    if (medicalIntersect) {
+      const conditionId = (medicalIntersect.object as THREE.Mesh).userData.conditionId
+      this.discoverCondition(conditionId)
+    }
+  }
+
+  // ORGANIZED: Single method for condition discovery
+  discoverCondition(conditionId: string) {
+    const condition = this.diagnosticUI.discoverCondition(conditionId)
+    if (condition) {
+      console.log(`🔍 Discovered: ${condition.name}`)
+    }
+  }
+
+  // Add method to set the X-ray effect scale (0.3 to 2.0)
+  setScale(scale: number) {
+    // Clamp the scale between 0.3 and 2.0 as per project specifications
+    this.scale = Math.max(0.3, Math.min(2.0, scale));
+    console.log('🔍 X-ray effect scale updated:', this.scale);
+  }
+
+  // CLEAN: Old Llama methods removed - now handled by DiagnosticUI
 }

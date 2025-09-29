@@ -3,12 +3,126 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>X-RAI: AI Medical Diagnostic Game</title>
+    
+    <!-- PWA Configuration -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#00ff88" />
+    <meta name="background-color" content="#0c0c0c" />
+    
+    <!-- Mobile Optimizations -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="X-RAI" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
+    
+    <!-- Enhanced Meta Tags for Gamified Medical Experience -->
+    <meta name="description" content="X-RAI - Interactive 3D medical diagnostic game with AI-powered analysis. Scan patients, discover conditions, and master medical knowledge through gamified learning." />
+    <meta name="keywords" content="medical diagnosis, AI healthcare, educational game, 3D scanning, medical training, gamified learning, healthcare simulation, X-RAI" />
+    <meta name="author" content="X-RAI Diagnostic Team" />
+    <meta name="application-name" content="X-RAI" />
+    
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="X-RAI: AI Medical Diagnostic Game" />
+    <meta property="og:description" content="Interactive 3D medical diagnostic game with AI-powered analysis. Scan patients, discover conditions, and master medical knowledge through gamified learning." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://x-rai.example.com" />
+    <meta property="og:image" content="/icons/icon-512x512.png" />
+    <meta property="og:site_name" content="X-RAI" />
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="X-RAI: AI Medical Diagnostic Game" />
+    <meta name="twitter:description" content="Interactive 3D medical diagnostic game with AI-powered analysis. Scan patients, discover conditions, and master medical knowledge through gamified learning." />
+    <meta name="twitter:image" content="/icons/icon-512x512.png" />
+    <meta name="twitter:site" content="@XRAIGame" />
+    
+    <!-- Performance Optimizations -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Prevent zoom on mobile -->
+    <meta name="format-detection" content="telephone=no" />
   </head>
   <body>
-    <div id="app">Press [ E ] to expand</div>
+    <div id="app">
+      <div class="instructions">🔬 Scan patients • [ E ] expand scan • [ C ] show conditions • Click markers to diagnose</div>
+    </div>
     <canvas id="webgl"></canvas>
+    
+    <!-- PWA Installation Banner -->
+    <div id="pwa-install-banner" style="display: none;">
+      <div style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 255, 136, 0.2); border: 2px solid #00ff88; color: #00ff88; padding: 12px 20px; border-radius: 20px; font-family: 'Roboto', monospace; z-index: 10000; backdrop-filter: blur(10px);">
+        <span>📱 Install X-RAI for better mobile experience</span>
+        <button id="pwa-install-btn" style="background: none; border: 1px solid #00ff88; color: #00ff88; padding: 6px 12px; margin-left: 15px; border-radius: 6px; cursor: pointer;">Install</button>
+        <button id="pwa-dismiss-btn" style="background: none; border: none; color: #00ff88; margin-left: 10px; cursor: pointer; font-size: 16px;">✕</button>
+      </div>
+    </div>
+    
     <script type="module" src="/src/main.ts"></script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+      // Register service worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('🚀 SW registered: ', registration)
+            })
+            .catch((registrationError) => {
+              console.log('❌ SW registration failed: ', registrationError)
+            })
+        })
+      }
+      
+      // PWA Install Prompt
+      let deferredPrompt
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault()
+        deferredPrompt = e
+        
+        // Show custom install banner
+        const banner = document.getElementById('pwa-install-banner')
+        banner.style.display = 'block'
+        
+        // Handle install button click
+        document.getElementById('pwa-install-btn').onclick = () => {
+          banner.style.display = 'none'
+          deferredPrompt.prompt()
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('📱 User accepted PWA install')
+            }
+            deferredPrompt = null
+          })
+        }
+        
+        // Handle dismiss button
+        document.getElementById('pwa-dismiss-btn').onclick = () => {
+          banner.style.display = 'none'
+        }
+      })
+      
+      // Mobile viewport adjustment
+      function adjustViewportForMobile() {
+        if (window.innerWidth < 768) {
+          document.body.style.overflow = 'hidden'
+          document.documentElement.style.overflow = 'hidden'
+          
+          // Prevent pull-to-refresh
+          document.body.style.overscrollBehavior = 'none'
+          document.documentElement.style.overscrollBehavior = 'none'
+        }
+      }
+      
+      adjustViewportForMobile()
+      window.addEventListener('resize', adjustViewportForMobile)
+      window.addEventListener('orientationchange', () => {
+        setTimeout(adjustViewportForMobile, 100)
+      })
+    </script>
   </body>
 </html>
