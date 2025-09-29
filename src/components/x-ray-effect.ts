@@ -72,12 +72,10 @@ export default class XRayEffect {
   }
 
   createRenderTargets() {
-    // Use original implementation to avoid distortion
+    // Use simplified implementation to avoid distortion (following best practice)
     const sizes = {
-      width:
-        window.innerWidth * Math.ceil(Math.min(2, window.devicePixelRatio)),
-      height:
-        window.innerHeight * Math.ceil(Math.min(2, window.devicePixelRatio)),
+      width: window.innerWidth,
+      height: window.innerHeight,
     }
 
     this.renderTargetA = new THREE.WebGLRenderTarget(
@@ -126,6 +124,9 @@ export default class XRayEffect {
     this.xRayPass.uniforms.uViewportRes = new THREE.Uniform(
       new THREE.Vector2(window.innerWidth, window.innerHeight)
     )
+    
+    // Recreate render targets on resize to maintain proper dimensions
+    this.createRenderTargets()
   }
 
   onPressKey(event: KeyboardEvent) {
@@ -206,6 +207,7 @@ export default class XRayEffect {
     })
 
     this.xRayPass.uniforms.tDiffuse1.value = this.renderTargetA.texture
+    // Revert to using target mouse position for accurate positioning
     this.xRayPass.uniforms.uMouse.value = this.mouse.target
 
     // Update the expand uniform based on scale - this is the correct way to scale the X-ray effect
@@ -277,12 +279,9 @@ export default class XRayEffect {
     }
   }
 
-  // ORGANIZED: Single method for condition discovery
   discoverCondition(conditionId: string) {
-    const condition = this.diagnosticUI.discoverCondition(conditionId)
-    if (condition) {
-      console.log(`🔍 Discovered: ${condition.name}`)
-    }
+    console.log('🔍 Discovering condition:', conditionId)
+    this.diagnosticUI.discoverCondition(conditionId)
   }
 
   // Add method to set the X-ray effect scale (0.3 to 2.0)

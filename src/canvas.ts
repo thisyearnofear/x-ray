@@ -38,11 +38,11 @@ export default class Canvas {
     this.createClock()
     this.createScene()
     this.createCamera()
-    this.createRenderer()
+    this.setSizes() // Set dimensions before creating renderer
+    this.createRenderer() // Now dimensions is defined
     this.createPostProcessing()
-    this.setSizes()
     this.createRayCaster()
-    this.createOrbitControls()
+    this.createOrbitControls() // Now renderer is defined
     this.addEventListeners()
     //this.createDebug()
     //this.createHelpers()
@@ -87,44 +87,6 @@ export default class Canvas {
     )
   }
 
-  createRenderer() {
-    this.dimensions = {
-      width: window.innerWidth,
-      height: window.innerHeight,
-      pixelRatio: Math.min(2, window.devicePixelRatio),
-    }
-
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: this.element,
-      alpha: true,
-    })
-    this.renderer.setSize(this.dimensions.width, this.dimensions.height)
-    this.renderer.render(this.scene, this.camera)
-
-    this.renderer.setPixelRatio(this.dimensions.pixelRatio)
-  }
-
-  createPostProcessing() {
-    this.composer = new EffectComposer(this.renderer)
-    const renderPass = new RenderPass(this.scene, this.camera)
-    this.composer.addPass(renderPass)
-  }
-
-  createDebug() {
-    this.debug = new GUI()
-  }
-
-  setSizes() {
-    let fov = this.camera.fov * (Math.PI / 180)
-    let height = this.camera.position.z * Math.tan(fov / 2) * 2
-    let width = height * this.camera.aspect
-
-    this.sizes = {
-      width: width,
-      height: height,
-    }
-  }
-
   createClock() {
     this.clock = new THREE.Clock()
   }
@@ -134,18 +96,56 @@ export default class Canvas {
     this.mouse = new THREE.Vector2()
   }
 
-  onMouseMove(event: MouseEvent) {
-    this.mouse.x = event.clientX / window.innerWidth
-    this.mouse.y = 1 - event.clientY / window.innerHeight
+  setSizes() {
+    this.dimensions = {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      pixelRatio: Math.min(2, window.devicePixelRatio),
+    }
 
+    this.sizes = {
+      width: this.dimensions.width,
+      height: this.dimensions.height,
+    }
+  }
+
+  createRenderer() {
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.element,
+      antialias: true,
+      alpha: true,
+    })
+    this.renderer.setPixelRatio(this.dimensions.pixelRatio)
+    this.renderer.setSize(this.dimensions.width, this.dimensions.height)
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping
+    this.renderer.toneMappingExposure = 1.2
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace
+  }
+
+  createPostProcessing() {
+    this.composer = new EffectComposer(this.renderer)
+    const renderPass = new RenderPass(this.scene, this.camera)
+    this.composer.addPass(renderPass)
+  }
+
+  onMouseMove(event: MouseEvent) {
+    // Store normalized device coordinates for raycasting
+    const ndcX = (event.clientX / window.innerWidth) * 2 - 1
+    const ndcY = -(event.clientY / window.innerHeight) * 2 + 1
+    
+    // Store 0-1 range coordinates for XRayEffect
+    const xRayX = event.clientX / window.innerWidth
+    const xRayY = 1 - event.clientY / window.innerHeight
+    
+    // Pass 0-1 range coordinates to XRayEffect
     this.xRayEffect?.onMouseMove({
-      x: this.mouse.x,
-      y: this.mouse.y,
+      x: xRayX,
+      y: xRayY,
     })
 
-    // Consolidated medical condition detection
-    this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1
-    this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
+    // Use NDC coordinates for raycasting
+    this.mouse.x = ndcX
+    this.mouse.y = ndcY
     this.raycaster.setFromCamera(this.mouse, this.camera)
     
     const intersects = this.raycaster.intersectObjects(this.scene.children)
@@ -220,6 +220,12 @@ export default class Canvas {
           if (this.xRayEffect) {
             this.xRayEffect.setScale(scale)
           }
+        },
+        onToggleConditions: () => {
+          console.log('🔍 Toggle conditions requested')
+          if (this.xRayEffect) {
+            this.xRayEffect.toggleConditions()
+          }
         }
       }
     )
@@ -239,18 +245,5 @@ export default class Canvas {
         console.log('📷 Camera permission granted')
       }
     })
-  }
-
-  // Public API for accessing mobile components
-  public getXRayControls(): XRayControls {
-    return this.xrayControls
-  }
-
-  public getMobileCamera(): MobileCamera {
-    return this.mobileCamera
-  }
-
-  public isMobileDevice(): boolean {
-    return this.isMobile
   }
 }

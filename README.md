@@ -70,8 +70,9 @@ An interactive 3D medical visualization tool that combines **face-swapping**, **
 
 1. **Upload Face**: Click "Upload Face" → AI processes and applies to 3D model
 2. **X-Ray Scan**: Move mouse to control X-ray scanning area
-3. **Medical Analysis**: Press `[C]` to show condition markers → Click for AI diagnosis
+3. **Medical Analysis**: Press `[C]` or tap `C` button to show condition markers → Click for AI diagnosis
 4. **Expand View**: Press `[E]` for full X-ray expansion effect
+5. **Dynamic Markers**: Discovered conditions change appearance (cyan color, larger size) for easy tracking
 
 ## 🧠 AI Integration Details
 
@@ -91,56 +92,3 @@ const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
   reasoning_effort: "medium",
 });
 ```
-
-### Enhanced Cerebras Features
-
-```typescript
-// Structured JSON outputs with confidence scoring
-const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
-  model: "llama-4-scout-17b-16e-instruct",
-  messages: [{ role: "user", content: "Analyze this case..." }],
-  response_format: {
-    type: "json_schema",
-    json_schema: DIAGNOSTIC_ANALYSIS_SCHEMA,
-  },
-});
-
-// Tool use for medical calculations
-const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
-  model: "llama-4-scout-17b-16e-instruct",
-  messages: [{ role: "user", content: "Calculate CHADS2 score..." }],
-  tools: [medical_calculation_tools],
-});
-```
-
-## 🏥 Educational Impact
-
-- **Medical Students**: Interactive anatomy learning with personalized visualization
-- **Healthcare Training**: Safe environment to explore medical conditions
-- **Public Health**: Accessible medical education through gamification
-- **Research**: Platform for medical AI model development and testing
-
-## 🔮 Future Enhancements
-
-- **Multi-modal AI**: Integration with additional medical imaging modalities
-- **Collaborative Learning**: Multi-user shared X-ray sessions
-- **AR/VR Support**: Extended reality medical education
-- **Real Medical Data**: Integration with anonymized medical datasets
-
-## 🚀 Quick Start
-
-```bash
-npm install
-npm run dev
-```
-
-Set environment variables:
-
-```bash
-export VITE_CEREBRAS_API_KEY="your-cerebras-key"
-```
-
----
-
-**Built for FutureStack GenAI Hackathon 2024**  
-_X-RAI: Combining cutting-edge AI with immersive 3D graphics for next-generation medical education_

@@ -10,6 +10,7 @@ interface ViewportConfig {
 
 interface ViewportState {
   currentScale: number
+  conditionsVisible: boolean
 }
 
 export class XRayControls {
@@ -21,6 +22,7 @@ export class XRayControls {
   private controlsPanel: HTMLElement
   private callbacks: {
     onScaleChange?: (scale: number) => void
+    onToggleConditions?: () => void
   }
 
   constructor(
@@ -29,6 +31,7 @@ export class XRayControls {
     renderer: THREE.WebGLRenderer,
     callbacks: {
       onScaleChange?: (scale: number) => void
+      onToggleConditions?: () => void
     } = {}
   ) {
     this.element = canvas
@@ -43,7 +46,8 @@ export class XRayControls {
     }
 
     this.state = {
-      currentScale: 1.0
+      currentScale: 1.0,
+      conditionsVisible: false
     }
 
     this.createControls()
@@ -82,6 +86,13 @@ export class XRayControls {
     this.controlsPanel.addEventListener('mouseleave', () => {
       this.controlsPanel.style.opacity = '0.7'
     })
+
+    // Condition toggle button
+    const conditionToggleBtn = this.createControlButton('C', 'Toggle Conditions', () => {
+      this.toggleConditions()
+    })
+    
+    this.controlsPanel.appendChild(conditionToggleBtn)
 
     // Scale controls
     this.createScaleControls()
@@ -148,6 +159,11 @@ export class XRayControls {
     })
 
     return btn
+  }
+
+  public toggleConditions(): void {
+    this.state.conditionsVisible = !this.state.conditionsVisible
+    this.callbacks.onToggleConditions?.()
   }
 
   public adjustSize(delta: number): void {
