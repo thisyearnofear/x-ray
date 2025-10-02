@@ -53,6 +53,7 @@ export class DiagnosticUI {
 
     this.container = this.createContainer()
     this.setupStyles()
+    this.createLeftSidebar()
     document.body.appendChild(this.container)
 
     // Show the case selection screen by default
@@ -65,22 +66,69 @@ export class DiagnosticUI {
     container.id = 'diagnostic-ui'
     container.style.cssText = `
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 280px;
-      height: 100vh;
+      bottom: 20px;
+      right: 20px;
+      width: 350px;
+      max-height: 500px;
       background: rgba(0, 15, 25, 0.95);
-      border-right: 2px solid #00ccdd;
+      border: 2px solid #00ccdd;
+      border-radius: 8px;
       font-family: 'Roboto', sans-serif;
       color: #00ccdd;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
       backdrop-filter: blur(12px);
       box-shadow: 0 0 30px rgba(0, 204, 221, 0.2);
       z-index: 1000;
       transition: all 0.3s ease;
     `
     return container
+  }
+
+  // ENHANCEMENT: Create left sidebar for instructions
+  private createLeftSidebar(): void {
+    // Hide the original instructions
+    const originalInstructions = document.querySelector('.instructions') as HTMLElement
+    if (originalInstructions) {
+      originalInstructions.style.display = 'none'
+    }
+
+    // Create left sidebar
+    const leftSidebar = document.createElement('div')
+    leftSidebar.id = 'left-sidebar'
+    leftSidebar.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 280px;
+      background: rgba(0, 15, 25, 0.95);
+      border: 2px solid #00ccdd;
+      border-radius: 8px;
+      font-family: 'Roboto', sans-serif;
+      color: #00ccdd;
+      padding: 15px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 0 30px rgba(0, 204, 221, 0.2);
+      z-index: 999;
+      font-size: 12px;
+      line-height: 1.4;
+    `
+    
+    leftSidebar.innerHTML = `
+      <div style="color: #00ffaa; font-weight: bold; margin-bottom: 10px;">🔬 Scan Instructions</div>
+      <div style="opacity: 0.9;">
+        • Move mouse to scan patients<br>
+        • <kbd style="background: rgba(0,204,221,0.2); padding: 2px 6px; border-radius: 3px;">E</kbd> expand view<br>
+        • <kbd style="background: rgba(0,204,221,0.2); padding: 2px 6px; border-radius: 3px;">C</kbd> toggle conditions<br>
+        • <kbd style="background: rgba(0,204,221,0.2); padding: 2px 6px; border-radius: 3px;">1</kbd> head model<br>
+        • <kbd style="background: rgba(0,204,221,0.2); padding: 2px 6px; border-radius: 3px;">2</kbd> torso model<br>
+        • <kbd style="background: rgba(0,204,221,0.2); padding: 2px 6px; border-radius: 3px;">3</kbd> full body model<br>
+        • Click markers to diagnose
+      </div>
+    `
+    
+    document.body.appendChild(leftSidebar)
   }
 
   // DRY: Centralized styling
