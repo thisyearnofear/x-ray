@@ -9,14 +9,18 @@ import * as THREE from "three"
  */
 
 const XRayShader = {
-  name: "XRayShader",
+	name: "XRayShader",
 
-  uniforms: {
-    tDiffuse: { value: null },
-    resolution: { value: new Vector2() },
-  },
+	uniforms: {
+		tDiffuse: { value: null },
+		tDiffuse1: { value: new THREE.Vector4() },
+		resolution: { value: new Vector2() },
+		uViewportRes: { value: new Vector2() },
+		uMouse: { value: new Vector2() },
+		expand: { value: 0 },
+	},
 
-  vertexShader: /* glsl */ `
+	vertexShader: /* glsl */ `
 
 		varying vec2 vUv;
 
@@ -28,7 +32,7 @@ const XRayShader = {
 
 		}`,
 
-  fragmentShader: /* glsl */ `
+	fragmentShader: /* glsl */ `
 
 		uniform sampler2D tDiffuse;
 		uniform vec2 resolution;

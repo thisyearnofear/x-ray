@@ -14,10 +14,10 @@ const DIAGNOSTIC_ANALYSIS_SCHEMA = {
     },
     reasoning: { type: "string" },
     recommendedTests: {
-      type: "array", 
+      type: "array",
       items: { type: "string" }
     },
-    urgency: { 
+    urgency: {
       type: "string",
       enum: ["low", "medium", "high", "emergency"]
     }
@@ -39,7 +39,7 @@ const TEACHING_EXPLANATION_SCHEMA = {
       items: { type: "string" }
     },
     clinicalPearls: {
-      type: "array", 
+      type: "array",
       items: { type: "string" }
     },
     followUpQuestions: {
@@ -48,6 +48,40 @@ const TEACHING_EXPLANATION_SCHEMA = {
     }
   },
   required: ["explanation", "keyPoints"],
+  additionalProperties: false
+}
+
+const DYNAMIC_CASE_SCHEMA = {
+  type: "object",
+  properties: {
+    patientInfo: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        age: { type: "number" },
+        gender: { type: "string", enum: ["M", "F", "Other"] },
+        occupation: { type: "string" },
+        chiefComplaint: { type: "string" },
+        medicalHistory: {
+          type: "array",
+          items: { type: "string" }
+        }
+      },
+      required: ["name", "age", "gender", "chiefComplaint"]
+    },
+    conditions: {
+      type: "array",
+      items: { type: "string" }
+    },
+    difficulty: { type: "number", minimum: 1, maximum: 5 },
+    educationalValue: { type: "string" },
+    uniqueTwist: { type: "string" },
+    learningObjectives: {
+      type: "array",
+      items: { type: "string" }
+    }
+  },
+  required: ["patientInfo", "conditions", "difficulty"],
   additionalProperties: false
 }
 
@@ -100,7 +134,7 @@ export class CerebrasService {
             role: 'system',
             content: `You are an expert radiologist and medical educator. Analyze the patient case step-by-step, showing your reasoning process clearly. Be thorough but educational.`
           }, {
-            role: 'user', 
+            role: 'user',
             content: `Patient Context: ${patientContext}
                      Reported Symptoms: ${symptoms.join(', ')}
                      X-ray Findings: ${imageFindings.join(', ')}
@@ -119,7 +153,7 @@ export class CerebrasService {
       }
 
       return this.handleStreamingResponse(response, callback)
-      
+
     } catch (error) {
       callback.onError?.(error as Error)
       return { success: false, error: (error as Error).message }
@@ -165,7 +199,7 @@ export class CerebrasService {
 
       const data = await response.json()
       const analysis = JSON.parse(data.choices[0].message.content)
-      
+
       return {
         success: true,
         data: analysis,
@@ -182,7 +216,7 @@ export class CerebrasService {
   async getInteractiveExplanation(
     condition: MedicalCondition,
     userQuestion: string,
-    conversationHistory: Array<{role: string, content: string}> = []
+    conversationHistory: Array<{ role: string, content: string }> = []
   ): Promise<CerebrasResponse<any>> {
     if (!this.apiKey) {
       return { success: false, error: 'No API key' }
@@ -196,7 +230,7 @@ export class CerebrasService {
         strict: true,
         description: "Calculate medical scoring systems and risk assessments",
         parameters: {
-          type: "object", 
+          type: "object",
           properties: {
             scoreType: {
               type: "string",
@@ -251,7 +285,7 @@ export class CerebrasService {
       // Handle tool calls if present
       if (message.tool_calls) {
         const toolResult = await this.handleToolCall(message.tool_calls[0])
-        
+
         // Continue conversation with tool result
         return this.continueConversationWithTool(messages, message, toolResult)
       }
@@ -314,7 +348,7 @@ export class CerebrasService {
 
       const data = await response.json()
       const teaching = JSON.parse(data.choices[0].message.content)
-      
+
       return {
         success: true,
         data: teaching,
@@ -323,6 +357,74 @@ export class CerebrasService {
 
     } catch (error) {
       return this.getFallbackTeaching(studentAnswer, correctAnswer)
+    }
+  }
+
+  // DYNAMIC: AI-powered case generation for endless learning
+  async generateDynamicCase(
+    anatomicalModel: 'head' | 'torso' | 'fullbody',
+    difficulty: number,
+    previousCases: string[] = []
+  ): Promise<CerebrasResponse<any>> {
+    if (!this.apiKey) {
+      return this.getFallbackDynamicCase(anatomicalModel, difficulty)
+    }
+
+    try {
+      const modelContexts = {
+        head: 'head, neck, cervical spine, jaw, face, temporomandibular joint',
+        torso: 'spine, back, torso, chest, ribs',
+        fullbody: 'legs, lower body, thigh, knee, spine, back, torso'
+      }
+
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama-4-scout-17b-16e-instruct',
+          messages: [{
+            role: 'system',
+            content: `You are a medical educator creating realistic patient cases. Generate unique, educational cases that teach important diagnostic skills. Avoid repeating previous cases. Make cases progressively challenging and medically accurate.`
+          }, {
+            role: 'user',
+            content: `Generate a new patient case for ${anatomicalModel} anatomy (focusing on: ${modelContexts[anatomicalModel]}).
+                      Difficulty level: ${difficulty}/5
+                      Previous cases to avoid: ${previousCases.join(', ')}
+
+                      Create a realistic case with:
+                      - Believable patient demographics and history
+                      - Medically accurate presentation
+                      - Educational diagnostic challenges
+                      - Clear learning objectives
+
+                      Return valid JSON matching the case schema.`
+          }],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "dynamic_case",
+              strict: true,
+              schema: DYNAMIC_CASE_SCHEMA
+            }
+          },
+          temperature: 0.7
+        })
+      })
+
+      const data = await response.json()
+      const caseData = JSON.parse(data.choices[0].message.content)
+
+      return {
+        success: true,
+        data: caseData
+      }
+
+    } catch (error) {
+      console.warn('Dynamic case generation failed, using fallback:', error)
+      return this.getFallbackDynamicCase(anatomicalModel, difficulty)
     }
   }
 
@@ -360,7 +462,7 @@ export class CerebrasService {
 
       const data = await response.json()
       const faceData = JSON.parse(data.choices[0].message.content)
-      
+
       return {
         success: true,
         data: faceData
@@ -449,12 +551,12 @@ export class CerebrasService {
       case 'fracture_risk':
         const risk = params.age > 65 ? 'High' : params.age > 50 ? 'Medium' : 'Low'
         return `Fracture risk: ${risk} (based on age ${params.age})`
-      
+
       case 'scoliosis_cobb_angle':
         const angle = params.measurements?.[0] || 15
         const severity = angle > 40 ? 'Severe' : angle > 25 ? 'Moderate' : 'Mild'
         return `Cobb angle: ${angle}°, Severity: ${severity}`
-        
+
       default:
         return 'Score calculation not available'
     }
@@ -496,6 +598,67 @@ export class CerebrasService {
         keyPoints: ['Review anatomical landmarks', 'Consider differential diagnoses'],
         commonMistakes: ['Overlooking subtle findings', 'Not considering patient history']
       }
+    }
+  }
+
+  private getFallbackDynamicCase(anatomicalModel: 'head' | 'torso' | 'fullbody', difficulty: number) {
+    const cases = {
+      head: [
+        {
+          patientInfo: {
+            name: 'Alexandra M.',
+            age: 31,
+            gender: 'F',
+            occupation: 'Yoga Instructor',
+            chiefComplaint: 'Persistent neck discomfort after intensive stretching session',
+            medicalHistory: ['Regular yoga practice', 'Previous minor neck strain']
+          },
+          conditions: ['cervical_strain'],
+          difficulty: 2,
+          educationalValue: 'Understanding the difference between muscle strain and more serious cervical issues',
+          uniqueTwist: 'Patient initially attributes symptoms to normal post-yoga soreness',
+          learningObjectives: ['Identify muscle vs. joint involvement', 'Assess when conservative treatment is appropriate']
+        }
+      ],
+      torso: [
+        {
+          patientInfo: {
+            name: 'Marcus L.',
+            age: 45,
+            gender: 'M',
+            occupation: 'Construction Worker',
+            chiefComplaint: 'Mid-back pain that worsens with heavy lifting',
+            medicalHistory: ['Long work history', 'Previous back strain']
+          },
+          conditions: ['scoliosis'],
+          difficulty: 3,
+          educationalValue: 'Recognizing adult scoliosis presentation in occupational context',
+          uniqueTwist: 'Patient has compensated for years, making diagnosis challenging',
+          learningObjectives: ['Measure spinal curvature', 'Differentiate from acute injury']
+        }
+      ],
+      fullbody: [
+        {
+          patientInfo: {
+            name: 'Sarah K.',
+            age: 28,
+            gender: 'F',
+            occupation: 'Distance Runner',
+            chiefComplaint: 'Knee pain that started gradually during marathon training',
+            medicalHistory: ['No previous injuries', 'High training volume']
+          },
+          conditions: ['knee_arthritis'],
+          difficulty: 2,
+          educationalValue: 'Early detection of overuse injuries in athletes',
+          uniqueTwist: 'Patient is reluctant to reduce training intensity',
+          learningObjectives: ['Identify early arthritic changes', 'Balance athletic goals with joint health']
+        }
+      ]
+    }
+
+    return {
+      success: true,
+      data: cases[anatomicalModel][0] || cases.head[0]
     }
   }
 }

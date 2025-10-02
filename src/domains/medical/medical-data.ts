@@ -1,5 +1,7 @@
 // DRY: Single source of truth for all medical knowledge
 
+import * as THREE from 'three';
+
 export interface MedicalCondition {
   id: string
   name: string
@@ -9,9 +11,27 @@ export interface MedicalCondition {
   treatments: string[]
   severity: 'low' | 'medium' | 'high'
   category: 'orthopedic' | 'neurological' | 'cardiovascular'
-  position: { x: number; y: number; z: number }
+  // ENHANCEMENT: Anatomical model requirements for proper visualization
+  requiredModel: 'head' | 'torso' | 'fullbody'
+  visibleIn: string[] // Anatomical regions where this condition is visible
+  // 🏥 Anatomically accurate positioning (replaces arbitrary position)
+  anatomicalConfig?: {
+    attachmentPoint: {
+      boneName: 'skull' | 'cervical_vertebra' | 'mandible' | 'temporomandibular_joint'
+      landmark: string
+      relativeOffset: THREE.Vector3
+    }
+    conditionSpecificOffset?: THREE.Vector3
+    landmarkBased: boolean
+    anatomicalRegion: string
+  }
+  // Legacy support (deprecated)
+  position?: { x: number; y: number; z: number }
   visualClues: string[]
   keyFeatures: string[] // Added for enhanced Cerebras integration
+  // GAMIFICATION: Discovery mechanics
+  discoveryDifficulty: 'easy' | 'medium' | 'hard'
+  scanTimeRequired: number // Seconds of scanning required to reveal
 }
 
 export interface PatientCase {
@@ -58,11 +78,15 @@ export const MEDICAL_CONDITIONS: Record<string, MedicalCondition> = {
     treatments: ['Surgical repair with rods/plates', 'Physical therapy', 'Pain management'],
     severity: 'high',
     category: 'orthopedic',
-    position: { x: 0.1, y: -0.3, z: 0 },
+    requiredModel: 'fullbody',
+    visibleIn: ['legs', 'lower_body', 'thigh'],
+    position: { x: 0.15, y: -1.2, z: 0 }, // Adjusted for full body model
     visualClues: ['Clear fracture line', 'Bone displacement', 'Soft tissue swelling'],
-    keyFeatures: ['Complete fracture line', 'Bone displacement', 'Cortical disruption', 'Soft tissue swelling']
+    keyFeatures: ['Complete fracture line', 'Bone displacement', 'Cortical disruption', 'Soft tissue swelling'],
+    discoveryDifficulty: 'easy',
+    scanTimeRequired: 2
   },
-  
+
   knee_arthritis: {
     id: 'knee_arthritis',
     name: 'Knee Osteoarthritis',
@@ -72,11 +96,15 @@ export const MEDICAL_CONDITIONS: Record<string, MedicalCondition> = {
     treatments: ['Anti-inflammatory medications', 'Physical therapy', 'Joint replacement'],
     severity: 'medium',
     category: 'orthopedic',
-    position: { x: 0.05, y: -0.6, z: 0 },
+    requiredModel: 'fullbody',
+    visibleIn: ['legs', 'lower_body', 'knee'],
+    position: { x: 0.1, y: -1.8, z: 0 }, // Adjusted for full body model
     visualClues: ['Joint space narrowing', 'Bone spurs', 'Subchondral sclerosis'],
-    keyFeatures: ['Joint space narrowing', 'Osteophyte formation', 'Subchondral sclerosis', 'Cartilage degeneration']
+    keyFeatures: ['Joint space narrowing', 'Osteophyte formation', 'Subchondral sclerosis', 'Cartilage degeneration'],
+    discoveryDifficulty: 'medium',
+    scanTimeRequired: 4
   },
-  
+
   scoliosis: {
     id: 'scoliosis',
     name: 'Adolescent Idiopathic Scoliosis',
@@ -86,9 +114,68 @@ export const MEDICAL_CONDITIONS: Record<string, MedicalCondition> = {
     treatments: ['Observation', 'Bracing', 'Spinal fusion surgery'],
     severity: 'medium',
     category: 'orthopedic',
+    requiredModel: 'torso',
+    visibleIn: ['spine', 'back', 'torso'],
     position: { x: 0, y: 0.2, z: -0.05 },
     visualClues: ['Spinal curvature', 'Vertebral rotation', 'Rib hump'],
-    keyFeatures: ['Lateral spinal curvature', 'Vertebral rotation', 'Cobb angle measurement', 'Compensatory curves']
+    keyFeatures: ['Lateral spinal curvature', 'Vertebral rotation', 'Cobb angle measurement', 'Compensatory curves'],
+    discoveryDifficulty: 'medium',
+    scanTimeRequired: 3
+  },
+
+  // ENHANCEMENT: Add head/neck conditions for current model compatibility
+  cervical_strain: {
+    id: 'cervical_strain',
+    name: 'Cervical Muscle Strain',
+    description: 'Acute strain of neck muscles and ligaments',
+    symptoms: ['Neck pain', 'Muscle spasms', 'Limited range of motion', 'Headaches'],
+    causes: ['Poor posture', 'Sudden movement', 'Sleeping in awkward position'],
+    treatments: ['Rest', 'Ice/heat therapy', 'Anti-inflammatory medications', 'Physical therapy'],
+    severity: 'low',
+    category: 'orthopedic',
+    requiredModel: 'head',
+    visibleIn: ['neck', 'cervical_spine', 'head'],
+    // 🏥 Anatomically accurate positioning
+    anatomicalConfig: {
+      attachmentPoint: {
+        boneName: 'cervical_vertebra',
+        landmark: 'c2',
+        relativeOffset: new THREE.Vector3(0.05, 0.1, 0.02)
+      },
+      landmarkBased: true,
+      anatomicalRegion: 'cervical_spine'
+    },
+    visualClues: ['Muscle tension', 'Reduced neck mobility', 'Tender points'],
+    keyFeatures: ['Muscle spasm', 'Soft tissue inflammation', 'Postural changes'],
+    discoveryDifficulty: 'easy',
+    scanTimeRequired: 2
+  },
+
+  temporomandibular_disorder: {
+    id: 'temporomandibular_disorder',
+    name: 'TMJ Disorder',
+    description: 'Dysfunction of the temporomandibular joint',
+    symptoms: ['Jaw pain', 'Clicking sounds', 'Limited jaw opening', 'Facial pain'],
+    causes: ['Teeth grinding', 'Jaw clenching', 'Arthritis', 'Jaw injury'],
+    treatments: ['Bite guards', 'Physical therapy', 'Anti-inflammatory medications', 'Stress management'],
+    severity: 'medium',
+    category: 'orthopedic',
+    requiredModel: 'head',
+    visibleIn: ['jaw', 'face', 'temporomandibular_joint'],
+    // 🏥 Anatomically accurate positioning for TMJ
+    anatomicalConfig: {
+      attachmentPoint: {
+        boneName: 'temporomandibular_joint',
+        landmark: 'lateral',
+        relativeOffset: new THREE.Vector3(0.02, -0.01, 0.01)
+      },
+      landmarkBased: true,
+      anatomicalRegion: 'temporomandibular_joint'
+    },
+    visualClues: ['Joint space changes', 'Disc displacement', 'Muscle tension'],
+    keyFeatures: ['Joint dysfunction', 'Disc displacement', 'Muscle hyperactivity'],
+    discoveryDifficulty: 'hard',
+    scanTimeRequired: 5
   }
 }
 
@@ -109,7 +196,7 @@ export const PATIENT_CASES: Record<string, PatientCase> = {
     prerequisiteKnowledge: ['Basic joint anatomy', 'Common sports injuries'],
     learningObjectives: ['Identify joint space narrowing', 'Understand arthritis progression']
   },
-  
+
   case_002: {
     id: 'case_002',
     patientInfo: {
@@ -125,7 +212,7 @@ export const PATIENT_CASES: Record<string, PatientCase> = {
     prerequisiteKnowledge: ['Spinal anatomy', 'Growth disorders'],
     learningObjectives: ['Measure spinal curvature', 'Assess treatment options']
   },
-  
+
   case_003: {
     id: 'case_003',
     patientInfo: {
@@ -163,7 +250,7 @@ export const DIAGNOSTIC_QUESTIONS: Record<string, DiagnosticQuestion[]> = {
       ]
     }
   ],
-  
+
   scoliosis: [
     {
       id: 'scoliosis_obs_1',
@@ -182,7 +269,7 @@ export const DIAGNOSTIC_QUESTIONS: Record<string, DiagnosticQuestion[]> = {
       ]
     }
   ],
-  
+
   femur_fracture: [
     {
       id: 'femur_obs_1',

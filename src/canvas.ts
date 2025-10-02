@@ -8,6 +8,8 @@ import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js"
 import XRayEffect from "./components/x-ray-effect"
 import { XRayControls } from "./components/xray-controls"
 import { MobileCamera } from "./components/mobile-camera"
+import { AudioManager } from "./components/AudioManager"
+import { SoundType } from "./components/AudioManager"
 
 export default class Canvas {
   element: HTMLCanvasElement
@@ -24,17 +26,20 @@ export default class Canvas {
   orbitControls: OrbitControls
   debug: GUI
   xRayEffect: XRayEffect
-  
+
   // Enhanced mobile components
   xrayControls: XRayControls
   mobileCamera: MobileCamera
   isMobile: boolean
 
+  // Audio system
+  audioManager: AudioManager
+
   constructor() {
     this.element = document.getElementById("webgl") as HTMLCanvasElement
     this.time = 0
     this.isMobile = window.innerWidth < 768
-    
+
     this.createClock()
     this.createScene()
     this.createCamera()
@@ -48,6 +53,7 @@ export default class Canvas {
     //this.createHelpers()
     this.createXRayEffect()
     this.createLights()
+    this.createAudioManager()
     this.createMobileComponents()
     this.render()
   }
@@ -78,6 +84,10 @@ export default class Canvas {
     const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.75)
     directionalLight2.position.set(-1, -1, -1)
     this.scene.add(directionalLight2)
+  }
+
+  createAudioManager() {
+    this.audioManager = new AudioManager(this.camera)
   }
 
   createOrbitControls() {
@@ -132,11 +142,13 @@ export default class Canvas {
     // Store normalized device coordinates for raycasting
     const ndcX = (event.clientX / window.innerWidth) * 2 - 1
     const ndcY = -(event.clientY / window.innerHeight) * 2 + 1
-    
+
     // Store 0-1 range coordinates for XRayEffect
+    // Shader expects (0,0) at bottom-left and (1,1) at top-right
+    // So we invert Y: screen Y (0 at top) -> shader Y (1 at top)
     const xRayX = event.clientX / window.innerWidth
     const xRayY = 1 - event.clientY / window.innerHeight
-    
+
     // Pass 0-1 range coordinates to XRayEffect
     this.xRayEffect?.onMouseMove({
       x: xRayX,
@@ -147,7 +159,7 @@ export default class Canvas {
     this.mouse.x = ndcX
     this.mouse.y = ndcY
     this.raycaster.setFromCamera(this.mouse, this.camera)
-    
+
     const intersects = this.raycaster.intersectObjects(this.scene.children)
     this.xRayEffect?.handleMedicalConditionHover(intersects)
   }
@@ -167,7 +179,7 @@ export default class Canvas {
     this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1
     this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
     this.raycaster.setFromCamera(this.mouse, this.camera)
-    
+
     const intersects = this.raycaster.intersectObjects(this.scene.children)
     this.xRayEffect?.handleMedicalConditionClick(intersects)
   }
@@ -194,6 +206,7 @@ export default class Canvas {
       composer: this.composer,
       renderer: this.renderer,
       camera: this.camera,
+      audioManager: this.audioManager,
     })
   }
 
@@ -206,7 +219,7 @@ export default class Canvas {
 
     this.composer.render()
   }
-  
+
   // Enhanced mobile methods
   private createMobileComponents(): void {
     // Create X-ray effect controls

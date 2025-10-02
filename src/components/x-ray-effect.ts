@@ -9,6 +9,9 @@ import xRayFragment from "../shaders/x-ray-fragment.glsl"
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { Position } from "../types/types"
 import gsap from "gsap"
+import { MedicalMarker } from "./MedicalMarker"
+import { AudioManager as AudioManagerType, SoundType as SoundTypeType } from "./AudioManager"
+import { VisualFeedbackSystem } from "./VisualFeedbackSystem"
 
 const rtParams = {
   format: THREE.RGBAFormat,
@@ -19,11 +22,15 @@ const rtParams = {
   magFilter: THREE.NearestFilter,
 }
 
+import { AudioManager } from './AudioManager'
+import { SoundType } from './AudioManager'
+
 interface Props {
   scene: THREE.Scene
   composer: EffectComposer
   renderer: THREE.WebGLRenderer
   camera: THREE.PerspectiveCamera
+  audioManager: AudioManagerType
 }
 
 export default class XRayEffect {
@@ -37,7 +44,7 @@ export default class XRayEffect {
   camera: THREE.PerspectiveCamera
   leePerry: LeePerry
   skeleton: Skeleton
-  medicalMarkers: Map<string, THREE.Mesh> = new Map()
+  medicalMarkers: Map<string, MedicalMarker> = new Map()
   diagnosticUI: DiagnosticUI
   mouse: {
     current: Position
@@ -47,11 +54,25 @@ export default class XRayEffect {
   // Add scale property for X-ray effect scaling
   scale: number = 1.0
 
-  constructor({ scene, composer, renderer, camera }: Props) {
+  // Audio system
+  audioManager: AudioManagerType;
+
+  // Visual feedback system for accessibility
+  visualFeedbackSystem: VisualFeedbackSystem;
+
+  // INTEGRATION: Progressive discovery and model switching
+  currentModel: 'head' | 'torso' | 'fullbody' = 'head'
+  scanProgress: Map<string, number> = new Map() // Track scanning progress per condition
+  discoveredConditions: Set<string> = new Set() // Track discovered conditions
+  visibleAnatomy: string[] = ['head', 'neck', 'cervical_spine', 'jaw', 'face'] // Current visible anatomy
+
+  constructor({ scene, composer, renderer, camera, audioManager }: Props) {
     this.scene = scene
     this.composer = composer
     this.renderer = renderer
     this.camera = camera
+    this.audioManager = audioManager;
+    this.visualFeedbackSystem = new VisualFeedbackSystem(this.scene);
     this.mouse = {
       current: { x: 0, y: 0 },
       target: { x: 0, y: 0 },
@@ -63,7 +84,11 @@ export default class XRayEffect {
     this.initializeMedicalMarkers()
     this.diagnosticUI = createDiagnosticUI({
       onStartDiagnosis: (conditionId: any) => console.log('🎯 Starting diagnosis for:', conditionId),
-      onCaseSelection: (caseId: any) => console.log('📋 Case selected:', caseId)
+      onCaseSelection: (caseId: any) => console.log('📋 Case selected:', caseId),
+      // INTEGRATION: Handle model switching from diagnostic UI
+      onModelSwitch: (modelType: 'head' | 'torso' | 'fullbody') => {
+        this.switchAnatomicalModel(modelType)
+      }
     })
 
     window.addEventListener("keypress", (event) => {
@@ -87,19 +112,62 @@ export default class XRayEffect {
 
   onMouseMove(position: Position) {
     this.mouse.target = position
+    // INTEGRATION: Update scanning progress for progressive discovery
+    this.updateScanProgress(position)
+  }
+
+  // INTEGRATION: Progressive discovery through scanning
+  updateScanProgress(mousePosition: Position) {
+    const scanRadius = 0.15 // Radius around mouse for scanning
+    const deltaTime = 0.016 // Approximate frame time (60fps)
+
+    this.medicalMarkers.forEach((medicalMarker, conditionId) => {
+      if (this.discoveredConditions.has(conditionId)) return
+
+      const markerGroup = medicalMarker.getMarkerGroup();
+      const markerPos = markerGroup.position;
+      const mousePos3D = new THREE.Vector3(
+        (mousePosition.x - 0.5) * 4, // Convert to world coordinates
+        (mousePosition.y - 0.5) * 4,
+        0
+      )
+
+      const distance = markerPos.distanceTo(mousePos3D)
+
+      if (distance < scanRadius) {
+        // Increase scan progress
+        const currentProgress = this.scanProgress.get(conditionId) || 0
+        const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId)
+        const requiredTime = condition?.scanTimeRequired || 3
+
+        const newProgress = Math.min(currentProgress + deltaTime, requiredTime)
+        this.scanProgress.set(conditionId, newProgress)
+
+        // Update marker visibility based on progress
+        this.updateMarkerVisibility(medicalMarker, newProgress / requiredTime)
+
+        // Update diagnostic UI progress
+        this.diagnosticUI.updateScanProgress(conditionId, newProgress)
+
+        // Check if condition is fully discovered
+        if (newProgress >= requiredTime && !this.discoveredConditions.has(conditionId)) {
+          this.discoverCondition(conditionId)
+        }
+      }
+    })
+  }
+
+  // INTEGRATION: Progressive marker revelation
+  updateMarkerVisibility(medicalMarker: MedicalMarker, progress: number) {
+    medicalMarker.updateDiscoveryProgress(progress);
   }
 
   setupPostprocessing() {
-    //@ts-ignore
     XRayShader.uniforms.tDiffuse1 = new THREE.Uniform(new THREE.Vector4())
-    //@ts-ignore
-    XRayShader.uniforms.uMouse = new THREE.Uniform(new THREE.Vector2())
-    //@ts-ignore
-    XRayShader.uniforms.uViewportRes = new THREE.Uniform(
-      new THREE.Vector2(window.innerWidth, window.innerHeight)
-    )
-    //@ts-ignore
-    XRayShader.uniforms.expand = new THREE.Uniform(0)
+    XRayShader.uniforms.uMouse.value = new THREE.Vector2()
+    const pixelRatio = Math.min(2, window.devicePixelRatio)
+    XRayShader.uniforms.uViewportRes.value = new THREE.Vector2(window.innerWidth * pixelRatio, window.innerHeight * pixelRatio)
+    XRayShader.uniforms.expand.value = 0
 
     XRayShader.fragmentShader = xRayFragment
 
@@ -121,10 +189,9 @@ export default class XRayEffect {
   }
 
   onResize() {
-    this.xRayPass.uniforms.uViewportRes = new THREE.Uniform(
-      new THREE.Vector2(window.innerWidth, window.innerHeight)
-    )
-    
+    const pixelRatio = Math.min(2, window.devicePixelRatio)
+    this.xRayPass.uniforms.uViewportRes.value = new THREE.Vector2(window.innerWidth * pixelRatio, window.innerHeight * pixelRatio)
+
     // Recreate render targets on resize to maintain proper dimensions
     this.createRenderTargets()
   }
@@ -149,6 +216,14 @@ export default class XRayEffect {
         this.expanded = true
       }
     }
+    // INTEGRATION: Keyboard shortcuts for model switching
+    else if (event.key === "1") {
+      this.switchAnatomicalModel('head')
+    } else if (event.key === "2") {
+      this.switchAnatomicalModel('torso')
+    } else if (event.key === "3") {
+      this.switchAnatomicalModel('fullbody')
+    }
   }
 
   createLeePerry() {
@@ -164,10 +239,35 @@ export default class XRayEffect {
   }
 
   initializeMedicalMarkers() {
-    // DRY: Use single source of truth from medical-data
-    Object.values(MEDICAL_CONDITIONS).forEach(condition => {
-      this.createConditionMarker(condition)
+    // INTEGRATION: Only create markers for conditions visible in current model
+    this.updateMarkersForCurrentModel()
+  }
+
+  // INTEGRATION: Smart marker management based on anatomical model
+  updateMarkersForCurrentModel() {
+    // Clear existing markers
+    this.medicalMarkers.forEach(medicalMarker => {
+      // Dispose of the medical marker to clean up animations
+      medicalMarker.dispose();
+      // Remove the marker group from the scene
+      const markerGroup = medicalMarker.getMarkerGroup();
+      if (markerGroup.parent) {
+        markerGroup.parent.remove(markerGroup);
+      }
     })
+    this.medicalMarkers.clear()
+    this.scanProgress.clear()
+
+    // Create markers only for conditions visible in current model
+    Object.values(MEDICAL_CONDITIONS).forEach(condition => {
+      if (condition.requiredModel === this.currentModel ||
+        condition.visibleIn.some(part => this.visibleAnatomy.includes(part))) {
+        this.createConditionMarker(condition)
+        this.scanProgress.set(condition.id, 0) // Initialize scan progress
+      }
+    })
+
+    console.log(`Updated markers for ${this.currentModel} model: ${this.medicalMarkers.size} conditions`)
   }
 
   render() {
@@ -226,62 +326,243 @@ export default class XRayEffect {
     this.skeletonModel.rotation.y += 0.005
     this.leePerryModel.rotation.y += 0.005
 
+    // Update all medical markers
+    this.medicalMarkers.forEach(marker => {
+      marker.update();
+    });
+
     this.renderer.setRenderTarget(null)
   }
 
-  // CLEAN: Streamlined medical marker system
+  // INTEGRATION: Enhanced medical marker system with progressive discovery
   createConditionMarker(condition: any) {
-    const colors = { low: '#44ff88', medium: '#ffaa44', high: '#ff4444' }
-    const geometry = new THREE.SphereGeometry(0.05, 16, 16)
-    const material = new THREE.MeshBasicMaterial({
-      color: colors[condition.severity as keyof typeof colors] || colors.medium,
-      opacity: 0.0,
-      transparent: true
+    // 🏥 Use anatomically accurate positioning if available, fallback to legacy
+    let markerOptions: any = {
+      conditionId: condition.id,
+      conditionName: condition.name,
+      severity: condition.severity,
+      category: condition.category,
+      discoveryProgress: 0,
+      isDiscovered: false
+    };
+
+    // Use anatomical configuration if available
+    if (condition.anatomicalConfig) {
+      markerOptions.anatomicalConfig = condition.anatomicalConfig;
+    } else if (condition.position) {
+      // Fallback to legacy positioning
+      markerOptions.position = new THREE.Vector3(
+        condition.position.x,
+        condition.position.y,
+        condition.position.z
+      );
+    }
+
+    const medicalMarker = new MedicalMarker(markerOptions);
+
+    // Add the marker group to the scene
+    this.scene.add(medicalMarker.getMarkerGroup());
+
+    // Store the medical marker instance
+    this.medicalMarkers.set(condition.id, medicalMarker);
+  }
+
+  // INTEGRATION: Add subtle pulsing effect to hint at hidden conditions
+  addSubtlePulse(marker: THREE.Mesh) {
+    gsap.to(marker.scale, {
+      x: 1.1, y: 1.1, z: 1.1,
+      duration: 2,
+      repeat: -1,
+      yoyo: true,
+      ease: "power2.inOut"
     })
-    
-    const marker = new THREE.Mesh(geometry, material)
-    marker.position.set(condition.position.x, condition.position.y, condition.position.z)
-    marker.userData = { conditionId: condition.id }
-    
-    this.medicalMarkers.set(condition.id, marker)
-    this.scene.add(marker)
   }
 
   toggleConditions() {
+    // For the new marker system, we'll just toggle visibility of all markers
+    // The actual opacity is controlled by the MedicalMarker class
     const firstMarker = Array.from(this.medicalMarkers.values())[0]
-    const material = Array.isArray(firstMarker?.material) ? firstMarker?.material[0] : firstMarker?.material
-    const visible = (material as any)?.opacity === 0
-    
-    this.medicalMarkers.forEach(marker => {
-      if (marker.material instanceof THREE.MeshBasicMaterial) {
-        marker.material.opacity = visible ? 0.4 : 0
-      }
+    const markerGroup = firstMarker?.getMarkerGroup()
+
+    // We'll use a different approach: just toggle the discovery progress
+    // to show/hide markers based on their state
+    this.medicalMarkers.forEach(medicalMarker => {
+      medicalMarker.getMarkerGroup().visible = !medicalMarker.getMarkerGroup().visible
     })
   }
 
-  // MODULAR: Clean interaction handlers
+  // MODULAR: Clean interaction handlers with consistent UX
   handleMedicalConditionHover(intersects: THREE.Intersection[]) {
-    const medicalIntersect = intersects.find(i => 
-      Array.from(this.medicalMarkers.values()).includes(i.object as THREE.Mesh)
+    // For the new marker system, we need to check if the intersected object
+    // is part of a medical marker group
+    const medicalIntersect = intersects.find(i =>
+      Array.from(this.medicalMarkers.values()).some(marker =>
+        marker.getMarkerGroup().children.includes(i.object as THREE.Object3D) ||
+        marker.getMarkerGroup() === i.object
+      )
     )
-    
+
+    // Hide AR overlays for all markers first
+    this.medicalMarkers.forEach(marker => {
+      marker.hideAROverlay();
+    });
+
+    // Show AR overlay for the hovered marker with consistent timing
+    if (medicalIntersect) {
+      for (const [conditionId, medicalMarker] of this.medicalMarkers.entries()) {
+        const markerGroup = medicalMarker.getMarkerGroup();
+
+        if (medicalIntersect.object === markerGroup ||
+          markerGroup.children.includes(medicalIntersect.object as THREE.Object3D)) {
+          medicalMarker.showAROverlay();
+          break;
+        }
+      }
+
+      // Also provide audio feedback for hover to maintain consistency
+      if (this.audioManager) {
+        this.audioManager.playSound(SoundTypeType.HOVER);
+      }
+    }
+
     document.body.style.cursor = medicalIntersect ? 'pointer' : 'default'
   }
 
   handleMedicalConditionClick(intersects: THREE.Intersection[]) {
-    const medicalIntersect = intersects.find(i => 
-      Array.from(this.medicalMarkers.values()).includes(i.object as THREE.Mesh)
-    )
-    
-    if (medicalIntersect) {
-      const conditionId = (medicalIntersect.object as THREE.Mesh).userData.conditionId
-      this.discoverCondition(conditionId)
+    // Find which medical marker was clicked
+    for (const [conditionId, medicalMarker] of this.medicalMarkers.entries()) {
+      const markerGroup = medicalMarker.getMarkerGroup();
+
+      // Check if any part of the marker group was intersected
+      if (intersects.some(intersect =>
+        markerGroup.children.includes(intersect.object as THREE.Object3D) ||
+        markerGroup === intersect.object
+      )) {
+        // Play click sound for consistency
+        this.audioManager.playSound(SoundTypeType.CLICK);
+
+        this.discoverCondition(conditionId);
+        // Hide the AR overlay after discovery
+        medicalMarker.hideAROverlay();
+        break;
+      }
     }
   }
 
   discoverCondition(conditionId: string) {
     console.log('🔍 Discovering condition:', conditionId)
+
+    // Mark as discovered
+    this.discoveredConditions.add(conditionId)
+
+    // Update marker appearance for discovered condition
+    const medicalMarker = this.medicalMarkers.get(conditionId)
+    if (medicalMarker) {
+      medicalMarker.markAsDiscovered();
+
+      // Get condition details for both audio and visual feedback
+      const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId);
+      if (condition) {
+        // Play discovery sound based on severity
+        switch (condition.severity) {
+          case 'low':
+            this.audioManager.playSound(SoundTypeType.LOW_SEVERITY, medicalMarker.getMarkerGroup().position);
+            break;
+          case 'medium':
+            this.audioManager.playSound(SoundTypeType.MEDIUM_SEVERITY, medicalMarker.getMarkerGroup().position);
+            break;
+          case 'high':
+            this.audioManager.playSound(SoundTypeType.HIGH_SEVERITY, medicalMarker.getMarkerGroup().position);
+            break;
+        }
+
+        // Create visual feedback as audio alternative
+        this.visualFeedbackSystem.createConditionDiscoveryFeedback(
+          medicalMarker.getMarkerGroup().position,
+          condition.severity,
+          condition.name
+        );
+      }
+    }
+
+    // Trigger diagnostic UI
     this.diagnosticUI.discoverCondition(conditionId)
+  }
+
+  // INTEGRATION: Switch between anatomical models with reality shift effects
+  switchAnatomicalModel(modelType: 'head' | 'torso' | 'fullbody') {
+    if (this.currentModel === modelType) return
+
+    console.log(`Switching from ${this.currentModel} to ${modelType} model`)
+
+    // Play transition sound
+    this.audioManager.playSound(SoundTypeType.DISCOVERY);
+
+    // Create a transition effect
+    this.performRealityShift(modelType);
+
+    this.currentModel = modelType
+
+    // Update visible anatomy based on model
+    switch (modelType) {
+      case 'head':
+        this.visibleAnatomy = ['head', 'neck', 'cervical_spine', 'jaw', 'face', 'temporomandibular_joint']
+        break
+      case 'torso':
+        this.visibleAnatomy = ['spine', 'back', 'torso', 'chest', 'ribs']
+        break
+      case 'fullbody':
+        this.visibleAnatomy = ['legs', 'lower_body', 'thigh', 'knee', 'spine', 'back', 'torso']
+        break
+    }
+
+    // Update markers for new model
+    this.updateMarkersForCurrentModel()
+
+    // Reset discovery progress for new model
+    this.discoveredConditions.clear()
+
+    console.log(`Model switched. Visible anatomy:`, this.visibleAnatomy)
+    console.log(`Active markers: ${this.medicalMarkers.size}`)
+  }
+
+  // NEW: Perform reality shift transition effect
+  private performRealityShift(newModelType: 'head' | 'torso' | 'fullbody'): void {
+    // Create a brief fade effect during transition
+    const originalExpandValue = this.xRayPass.uniforms.expand.value;
+
+    // Fade out effect
+    gsap.to(this.xRayPass.uniforms.expand, {
+      value: originalExpandValue - 0.5,
+      duration: 0.3,
+      ease: "power2.in",
+      onComplete: () => {
+        // Fade back in with new model
+        gsap.to(this.xRayPass.uniforms.expand, {
+          value: originalExpandValue,
+          duration: 0.3,
+          ease: "power2.out"
+        });
+
+        // Create visual feedback for model switch
+        this.visualFeedbackSystem.createModelSwitchFeedback(
+          new THREE.Vector3(0, 0, 0) // Center of scene for model switch feedback
+        );
+      }
+    });
+
+    // Play transition sound
+    this.audioManager.playSound(SoundTypeType.CONDITION_FOUND);
+  }
+
+  // INTEGRATION: Get conditions visible in current model (for diagnostic UI filtering)
+  getVisibleConditions(): string[] {
+    return Object.values(MEDICAL_CONDITIONS)
+      .filter(condition =>
+        condition.requiredModel === this.currentModel ||
+        condition.visibleIn.some(part => this.visibleAnatomy.includes(part))
+      )
+      .map(condition => condition.id)
   }
 
   // Add method to set the X-ray effect scale (0.3 to 2.0)
