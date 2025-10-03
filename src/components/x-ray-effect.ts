@@ -1,8 +1,9 @@
 import * as THREE from "three"
 import LeePerry from "./lee-perry"
 import Skeleton from "./skeleton"
-import { createDiagnosticUI, type DiagnosticUI } from "../domains/diagnostic/diagnostic-ui"
-import { MEDICAL_CONDITIONS } from "../domains/medical/medical-data"
+import { DiagnosticUI } from "../domains/diagnostic/diagnostic-ui"
+import { InstructionsPanel } from "./instructions-panel"
+import { MEDICAL_CONDITIONS, getConditionsForModel } from "../domains/medical/medical-data"
 import { EffectComposer, ShaderPass } from "three/examples/jsm/Addons.js"
 import { XRayShader } from "../shaders/XRayShader"
 import xRayFragment from "../shaders/x-ray-fragment.glsl"
@@ -46,6 +47,7 @@ export default class XRayEffect {
   skeleton: Skeleton
   medicalMarkers: Map<string, MedicalMarker> = new Map()
   diagnosticUI: DiagnosticUI
+  instructionsPanel: InstructionsPanel
   mouse: {
     current: Position
     target: Position
@@ -53,6 +55,7 @@ export default class XRayEffect {
   expanded: boolean = false
   // Add scale property for X-ray effect scaling
   scale: number = 1.0
+  keyHandler: (event: KeyboardEvent) => void
 
   // Audio system
   audioManager: AudioManagerType;
@@ -82,18 +85,33 @@ export default class XRayEffect {
     this.createLeePerry()
     this.createSkeleton()
     this.initializeMedicalMarkers()
-    this.diagnosticUI = createDiagnosticUI({
-      onStartDiagnosis: (conditionId: any) => console.log('🎯 Starting diagnosis for:', conditionId),
-      onCaseSelection: (caseId: any) => console.log('📋 Case selected:', caseId),
-      // INTEGRATION: Handle model switching from diagnostic UI
-      onModelSwitch: (modelType: 'head' | 'torso' | 'fullbody') => {
-        this.switchAnatomicalModel(modelType)
+    this.instructionsPanel = new InstructionsPanel()
+    this.diagnosticUI = new DiagnosticUI({
+      onAnalysisStart: (conditionId) => {
+        // PERFORMANT: Visual feedback on marker during analysis
+        const marker = this.medicalMarkers.get(conditionId)
+        if (marker) {
+          const group = marker.getMarkerGroup()
+          group.scale.setScalar(1.2) // Subtle scale animation
+        }
+      },
+      onAnalysisChunk: (chunk, conditionId) => {
+        // CLEAN: Real-time streaming feedback
+        console.log(`📊 Analysis chunk for ${conditionId}:`, chunk.slice(0, 50) + '...')
+      },
+      onAnalysisComplete: (conditionId) => {
+        // PERFORMANT: Reset marker scale
+        const marker = this.medicalMarkers.get(conditionId)
+        if (marker) {
+          const group = marker.getMarkerGroup()
+          group.scale.setScalar(1.0)
+        }
       }
     })
 
-    window.addEventListener("keypress", (event) => {
-      this.onPressKey(event)
-    })
+    // PREVENT BLOAT: Single event listener with cleanup
+    this.keyHandler = (event: KeyboardEvent) => this.onPressKey(event)
+    window.addEventListener("keydown", this.keyHandler)
   }
 
   createRenderTargets() {
@@ -241,15 +259,16 @@ export default class XRayEffect {
   initializeMedicalMarkers() {
     // INTEGRATION: Only create markers for conditions visible in current model
     this.updateMarkersForCurrentModel()
+    
+    // CLEAN: Ensure markers are visible by default
+    console.log('Initializing medical markers for model:', this.currentModel)
   }
 
   // INTEGRATION: Smart marker management based on anatomical model
   updateMarkersForCurrentModel() {
     // Clear existing markers
     this.medicalMarkers.forEach(medicalMarker => {
-      // Dispose of the medical marker to clean up animations
       medicalMarker.dispose();
-      // Remove the marker group from the scene
       const markerGroup = medicalMarker.getMarkerGroup();
       if (markerGroup.parent) {
         markerGroup.parent.remove(markerGroup);
@@ -258,8 +277,9 @@ export default class XRayEffect {
     this.medicalMarkers.clear()
     this.scanProgress.clear()
 
-    // Create markers only for conditions visible in current model
-    Object.values(MEDICAL_CONDITIONS).forEach(condition => {
+    // PERFORMANT: Use consolidated condition filtering
+    const conditions = getConditionsForModel(this.currentModel)
+    conditions.forEach(condition => {
       if (condition.requiredModel === this.currentModel ||
         condition.visibleIn.some(part => this.visibleAnatomy.includes(part))) {
         this.createConditionMarker(condition)
@@ -334,37 +354,24 @@ export default class XRayEffect {
     this.renderer.setRenderTarget(null)
   }
 
-  // INTEGRATION: Enhanced medical marker system with progressive discovery
+  // CLEAN: Simplified marker creation with single positioning system
   createConditionMarker(condition: any) {
-    // 🏥 Use anatomically accurate positioning if available, fallback to legacy
-    let markerOptions: any = {
+    const markerOptions = {
       conditionId: condition.id,
       conditionName: condition.name,
-      severity: condition.severity,
-      category: condition.category,
-      discoveryProgress: 0,
-      isDiscovered: false
+      position: condition.position,
+      severity: condition.severity
     };
 
-    // Use anatomical configuration if available
-    if (condition.anatomicalConfig) {
-      markerOptions.anatomicalConfig = condition.anatomicalConfig;
-    } else if (condition.position) {
-      // Fallback to legacy positioning
-      markerOptions.position = new THREE.Vector3(
-        condition.position.x,
-        condition.position.y,
-        condition.position.z
-      );
-    }
-
     const medicalMarker = new MedicalMarker(markerOptions);
-
-    // Add the marker group to the scene
-    this.scene.add(medicalMarker.getMarkerGroup());
-
-    // Store the medical marker instance
+    const markerGroup = medicalMarker.getMarkerGroup();
+    
+    // CLEAN: Ensure markers are visible and properly positioned
+    markerGroup.visible = true;
+    this.scene.add(markerGroup);
     this.medicalMarkers.set(condition.id, medicalMarker);
+    
+    console.log(`Created marker for ${condition.id} at position:`, markerGroup.position);
   }
 
   // INTEGRATION: Add subtle pulsing effect to hint at hidden conditions
@@ -379,15 +386,9 @@ export default class XRayEffect {
   }
 
   toggleConditions() {
-    // For the new marker system, we'll just toggle visibility of all markers
-    // The actual opacity is controlled by the MedicalMarker class
-    const firstMarker = Array.from(this.medicalMarkers.values())[0]
-    const markerGroup = firstMarker?.getMarkerGroup()
-
-    // We'll use a different approach: just toggle the discovery progress
-    // to show/hide markers based on their state
-    this.medicalMarkers.forEach(medicalMarker => {
-      medicalMarker.getMarkerGroup().visible = !medicalMarker.getMarkerGroup().visible
+    // CLEAN: Force markers visible without bloat
+    this.medicalMarkers.forEach((marker) => {
+      marker.getMarkerGroup().visible = true
     })
   }
 
@@ -440,6 +441,12 @@ export default class XRayEffect {
       )) {
         // Play click sound for consistency
         this.audioManager.playSound(SoundTypeType.CLICK);
+
+        // ENHANCEMENT FIRST: Trigger streaming analysis for immediate feedback
+        const condition = MEDICAL_CONDITIONS.find(c => c.id === conditionId)
+        if (condition) {
+          this.diagnosticUI.analyzeCondition(condition)
+        }
 
         this.discoverCondition(conditionId);
         // Hide the AR overlay after discovery
@@ -573,4 +580,11 @@ export default class XRayEffect {
   }
 
   // CLEAN: Old Llama methods removed - now handled by DiagnosticUI
+
+  // MODULAR: Clean resource management
+  destroy() {
+    window.removeEventListener("keydown", this.keyHandler)
+    this.instructionsPanel?.destroy()
+    this.diagnosticUI?.destroy()
+  }
 }
