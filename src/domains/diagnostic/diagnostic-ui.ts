@@ -1,8 +1,12 @@
-// MODULAR: Immersive gamified diagnostic experience
+// MODULAR: Immersive gamified diagnostic experience with enhanced onboarding
 
 import * as THREE from 'three'
 import { CerebrasService } from '../medical/cerebras-service'
 import { getConditionsForModel, type MedicalCondition } from '../medical/medical-data'
+import { GamePhaseManager, GamePhase } from './game-phase-manager'
+import { OnboardingUI } from './onboarding-ui'
+import { adaptiveLoader, performanceMonitor } from '../../utils/adaptive-loading'
+import { mobileUI } from './mobile-ui'
 
 interface GameState {
   score: number
@@ -15,15 +19,34 @@ interface GameState {
 
 export class DiagnosticUI {
   private cerebras: CerebrasService
-  private gameState: GameState = { score: 0, streak: 0, hintsUsed: 0, timeRemaining: 120, phase: 'scanning', difficulty: 1 }
+  private gameState: GameState = { score: 0, streak: 0, hintsUsed: 0, timeRemaining: 300, phase: 'scanning', difficulty: 1 }
   private panel: HTMLElement
   private timer: NodeJS.Timeout | null = null
   private currentCondition: MedicalCondition | null = null
+  
+  // MODULAR: Enhanced onboarding system
+  private phaseManager: GamePhaseManager
+  private onboardingUI: OnboardingUI
+  
+  // MOBILE-FIRST: Responsive design support
+  private isCollapsed: boolean = false
 
   constructor() {
     this.cerebras = new CerebrasService()
+    
+    // CLEAN: Initialize phase management system
+    this.phaseManager = new GamePhaseManager()
+    this.onboardingUI = new OnboardingUI(this.phaseManager)
+    
     this.createGamePanel()
-    this.startGameTimer()
+    this.setupPhaseIntegration()
+    this.setupMobileOptimizations()
+    
+    // PERFORMANT: Adaptive loading based on device capabilities
+    const strategy = adaptiveLoader.getStrategy()
+    console.log('Adaptive loading strategy:', strategy)
+    
+    // CLEAN: Phase manager starts in WELCOME by default, no need to transition
   }
 
   // PERFORMANT: Minimal DOM with premium visual effects
@@ -99,6 +122,9 @@ export class DiagnosticUI {
       transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
     `
 
+    // MOBILE-FIRST: Apply responsive styles
+    this.applyResponsiveStyles()
+
     document.body.appendChild(this.panel)
 
     // PREMIUM: Staggered entrance animation
@@ -152,10 +178,14 @@ export class DiagnosticUI {
     }, 300)
   }
 
-  // PERFORMANT: Streaming with delightful typing effect
+  // PERFORMANT: Streaming with delightful typing effect + Performance monitoring
   private async streamAnalysis(condition: MedicalCondition) {
     const streamEl = this.panel.querySelector('#analysis-stream') as HTMLElement
     streamEl.innerHTML = ''
+
+    // PERFORMANT: Monitor streaming performance
+    const startTime = performance.now()
+    let chunkCount = 0
 
     try {
       for await (const chunk of this.cerebras.analyzeMedicalCondition(condition)) {
@@ -164,14 +194,32 @@ export class DiagnosticUI {
         span.style.opacity = '0'
         streamEl.appendChild(span)
 
-        // PERFORMANT: Staggered fade-in animation
-        requestAnimationFrame(() => {
-          span.style.transition = 'opacity 0.3s ease'
+        // PERFORMANT: Adaptive animation based on device capabilities
+        const shouldAnimate = adaptiveLoader.shouldEnableAnimation('decorative')
+        
+        if (shouldAnimate) {
+          // Staggered fade-in animation
+          requestAnimationFrame(() => {
+            span.style.transition = 'opacity 0.3s ease'
+            span.style.opacity = '1'
+          })
+          await new Promise(resolve => setTimeout(resolve, 30))
+        } else {
+          // Instant display for low-end devices
           span.style.opacity = '1'
-        })
+        }
 
-        await new Promise(resolve => setTimeout(resolve, 30))
+        chunkCount++
       }
+
+      // PERFORMANT: Update adaptive strategy based on performance
+      const duration = performance.now() - startTime
+      const fps = performanceMonitor.measureFPS()
+      
+      if (chunkCount > 0) {
+        adaptiveLoader.updateStrategy({ fps, loadTime: duration })
+      }
+
     } catch (error) {
       streamEl.innerHTML = `<div class="fallback-info">${condition.description}</div>`
     }
@@ -286,6 +334,32 @@ export class DiagnosticUI {
     }, duration)
   }
 
+  // MODULAR: Phase integration with existing game systems
+  private setupPhaseIntegration(): void {
+    // CLEAN: Sync phase manager with game timer
+    this.phaseManager.onPhaseChange(GamePhase.ACTIVE, () => {
+      this.startGameTimer()
+    })
+
+    this.phaseManager.onPhaseChange(GamePhase.PAUSED, () => {
+      if (this.timer) {
+        clearInterval(this.timer)
+        this.timer = null
+      }
+    })
+
+    this.phaseManager.onPhaseChange(GamePhase.COMPLETE, () => {
+      this.endGame()
+    })
+
+    // PERFORMANT: Sync game state with phase manager
+    this.phaseManager.onPhaseChange(GamePhase.ACTIVE, () => {
+      const phaseState = this.phaseManager.getState()
+      this.gameState.timeRemaining = phaseState.timeRemaining
+      this.gameState.score = phaseState.score
+    })
+  }
+
   // CLEAN: Game timer with visual countdown
   private startGameTimer() {
     this.timer = setInterval(() => {
@@ -306,8 +380,12 @@ export class DiagnosticUI {
     const seconds = this.gameState.timeRemaining % 60
     timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`
 
-    const progress = (this.gameState.timeRemaining / 120) * 157 // 2π * 25
+    // PERFORMANT: Updated progress calculation for 5-minute timer
+    const progress = (this.gameState.timeRemaining / 300) * 157 // 2π * 25 for 5 minutes
     progressEl.style.strokeDasharray = `${progress} 157`
+    
+    // CLEAN: Sync with phase manager
+    this.phaseManager.updateState({ timeRemaining: this.gameState.timeRemaining })
   }
 
   private updateUI() {
@@ -350,5 +428,171 @@ export class DiagnosticUI {
   destroy() {
     if (this.timer) clearInterval(this.timer)
     this.panel.remove()
+    
+    // CLEAN: Cleanup phase management system
+    this.phaseManager.destroy()
+    this.onboardingUI.destroy()
+    
+    // MOBILE-FIRST: Cleanup mobile UI
+    mobileUI.destroy()
+  }
+
+  // UNIVERSAL: Setup collapsible functionality for all devices
+  private setupMobileOptimizations(): void {
+    const config = mobileUI.getConfig()
+    
+    // ENHANCEMENT: Enable collapsible for all devices, not just mobile
+    this.isCollapsed = config.isCollapsed
+    
+    // Apply responsive styles for all devices
+    this.applyResponsiveStyles()
+    
+    // Setup collapsible panel for all devices
+    this.setupCollapsiblePanel()
+    
+    // CLEAN: Listen for layout changes
+    mobileUI.onLayoutChange(() => {
+      this.applyResponsiveStyles()
+    })
+    
+    // Add gesture support for mobile devices
+    if (mobileUI.isMobileDevice()) {
+      mobileUI.onSwipeUp(() => {
+        if (this.isCollapsed) this.togglePanel()
+      })
+      
+      mobileUI.onSwipeDown(() => {
+        if (!this.isCollapsed) this.togglePanel()
+      })
+    }
+  }
+
+  private applyResponsiveStyles(): void {
+    // UNIVERSAL: Apply styles for both mobile and desktop
+    const existingStyle = document.getElementById('diagnostic-responsive-styles')
+    if (existingStyle) existingStyle.remove()
+    
+    const style = document.createElement('style')
+    style.id = 'diagnostic-responsive-styles'
+    
+    // Generate styles for both mobile and desktop
+    const mobileStyles = mobileUI.generateResponsiveStyles('.diagnostic-panel')
+    const desktopStyles = this.generateDesktopCollapsibleStyles()
+    
+    style.textContent = mobileStyles + desktopStyles
+    document.head.appendChild(style)
+    
+    // CLEAN: Update panel classes
+    this.panel.classList.toggle('mobile', mobileUI.isMobileDevice())
+    this.panel.classList.toggle('desktop', !mobileUI.isMobileDevice())
+    this.panel.classList.toggle('collapsed', this.isCollapsed)
+  }
+
+  private generateDesktopCollapsibleStyles(): string {
+    return `
+      /* DESKTOP: Collapsible panel styles */
+      @media (min-width: 769px) {
+        .diagnostic-panel.desktop {
+          position: fixed !important;
+          top: 2rem !important;
+          right: 2rem !important;
+          width: 400px !important;
+          max-height: calc(100vh - 4rem) !important;
+          transition: transform 0.3s ease, width 0.3s ease !important;
+          z-index: 1000 !important;
+          border-radius: 12px !important;
+          box-shadow: 0 8px 32px rgba(0, 255, 136, 0.15) !important;
+        }
+        
+        .diagnostic-panel.desktop.collapsed {
+          transform: translateX(calc(100% - 60px)) !important;
+          width: 60px !important;
+        }
+        
+        .diagnostic-panel.desktop .panel-header {
+          background: rgba(0, 20, 40, 0.95) !important;
+          backdrop-filter: blur(10px) !important;
+          border-bottom: 1px solid #00ff88 !important;
+          padding: 1rem !important;
+          min-height: 60px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          cursor: pointer !important;
+          border-radius: 12px 12px 0 0 !important;
+        }
+        
+        .diagnostic-panel.desktop.collapsed .panel-header {
+          border-radius: 12px !important;
+        }
+        
+        .diagnostic-panel.desktop .panel-content {
+          max-height: calc(100vh - 120px) !important;
+          overflow-y: auto !important;
+          padding: 1rem !important;
+        }
+        
+        .diagnostic-panel.desktop.collapsed .panel-content {
+          display: none !important;
+        }
+        
+        .diagnostic-panel.desktop .collapse-indicator {
+          transition: transform 0.3s ease !important;
+          font-size: 1.2rem !important;
+          color: #00ff88 !important;
+          cursor: pointer !important;
+        }
+        
+        .diagnostic-panel.desktop.collapsed .collapse-indicator {
+          transform: rotate(180deg) !important;
+        }
+        
+        /* ENHANCEMENT: Hover effects for desktop */
+        .diagnostic-panel.desktop:hover {
+          box-shadow: 0 12px 40px rgba(0, 255, 136, 0.25) !important;
+        }
+        
+        .diagnostic-panel.desktop .panel-header:hover {
+          background: rgba(0, 30, 60, 0.95) !important;
+        }
+      }
+    `;
+  }
+
+  private setupCollapsiblePanel(): void {
+    // Enable collapsible functionality for all devices (desktop and mobile)
+    const header = this.panel.querySelector('.panel-header') as HTMLElement
+    if (header) {
+      header.style.cursor = 'pointer'
+      header.addEventListener('click', () => this.togglePanel())
+      
+      // Add visual indicator
+      const indicator = document.createElement('div')
+      indicator.innerHTML = '⌄'
+      indicator.className = 'collapse-indicator'
+      indicator.style.cssText = `
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%) rotate(${this.isCollapsed ? '180deg' : '0deg'});
+        transition: transform 0.3s ease;
+        font-size: 1.2rem;
+        color: #00ff88;
+        pointer-events: none;
+      `
+      header.style.position = 'relative'
+      header.appendChild(indicator)
+    }
+  }
+
+  private togglePanel(): void {
+    this.isCollapsed = !this.isCollapsed
+    this.panel.classList.toggle('collapsed', this.isCollapsed)
+    
+    // Update indicator rotation
+    const indicator = this.panel.querySelector('.collapse-indicator') as HTMLElement
+    if (indicator) {
+      indicator.style.transform = `translateY(-50%) rotate(${this.isCollapsed ? '180deg' : '0deg'})`
+    }
   }
 }
