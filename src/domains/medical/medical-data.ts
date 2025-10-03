@@ -9,6 +9,7 @@ export interface MedicalCondition {
   position: { x: number; y: number; z: number }
   requiredModel: 'head' | 'torso' | 'fullbody'
   visibleIn: string[]
+  scanTimeRequired?: number
 }
 
 // CLEAN: Consolidated medical conditions for all models
@@ -61,8 +62,8 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
 
 // PERFORMANT: Model-specific condition filtering
 export const getConditionsForModel = (model: string): MedicalCondition[] => {
-  return MEDICAL_CONDITIONS.filter(condition => 
-    condition.requiredModel === model || 
+  return MEDICAL_CONDITIONS.filter(condition =>
+    condition.requiredModel === model ||
     condition.visibleIn.includes(model)
   )
 }

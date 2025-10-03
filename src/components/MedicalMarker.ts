@@ -28,16 +28,16 @@ export class MedicalMarker {
       transparent: true,
       opacity: 0.8
     })
-    
+
     this.marker = new THREE.Mesh(geometry, material)
-    
+
     // Set position from config
     this.marker.position.set(
       this.config.position.x,
       this.config.position.y,
       this.config.position.z
     )
-    
+
     this.markerGroup.add(this.marker)
     this.markerGroup.position.copy(this.marker.position)
   }
@@ -65,6 +65,18 @@ export class MedicalMarker {
   // CLEAN: Public interface
   getMarkerGroup(): THREE.Group {
     return this.markerGroup
+  }
+
+  showAROverlay(): void {
+    // Simple show implementation
+    this.markerGroup.visible = true
+  }
+
+  markAsDiscovered(): void {
+    // Update marker appearance for discovered state
+    const material = this.marker.material as THREE.MeshBasicMaterial
+    material.color.setHex(0x00ff88) // Change to green when discovered
+    material.opacity = 1.0
   }
 
   hideAROverlay(): void {

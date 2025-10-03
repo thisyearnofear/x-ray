@@ -28,7 +28,7 @@ export class CerebrasService {
       })
 
       for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content
+        const content = (chunk as any).choices[0]?.delta?.content
         if (content) yield content
       }
     } catch (error) {
@@ -52,13 +52,13 @@ export class CerebrasService {
         max_tokens: 500
       })
 
-      const content = completion.choices[0]?.message?.content?.trim()
+      const content = (completion as any).choices[0]?.message?.content?.trim()
       if (!content) throw new Error('Empty response')
 
       // CLEAN: Extract JSON from response
       const jsonMatch = content.match(/\{[\s\S]*\}/)
       const jsonStr = jsonMatch ? jsonMatch[0] : content
-      
+
       return { success: true, data: JSON.parse(jsonStr) }
 
     } catch (error) {
@@ -73,7 +73,7 @@ export class CerebrasService {
       torso: { condition: 'thoracic strain', area: 'upper back' },
       fullbody: { condition: 'lumbar strain', area: 'lower back' }
     }
-    
+
     const caseInfo = cases[model as keyof typeof cases] || cases.head
 
     return {

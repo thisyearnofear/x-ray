@@ -337,6 +337,16 @@ export class DiagnosticUI {
     // Game over logic here
   }
 
+  updateScanProgress(conditionId: string, progress: number): void {
+    // Update UI to show scanning progress for the condition
+    console.log(`Scan progress for ${conditionId}: ${progress}`)
+  }
+
+  discoverCondition(conditionId: string): void {
+    // Handle condition discovery
+    console.log(`Condition discovered: ${conditionId}`)
+  }
+
   destroy() {
     if (this.timer) clearInterval(this.timer)
     this.panel.remove()

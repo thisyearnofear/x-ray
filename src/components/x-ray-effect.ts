@@ -86,28 +86,7 @@ export default class XRayEffect {
     this.createSkeleton()
     this.initializeMedicalMarkers()
     this.instructionsPanel = new InstructionsPanel()
-    this.diagnosticUI = new DiagnosticUI({
-      onAnalysisStart: (conditionId) => {
-        // PERFORMANT: Visual feedback on marker during analysis
-        const marker = this.medicalMarkers.get(conditionId)
-        if (marker) {
-          const group = marker.getMarkerGroup()
-          group.scale.setScalar(1.2) // Subtle scale animation
-        }
-      },
-      onAnalysisChunk: (chunk, conditionId) => {
-        // CLEAN: Real-time streaming feedback
-        console.log(`📊 Analysis chunk for ${conditionId}:`, chunk.slice(0, 50) + '...')
-      },
-      onAnalysisComplete: (conditionId) => {
-        // PERFORMANT: Reset marker scale
-        const marker = this.medicalMarkers.get(conditionId)
-        if (marker) {
-          const group = marker.getMarkerGroup()
-          group.scale.setScalar(1.0)
-        }
-      }
-    })
+    this.diagnosticUI = new DiagnosticUI()
 
     // PREVENT BLOAT: Single event listener with cleanup
     this.keyHandler = (event: KeyboardEvent) => this.onPressKey(event)
@@ -259,7 +238,7 @@ export default class XRayEffect {
   initializeMedicalMarkers() {
     // INTEGRATION: Only create markers for conditions visible in current model
     this.updateMarkersForCurrentModel()
-    
+
     // CLEAN: Ensure markers are visible by default
     console.log('Initializing medical markers for model:', this.currentModel)
   }
@@ -365,12 +344,12 @@ export default class XRayEffect {
 
     const medicalMarker = new MedicalMarker(markerOptions);
     const markerGroup = medicalMarker.getMarkerGroup();
-    
+
     // CLEAN: Ensure markers are visible and properly positioned
     markerGroup.visible = true;
     this.scene.add(markerGroup);
     this.medicalMarkers.set(condition.id, medicalMarker);
-    
+
     console.log(`Created marker for ${condition.id} at position:`, markerGroup.position);
   }
 
