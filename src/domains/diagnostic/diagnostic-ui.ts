@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { CerebrasService } from '../medical/cerebras-service'
 import { getConditionsForModel, type MedicalCondition } from '../medical/medical-data'
 import { GamePhaseManager, GamePhase } from './game-phase-manager'
-import { OnboardingUI } from './onboarding-ui'
+// OnboardingUI consolidated into DiagnosticUI
 import { adaptiveLoader, performanceMonitor } from '../../utils/adaptive-loading'
 import { mobileUI } from './mobile-ui'
 
@@ -26,7 +26,7 @@ export class DiagnosticUI {
   
   // MODULAR: Enhanced onboarding system
   private phaseManager: GamePhaseManager
-  private onboardingUI: OnboardingUI
+  private onboardingContainer: HTMLElement | null = null
   
   // MOBILE-FIRST: Responsive design support
   private isCollapsed: boolean = false
@@ -36,7 +36,7 @@ export class DiagnosticUI {
     
     // CLEAN: Initialize phase management system
     this.phaseManager = new GamePhaseManager()
-    this.onboardingUI = new OnboardingUI(this.phaseManager)
+    this.setupOnboardingSystem()
     
     this.createGamePanel()
     this.setupPhaseIntegration()
@@ -431,7 +431,7 @@ export class DiagnosticUI {
     
     // CLEAN: Cleanup phase management system
     this.phaseManager.destroy()
-    this.onboardingUI.destroy()
+    this.cleanupOnboarding()
     
     // MOBILE-FIRST: Cleanup mobile UI
     mobileUI.destroy()
@@ -593,6 +593,193 @@ export class DiagnosticUI {
     const indicator = this.panel.querySelector('.collapse-indicator') as HTMLElement
     if (indicator) {
       indicator.style.transform = `translateY(-50%) rotate(${this.isCollapsed ? '180deg' : '0deg'})`
+    }
+  }
+
+  // CONSOLIDATED: OnboardingUI functionality integrated into DiagnosticUI
+  private setupOnboardingSystem(): void {
+    this.createOnboardingContainer()
+    this.setupOnboardingPhaseListeners()
+  }
+
+  private createOnboardingContainer(): void {
+    this.onboardingContainer = document.createElement('div')
+    this.onboardingContainer.className = 'onboarding-overlay'
+    this.onboardingContainer.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.95); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.5s ease; pointer-events: none;
+      padding: 1rem; box-sizing: border-box;
+    `
+    document.body.appendChild(this.onboardingContainer)
+  }
+
+  private setupOnboardingPhaseListeners(): void {
+    this.phaseManager.onPhaseChange(GamePhase.WELCOME, () => this.showWelcomePanel())
+    this.phaseManager.onPhaseChange(GamePhase.TUTORIAL, () => this.showTutorialPanel())
+    this.phaseManager.onPhaseChange(GamePhase.EXPLORATION, () => this.showExplorationPanel())
+    this.phaseManager.onPhaseChange(GamePhase.READY, () => this.showReadyPanel())
+    this.phaseManager.onPhaseChange(GamePhase.ACTIVE, () => this.hideOnboarding())
+    this.phaseManager.onPhaseChange(GamePhase.COMPLETE, () => this.showCompletePanel())
+  }
+
+  private showOnboardingPanel(content: string, actions: Array<{text: string, action: () => void, primary?: boolean}>): void {
+    if (!this.onboardingContainer) return
+
+    this.onboardingContainer.innerHTML = ''
+    
+    const panel = document.createElement('div')
+    panel.className = 'onboarding-panel'
+    
+    const isMobile = mobileUI.isMobileDevice()
+    const config = mobileUI.getConfig()
+    
+    panel.style.cssText = `
+      background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
+      border: 2px solid #00ff88; border-radius: ${isMobile ? '12px' : '16px'};
+      padding: ${isMobile ? '1.5rem' : '2rem'}; max-width: ${isMobile ? '100%' : '600px'};
+      width: ${isMobile ? '100%' : '90%'}; max-height: ${isMobile ? '85vh' : 'auto'};
+      overflow-y: ${isMobile ? 'auto' : 'visible'};
+      box-shadow: 0 20px 40px rgba(0, 255, 136, 0.2);
+      animation: slideIn 0.5s ease-out; font-size: ${config.fontSize}px;
+    `
+
+    panel.innerHTML = `
+      <div class="panel-content" style="color: #ffffff; line-height: 1.6;">${content}</div>
+      <div class="panel-actions" style="margin-top: ${isMobile ? '1.5rem' : '2rem'}; display: flex; gap: ${isMobile ? '0.75rem' : '1rem'}; justify-content: flex-end; flex-wrap: wrap;">
+        ${actions.map(action => `
+          <button class="action-btn ${action.primary ? 'primary' : 'secondary'}" 
+                  style="padding: ${isMobile ? '0.875rem 1.25rem' : '0.75rem 1.5rem'}; border: 2px solid ${action.primary ? '#00ff88' : '#666'}; background: ${action.primary ? '#00ff88' : 'transparent'}; color: ${action.primary ? '#000' : '#00ff88'}; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: ${isMobile ? '16px' : '14px'}; min-height: ${isMobile ? '44px' : 'auto'}; min-width: ${isMobile ? '120px' : 'auto'}; transition: all 0.3s ease; flex: ${isMobile ? '1' : 'none'};"
+                  onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            ${action.text}
+          </button>
+        `).join('')}
+      </div>
+    `
+
+    // Attach event listeners
+    const buttons = panel.querySelectorAll('.action-btn')
+    buttons.forEach((btn, index) => {
+      btn.addEventListener('click', actions[index].action)
+    })
+
+    this.onboardingContainer.appendChild(panel)
+    this.showOnboarding()
+  }
+
+  private showWelcomePanel(): void {
+    const isMobile = mobileUI.isMobileDevice()
+    const content = `
+      <div style="text-align: center;">
+        <h1 style="color: #00ff88; font-size: ${isMobile ? '2rem' : '2.5rem'}; margin-bottom: 1rem; text-shadow: 0 0 20px rgba(0, 255, 136, 0.5); line-height: 1.2;">
+          🏥 X-RAI Medical Simulator
+        </h1>
+        <div style="background: rgba(0, 255, 136, 0.1); padding: ${isMobile ? '1rem' : '1.5rem'}; border-radius: 12px; margin: ${isMobile ? '1rem 0' : '1.5rem 0'};">
+          <h2 style="color: #00ff88; margin-bottom: 1rem; font-size: ${isMobile ? '1.3rem' : '1.5rem'};">📋 Patient Briefing</h2>
+          <p style="font-size: ${isMobile ? '1rem' : '1.1rem'}; margin-bottom: 1rem; line-height: 1.5;">
+            <strong>Emergency Department - 14:30</strong><br>You are the attending physician on duty. A new patient has arrived with concerning symptoms.
+          </p>
+          <p style="color: #ffaa00; font-weight: bold; font-size: ${isMobile ? '0.95rem' : '1rem'};">🚨 Your diagnostic skills are needed immediately</p>
+        </div>
+        <p style="font-size: ${isMobile ? '0.85rem' : '0.9rem'}; opacity: 0.8; margin-top: ${isMobile ? '1rem' : '1.5rem'}; line-height: 1.4;">
+          Powered by <strong>Cerebras AI</strong> and <strong>Meta Llama 4</strong> for ultra-fast, realistic medical simulations.
+        </p>
+      </div>
+    `
+    this.showOnboardingPanel(content, [
+      { text: isMobile ? 'Skip' : 'Skip Tutorial', action: () => this.phaseManager.transitionTo(GamePhase.EXPLORATION) },
+      { text: isMobile ? 'Tutorial' : 'Start Tutorial', action: () => this.phaseManager.transitionTo(GamePhase.TUTORIAL), primary: true }
+    ])
+  }
+
+  private showTutorialPanel(): void {
+    const content = `
+      <div style="text-align: center;">
+        <h2 style="color: #00ff88; margin-bottom: 1rem;">🔍 X-Ray Navigation</h2>
+        <div style="background: rgba(0, 255, 136, 0.1); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
+          <p style="font-size: 1.1rem; line-height: 1.6;">Use your mouse to rotate and zoom the 3D model. Look for anatomical markers and abnormalities.</p>
+        </div>
+      </div>
+    `
+    this.showOnboardingPanel(content, [
+      { text: 'Previous', action: () => this.phaseManager.transitionTo(GamePhase.WELCOME) },
+      { text: 'Start Exploring', action: () => this.phaseManager.transitionTo(GamePhase.EXPLORATION), primary: true }
+    ])
+  }
+
+  private showExplorationPanel(): void {
+    const content = `
+      <div style="text-align: center;">
+        <h2 style="color: #00ff88; margin-bottom: 1rem;">🔬 Explore the Patient</h2>
+        <div style="background: rgba(0, 255, 136, 0.1); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
+          <p style="font-size: 1.1rem; margin-bottom: 1rem;">Take your time to examine the 3D model. Rotate, zoom, and identify key anatomical structures.</p>
+          <p style="color: #ffaa00; font-weight: bold;">💡 The more you explore, the better prepared you'll be for diagnosis!</p>
+        </div>
+      </div>
+    `
+    this.showOnboardingPanel(content, [
+      { text: 'Back to Tutorial', action: () => this.phaseManager.transitionTo(GamePhase.TUTORIAL) },
+      { text: 'I\'m Ready!', action: () => this.phaseManager.transitionTo(GamePhase.READY), primary: true }
+    ])
+  }
+
+  private showReadyPanel(): void {
+    const content = `
+      <div style="text-align: center;">
+        <h2 style="color: #00ff88; margin-bottom: 1rem;">🚀 Ready for Diagnosis</h2>
+        <div style="background: rgba(255, 170, 0, 0.1); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0; border: 1px solid #ffaa00;">
+          <h3 style="color: #ffaa00; margin-bottom: 1rem;">⚠️ Final Briefing</h3>
+          <p style="font-size: 1.1rem; margin-bottom: 1rem;">Once you start the timer, you'll have <strong>5 minutes</strong> to make your diagnosis.</p>
+          <p style="color: #00ff88; font-weight: bold;">🎯 Remember: Accuracy and speed both matter!</p>
+        </div>
+      </div>
+    `
+    this.showOnboardingPanel(content, [
+      { text: 'More Practice', action: () => this.phaseManager.transitionTo(GamePhase.EXPLORATION) },
+      { text: 'Start Diagnosis!', action: () => this.phaseManager.transitionTo(GamePhase.ACTIVE), primary: true }
+    ])
+  }
+
+  private showCompletePanel(): void {
+    const state = this.phaseManager.getState()
+    const content = `
+      <div style="text-align: center;">
+        <h2 style="color: #00ff88; margin-bottom: 1rem;">🏆 Diagnosis Complete</h2>
+        <div style="background: rgba(0, 255, 136, 0.1); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
+          <h3 style="color: #00ff88; font-size: 2rem; margin-bottom: 1rem;">Score: ${state.score}</h3>
+          <p style="font-size: 1.1rem;">Time Used: ${Math.floor((300 - state.timeRemaining) / 60)}:${String((300 - state.timeRemaining) % 60).padStart(2, '0')}</p>
+        </div>
+        <p style="opacity: 0.9;">Thank you for using X-RAI Medical Simulator powered by Cerebras AI and Meta Llama 4.</p>
+      </div>
+    `
+    this.showOnboardingPanel(content, [
+      { text: 'New Case', action: () => this.phaseManager.transitionTo(GamePhase.WELCOME), primary: true }
+    ])
+  }
+
+  private showOnboarding(): void {
+    if (this.onboardingContainer) {
+      this.onboardingContainer.style.pointerEvents = 'auto'
+      this.onboardingContainer.style.opacity = '1'
+    }
+  }
+
+  private hideOnboarding(): void {
+    if (this.onboardingContainer) {
+      this.onboardingContainer.style.opacity = '0'
+      setTimeout(() => {
+        if (this.onboardingContainer) {
+          this.onboardingContainer.style.pointerEvents = 'none'
+        }
+      }, 500)
+    }
+  }
+
+  private cleanupOnboarding(): void {
+    if (this.onboardingContainer) {
+      this.onboardingContainer.remove()
+      this.onboardingContainer = null
     }
   }
 }

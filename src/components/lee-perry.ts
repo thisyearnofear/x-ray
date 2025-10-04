@@ -17,12 +17,25 @@ export default class LeePerry {
 
   constructor({ scene }: Props) {
     this.scene = scene
-    this.processingCanvas = document.createElement('canvas')
-    this.processingCtx = this.processingCanvas.getContext('2d')!
+    
+    // Only create canvas elements in browser environment
+    if (typeof window !== 'undefined') {
+      this.processingCanvas = document.createElement('canvas')
+      this.processingCtx = this.processingCanvas.getContext('2d')!
+    }
+    
     this.loadMapTexture()
     this.importModel()
     this.initializeFaceAPI()
     this.setupUploadInterface()
+  }
+
+  private ensureCanvas(): boolean {
+    if (!this.processingCanvas || !this.processingCtx) {
+      console.warn('Canvas not available in SSR environment');
+      return false;
+    }
+    return true;
   }
 
   importModel() {
@@ -35,7 +48,6 @@ export default class LeePerry {
           child.material = new THREE.MeshStandardMaterial({
             map: this.mapTexture,
             normalMap: this.normalTexture,
-            //transparent: true,
           })
         }
       })
@@ -267,7 +279,7 @@ export default class LeePerry {
 
   async procesWithCerebras(img: HTMLImageElement): Promise<THREE.Texture | null> {
     try {
-      console.log('🧠 Processing with Cerebras ultra-fast inference...')
+      console.log('Processing with Cerebras ultra-fast inference...')
       
       // Cerebras API call for face processing analysis
       const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
@@ -294,13 +306,13 @@ export default class LeePerry {
       const data = await response.json()
       const analysis = data.choices?.[0]?.message?.content
       
-      console.log('🧠 Cerebras analysis:', analysis)
+      console.log('Cerebras analysis:', analysis)
       
       if (analysis) {
         try {
           const faceData = JSON.parse(analysis)
           if (faceData.x !== undefined && faceData.y !== undefined) {
-            console.log('✅ Cerebras face region detected:', faceData)
+            console.log('Cerebras face region detected:', faceData)
             return this.extractFaceRegionFromPercentages(img, faceData)
           }
         } catch (parseError) {
@@ -308,7 +320,7 @@ export default class LeePerry {
         }
       }
     } catch (error) {
-      console.warn('⚡ Cerebras API unavailable, using fallback:', error)
+      console.warn('Cerebras API unavailable, using fallback:', error)
     }
     
     return null
@@ -343,7 +355,7 @@ export default class LeePerry {
 
   extractFaceRegionFromPercentages(img: HTMLImageElement, faceData: any): THREE.Texture {
     // IMPROVED: Better face detection and UV mapping for Lee Perry Smith model
-    console.log('🎯 Cerebras face data:', faceData)
+    console.log('Cerebras face data:', faceData)
     
     // Use smart defaults if Cerebras provides generic response
     const faceX = faceData.x || 0.5

@@ -8,9 +8,21 @@ body {
   overflow: hidden;
 }
 
+main {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+
 canvas {
   display: block;
   background: #000000;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1;
 }
 
 /* ENHANCEMENT: Challenge UI animations */

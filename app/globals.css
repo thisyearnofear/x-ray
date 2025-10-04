@@ -1,0 +1,31 @@
+@import '../src/style.css';
+
+html, body, :root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* prevent scrollbars for full-bleed canvas */
+  background: #0b0b0b; /* subtle dark backdrop */
+}
+
+main {
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+/* Ensure WebGL canvas fills the viewport and sits behind/under UI */
+#webgl {
+  position: fixed !important;
+  inset: 0 !important; /* top:0; right:0; bottom:0; left:0 */
+  width: 100vw !important;
+  height: 100vh !important;
+  display: block;
+  z-index: 0;
+  pointer-events: auto; /* keep interactivity for drag/drop and dblclick */
+}

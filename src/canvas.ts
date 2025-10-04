@@ -35,8 +35,12 @@ export default class Canvas {
   // Audio system
   audioManager: AudioManager
 
-  constructor() {
-    this.element = document.getElementById("webgl") as HTMLCanvasElement
+  // Control RAF and listeners
+  private _rafId: number | null = null
+  private _disposed = false
+
+  constructor(canvasElement: HTMLCanvasElement) {
+    this.element = canvasElement
     this.time = 0
     this.isMobile = window.innerWidth < 768
 
@@ -120,6 +124,17 @@ export default class Canvas {
   }
 
   createRenderer() {
+    // Force canvas to full size
+    this.element.style.width = '100vw';
+    this.element.style.height = '100vh';
+    this.element.style.position = 'fixed';
+    this.element.style.top = '0';
+    this.element.style.left = '0';
+    
+    console.log('Canvas element size:', this.element.clientWidth, 'x', this.element.clientHeight);
+    console.log('Window size:', window.innerWidth, 'x', window.innerHeight);
+    console.log('Dimensions:', this.dimensions);
+    
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.element,
       antialias: true,
@@ -130,6 +145,8 @@ export default class Canvas {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 1.2
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
+    
+    console.log('Renderer size set to:', this.dimensions.width, 'x', this.dimensions.height);
   }
 
   createPostProcessing() {
@@ -138,22 +155,17 @@ export default class Canvas {
     this.composer.addPass(renderPass)
   }
 
-  onMouseMove(event: MouseEvent) {
+  onMouseMove = (event: MouseEvent) => {
+    if (this._disposed) return;
     // Store normalized device coordinates for raycasting
     const ndcX = (event.clientX / window.innerWidth) * 2 - 1
     const ndcY = -(event.clientY / window.innerHeight) * 2 + 1
 
     // Store 0-1 range coordinates for XRayEffect
-    // Shader expects (0,0) at bottom-left and (1,1) at top-right
-    // So we invert Y: screen Y (0 at top) -> shader Y (1 at top)
     const xRayX = event.clientX / window.innerWidth
     const xRayY = 1 - event.clientY / window.innerHeight
 
-    // Pass 0-1 range coordinates to XRayEffect
-    this.xRayEffect?.onMouseMove({
-      x: xRayX,
-      y: xRayY,
-    })
+    this.xRayEffect?.onMouseMove({ x: xRayX, y: xRayY })
 
     // Use NDC coordinates for raycasting
     this.mouse.x = ndcX
@@ -170,12 +182,13 @@ export default class Canvas {
   }
 
   addEventListeners() {
-    window.addEventListener("mousemove", this.onMouseMove.bind(this))
-    window.addEventListener("click", this.onMouseClick.bind(this))
-    window.addEventListener("resize", this.onResize.bind(this))
+    window.addEventListener("mousemove", this.onMouseMove)
+    window.addEventListener("click", this.onMouseClick)
+    window.addEventListener("resize", this.onResize)
   }
 
-  onMouseClick(event: MouseEvent) {
+  onMouseClick = (event: MouseEvent) => {
+    if (this._disposed) return;
     this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1
     this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
     this.raycaster.setFromCamera(this.mouse, this.camera)
@@ -184,7 +197,8 @@ export default class Canvas {
     this.xRayEffect?.handleMedicalConditionClick(intersects)
   }
 
-  onResize() {
+  onResize = () => {
+    if (this._disposed) return;
     this.dimensions = {
       width: window.innerWidth,
       height: window.innerHeight,
@@ -211,6 +225,7 @@ export default class Canvas {
   }
 
   render() {
+    if (this._disposed) return;
     this.time = this.clock.getElapsedTime()
 
     this.orbitControls.update()
@@ -218,6 +233,9 @@ export default class Canvas {
     this.xRayEffect?.render()
 
     this.composer.render()
+
+    // Continue the animation loop
+    this._rafId = requestAnimationFrame(() => this.render())
   }
 
   // Enhanced mobile methods
@@ -229,13 +247,13 @@ export default class Canvas {
       this.renderer,
       {
         onScaleChange: (scale: number) => {
-          console.log('🔍 X-ray scale changed:', scale)
+          console.log('X-ray scale changed:', scale)
           if (this.xRayEffect) {
             this.xRayEffect.setScale(scale)
           }
         },
         onToggleConditions: () => {
-          console.log('🔍 Toggle conditions requested')
+          console.log('Toggle conditions requested')
           if (this.xRayEffect) {
             this.xRayEffect.toggleConditions()
           }
@@ -246,17 +264,38 @@ export default class Canvas {
     // Create mobile camera for face upload
     this.mobileCamera = new MobileCamera({
       onImageCaptured: (imageData: string, faceDetection: any) => {
-        console.log('📸 Face image captured:', { faceDetection })
+        console.log('Face image captured:', { faceDetection })
       },
       onFaceDetected: (detection: any) => {
         console.log('Face detected:', detection)
       },
       onError: (error: string) => {
-        console.error('📷 Camera error:', error)
+        console.error('Camera error:', error)
       },
       onPermissionGranted: () => {
-        console.log('📷 Camera permission granted')
+        console.log('Camera permission granted')
       }
     })
+  }
+
+  dispose() {
+    this._disposed = true
+    if (this._rafId !== null) cancelAnimationFrame(this._rafId)
+    window.removeEventListener("mousemove", this.onMouseMove)
+    window.removeEventListener("click", this.onMouseClick)
+    window.removeEventListener("resize", this.onResize)
+    try { this.xRayEffect?.destroy() } catch {}
+    try { this.renderer?.dispose() } catch {}
+    // Clean up scene resources
+    if (this.scene) {
+      this.scene.traverse((obj: any) => {
+        if ((obj as any).geometry) (obj as any).geometry.dispose?.()
+        if ((obj as any).material) {
+          const m = (obj as any).material
+          if (Array.isArray(m)) m.forEach(mm => mm.dispose?.())
+          else m.dispose?.()
+        }
+      })
+    }
   }
 }
