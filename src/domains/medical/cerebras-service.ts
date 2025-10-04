@@ -66,4 +66,90 @@ export class CerebrasService {
       yield fallback
     }
   }
+
+  // MISSING: Dynamic case generation that was removed during consolidation
+  async generateMedicalCase(anatomicalModel: string, difficulty: number = 1): Promise<any> {
+    const cacheKey = cerebrasCache.generateCaseKey(anatomicalModel, difficulty)
+    const cached = cerebrasCache.get(cacheKey)
+    
+    if (cached) {
+      console.log('Using cached medical case:', cached.patientName)
+      return cached
+    }
+
+    try {
+      const response = await fetch('/api/medical-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          condition: `Generate a realistic medical case for ${anatomicalModel} with difficulty level ${difficulty}. Include patient details, symptoms, and conditions to discover.` 
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Case generation failed')
+      }
+
+      const data = await response.json()
+      const content = data.choices?.[0]?.message?.content || ''
+      
+      const medicalCase = this.parseGeneratedCase(content, anatomicalModel, difficulty)
+      cerebrasCache.set(cacheKey, medicalCase, 300000)
+      
+      return medicalCase
+      
+    } catch (error) {
+      console.warn('Case generation failed, using fallback:', error)
+      return this.createFallbackCase(anatomicalModel, difficulty)
+    }
+  }
+
+  private parseGeneratedCase(content: string, anatomicalModel: string, difficulty: number): any {
+    return {
+      patientName: `Patient ${Math.floor(Math.random() * 1000)}`,
+      age: 25 + Math.floor(Math.random() * 50),
+      gender: Math.random() > 0.5 ? 'Male' : 'Female',
+      chiefComplaint: this.extractChiefComplaint(content),
+      anatomicalModel,
+      difficulty,
+      conditions: this.getConditionsForModel(anatomicalModel),
+      aiDescription: content,
+      timeLimit: 300 - (difficulty * 60)
+    }
+  }
+
+  private extractChiefComplaint(content: string): string {
+    const complaints = [
+      'Experiencing persistent pain and discomfort',
+      'Reports unusual symptoms requiring investigation', 
+      'Seeking medical evaluation for concerning issues',
+      'Presenting with symptoms affecting daily activities'
+    ]
+    return complaints[Math.floor(Math.random() * complaints.length)]
+  }
+
+  private getConditionsForModel(anatomicalModel: string): string[] {
+    const modelConditions: Record<string, string[]> = {
+      head: ['temporomandibular_disorder', 'cervical_strain'],
+      torso: ['thoracic_strain'],
+      fullbody: ['lumbar_strain']
+    }
+    return modelConditions[anatomicalModel] || modelConditions.head
+  }
+
+  private createFallbackCase(anatomicalModel: string, difficulty: number): any {
+    return {
+      patientName: `Emergency Patient ${Math.floor(Math.random() * 100)}`,
+      age: 30 + Math.floor(Math.random() * 40),
+      gender: Math.random() > 0.5 ? 'Male' : 'Female',
+      chiefComplaint: 'Patient requires immediate diagnostic evaluation',
+      anatomicalModel,
+      difficulty,
+      conditions: this.getConditionsForModel(anatomicalModel),
+      aiDescription: `Emergency case requiring ${anatomicalModel} examination. Use X-ray scanning to identify conditions.`,
+      timeLimit: 300
+    }
+  }
 }

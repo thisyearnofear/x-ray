@@ -129,7 +129,7 @@
   "handle_links": "preferred",
   "protocol_handlers": [
     {
-      "protocol": "x-rai-diagnostic",
+      "protocol": "web+x-rai-diagnostic",
       "url": "/?protocol=%s"
     }
   ]

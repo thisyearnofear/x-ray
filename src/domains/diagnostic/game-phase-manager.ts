@@ -41,6 +41,14 @@ export class GamePhaseManager {
 
   // PERFORMANT: Efficient phase transitions with validation
   transitionTo(newPhase: GamePhase): boolean {
+    // Allow same-phase transitions for welcome screen
+    if (this.currentPhase === newPhase && newPhase === GamePhase.WELCOME) {
+      this.onPhaseEnter(newPhase, this.currentPhase)
+      const phaseListeners = this.listeners.get(newPhase) || []
+      phaseListeners.forEach(listener => listener())
+      return true
+    }
+    
     if (!this.isValidTransition(this.currentPhase, newPhase)) {
       console.warn(`Invalid transition from ${this.currentPhase} to ${newPhase}`)
       return false

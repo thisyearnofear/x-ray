@@ -23,6 +23,7 @@ export class DiagnosticUI {
   private panel: HTMLElement
   private timer: NodeJS.Timeout | null = null
   private currentCondition: MedicalCondition | null = null
+  private currentCase: any = null
   
   // MODULAR: Enhanced onboarding system
   private phaseManager: GamePhaseManager
@@ -46,7 +47,10 @@ export class DiagnosticUI {
     const strategy = adaptiveLoader.getStrategy()
     console.log('Adaptive loading strategy:', strategy)
     
-    // CLEAN: Phase manager starts in WELCOME by default, no need to transition
+    // CLEAN: Phase manager starts in WELCOME by default, manually trigger welcome panel
+    setTimeout(() => {
+      this.showWelcomePanel()
+    }, 100)
   }
 
   // PERFORMANT: Minimal DOM with premium visual effects
@@ -668,20 +672,32 @@ export class DiagnosticUI {
     this.showOnboarding()
   }
 
-  private showWelcomePanel(): void {
+  private async showWelcomePanel(): Promise<void> {
+    // Generate a new medical case when starting
+    await this.generateNewCase()
+    
     const isMobile = mobileUI.isMobileDevice()
+    const caseInfo = this.currentCase ? `
+      <div style="background: rgba(255, 170, 0, 0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0; border: 1px solid #ffaa00;">
+        <h3 style="color: #ffaa00; margin-bottom: 0.5rem;">New Case Generated</h3>
+        <p style="margin: 0; font-size: 0.9rem;"><strong>${this.currentCase.patientName}</strong> - ${this.currentCase.age}yr ${this.currentCase.gender}</p>
+        <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; opacity: 0.9;">${this.currentCase.chiefComplaint}</p>
+      </div>
+    ` : ''
+    
     const content = `
       <div style="text-align: center;">
         <h1 style="color: #00ff88; font-size: ${isMobile ? '2rem' : '2.5rem'}; margin-bottom: 1rem; text-shadow: 0 0 20px rgba(0, 255, 136, 0.5); line-height: 1.2;">
-          🏥 X-RAI Medical Simulator
+          X-RAI Medical Simulator
         </h1>
         <div style="background: rgba(0, 255, 136, 0.1); padding: ${isMobile ? '1rem' : '1.5rem'}; border-radius: 12px; margin: ${isMobile ? '1rem 0' : '1.5rem 0'};">
-          <h2 style="color: #00ff88; margin-bottom: 1rem; font-size: ${isMobile ? '1.3rem' : '1.5rem'};">📋 Patient Briefing</h2>
+          <h2 style="color: #00ff88; margin-bottom: 1rem; font-size: ${isMobile ? '1.3rem' : '1.5rem'};">Patient Briefing</h2>
           <p style="font-size: ${isMobile ? '1rem' : '1.1rem'}; margin-bottom: 1rem; line-height: 1.5;">
             <strong>Emergency Department - 14:30</strong><br>You are the attending physician on duty. A new patient has arrived with concerning symptoms.
           </p>
-          <p style="color: #ffaa00; font-weight: bold; font-size: ${isMobile ? '0.95rem' : '1rem'};">🚨 Your diagnostic skills are needed immediately</p>
+          <p style="color: #ffaa00; font-weight: bold; font-size: ${isMobile ? '0.95rem' : '1rem'};">Your diagnostic skills are needed immediately</p>
         </div>
+        ${caseInfo}
         <p style="font-size: ${isMobile ? '0.85rem' : '0.9rem'}; opacity: 0.8; margin-top: ${isMobile ? '1rem' : '1.5rem'}; line-height: 1.4;">
           Powered by <strong>Cerebras AI</strong> and <strong>Meta Llama 4</strong> for ultra-fast, realistic medical simulations.
         </p>
@@ -691,6 +707,17 @@ export class DiagnosticUI {
       { text: isMobile ? 'Skip' : 'Skip Tutorial', action: () => this.phaseManager.transitionTo(GamePhase.EXPLORATION) },
       { text: isMobile ? 'Tutorial' : 'Start Tutorial', action: () => this.phaseManager.transitionTo(GamePhase.TUTORIAL), primary: true }
     ])
+  }
+
+  private async generateNewCase(): Promise<void> {
+    try {
+      console.log('Generating new medical case...')
+      this.currentCase = await this.cerebras.generateMedicalCase('head', 1)
+      console.log('Case generated:', this.currentCase.patientName)
+    } catch (error) {
+      console.error('Failed to generate case:', error)
+      this.currentCase = null
+    }
   }
 
   private showTutorialPanel(): void {
