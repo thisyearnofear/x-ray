@@ -77,6 +77,8 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 3. **Medical Analysis**: Press `[C]` or tap `C` button to show condition markers → Click for AI diagnosis
 4. **Expand View**: Press `[E]` for full X-ray expansion effect
 5. **Dynamic Markers**: Discovered conditions change appearance (cyan color, larger size) for easy tracking
+6. **🎵 Dynamic Audio**: Contextual medical audio generated per session using ElevenLabs AI
+7. **🎯 Centered UI**: High-fidelity diagnostic panel with glassmorphic design and real-time updates
 
 ## 🧠 AI Integration
 

@@ -29,3 +29,471 @@ main {
   z-index: 0;
   pointer-events: auto; /* keep interactivity for drag/drop and dblclick */
 }
+
+/* ENHANCEMENT FIRST: Enhanced diagnostic panel styling */
+.diagnostic-game-panel .timer-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.diagnostic-game-panel .timer-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #00ff88;
+  text-shadow: 0 0 15px rgba(0,255,136,0.8);
+  font-variant-numeric: tabular-nums;
+}
+
+.diagnostic-game-panel .timer-bar {
+  width: 80px;
+  height: 6px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 3px;
+  border: 1px solid rgba(0,255,136,0.3);
+  overflow: hidden;
+  position: relative;
+}
+
+.diagnostic-game-panel .timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00ff88, #00cc6a);
+  border-radius: 2px;
+  width: 100%;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 10px rgba(0,255,136,0.5);
+  position: relative;
+}
+
+.diagnostic-game-panel .timer-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+/* Enhanced score display */
+.diagnostic-game-panel .score-value {
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.5px;
+}
+
+/* Enhanced action buttons */
+.diagnostic-game-panel .action-btn {
+  min-width: 90px;
+  font-size: 12px;
+  padding: 14px 18px;
+}
+
+.diagnostic-game-panel .action-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(0,255,136,0.25);
+}
+
+/* Enhanced AI status panel */
+.diagnostic-game-panel .ai-status-panel {
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,255,136,0.4) !important;
+  box-shadow: 0 4px 20px rgba(0,255,136,0.1);
+}
+
+/* Enhanced conditions section */
+.diagnostic-game-panel .conditions-section {
+  margin-top: 16px;
+}
+
+.diagnostic-game-panel .conditions-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: rgba(0,255,136,0.8);
+  margin-bottom: 8px;
+}
+
+.diagnostic-game-panel .no-conditions {
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+  padding: 12px;
+  font-size: 13px;
+}
+
+.diagnostic-game-panel .scan-instruction {
+  font-weight: 600;
+  color: #00ff88;
+  margin-bottom: 4px;
+}
+
+.diagnostic-game-panel .scan-tip {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  font-style: italic;
+}
+
+/* Enhanced audio controls */
+.diagnostic-game-panel .audio-control-panel {
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+.diagnostic-game-panel .audio-btn:hover {
+  background: rgba(0, 255, 136, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+.diagnostic-game-panel .audio-type-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 255, 136, 0.2);
+}
+
+.diagnostic-game-panel .audio-type-btn.active {
+  background: rgba(0, 255, 136, 0.3) !important;
+  box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+}
+
+/* Enhanced volume slider */
+.diagnostic-game-panel input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(0, 255, 136, 0.2);
+  border-radius: 2px;
+  height: 4px;
+  outline: none;
+}
+
+.diagnostic-game-panel input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #00ff88;
+  cursor: pointer;
+  box-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
+}
+
+.diagnostic-game-panel input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #00ff88;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
+}
+
+/* Phase information panel */
+.diagnostic-game-panel .phase-info-panel {
+  backdrop-filter: blur(8px);
+  border-left: 3px solid #00ff88;
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced progress section */
+.diagnostic-game-panel .progress-section {
+  margin: 16px 0;
+}
+
+.diagnostic-game-panel .progress-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: rgba(0,255,136,0.8);
+  margin-bottom: 8px;
+}
+
+.diagnostic-game-panel .progress-bar {
+  height: 6px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 3px;
+  border: 1px solid rgba(0,255,136,0.3);
+  overflow: hidden;
+}
+
+.diagnostic-game-panel .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00ff88, #00cc6a);
+  width: 0%;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 8px rgba(0,255,136,0.5);
+}
+
+/* ENHANCEMENT FIRST: Premium Audio Environment Section */
+.diagnostic-game-panel .audio-environment-section {
+  background: 
+    linear-gradient(135deg, rgba(0,20,40,0.95) 0%, rgba(0,40,80,0.95) 50%, rgba(0,20,60,0.95) 100%),
+    radial-gradient(circle at 30% 30%, rgba(0,255,136,0.08) 0%, transparent 50%);
+  border: 1px solid rgba(0,255,136,0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  backdrop-filter: blur(20px) saturate(1.5);
+  box-shadow: 
+    0 8px 32px rgba(0,0,0,0.3),
+    0 0 0 1px rgba(255,255,255,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.2);
+  position: relative;
+  overflow: hidden;
+  animation: hologram-flicker 8s infinite;
+}
+
+.diagnostic-game-panel .audio-environment-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,255,136,0.02) 2px,
+      rgba(0,255,136,0.02) 4px
+    );
+  pointer-events: none;
+  animation: scan-line 4s linear infinite;
+}
+
+.diagnostic-game-panel .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.diagnostic-game-panel .section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.diagnostic-game-panel .section-icon {
+  font-size: 14px;
+  filter: drop-shadow(0 0 8px rgba(0,255,136,0.8));
+}
+
+.diagnostic-game-panel .section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: rgba(0,255,136,0.9);
+  text-shadow: 0 0 10px rgba(0,255,136,0.3);
+}
+
+.diagnostic-game-panel .audio-main-toggle {
+  background: linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(0,150,255,0.1) 100%);
+  border: 1px solid rgba(0,255,136,0.4);
+  border-radius: 8px;
+  color: #fff;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  overflow: hidden;
+}
+
+.diagnostic-game-panel .audio-main-toggle:hover {
+  background: linear-gradient(135deg, rgba(0,255,136,0.2) 0%, rgba(0,150,255,0.2) 100%);
+  border-color: rgba(0,255,136,0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,255,136,0.2);
+}
+
+.diagnostic-game-panel .audio-main-toggle.enabled {
+  background: linear-gradient(135deg, rgba(0,255,136,0.3) 0%, rgba(0,150,255,0.3) 100%);
+  border-color: rgba(0,255,136,0.7);
+  box-shadow: 0 0 20px rgba(0,255,136,0.4);
+}
+
+.diagnostic-game-panel .audio-main-toggle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: left 0.5s;
+}
+
+.diagnostic-game-panel .audio-main-toggle:hover::before {
+  left: 100%;
+}
+
+.diagnostic-game-panel .audio-status {
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+  text-align: center;
+}
+
+.diagnostic-game-panel .status-text {
+  font-size: 11px;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.4;
+}
+
+.diagnostic-game-panel .audio-controls-expanded {
+  position: relative;
+  z-index: 1;
+  animation: slideInUp 0.3s ease-out;
+}
+
+.diagnostic-game-panel .volume-section {
+  margin-bottom: 16px;
+}
+
+.diagnostic-game-panel .control-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.diagnostic-game-panel .control-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: rgba(0,255,136,0.8);
+}
+
+.diagnostic-game-panel .control-value {
+  font-size: 10px;
+  font-weight: 600;
+  color: #00ff88;
+  min-width: 30px;
+  text-align: right;
+  text-shadow: 0 0 8px rgba(0,255,136,0.5);
+}
+
+.diagnostic-game-panel .premium-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 3px;
+  border: 1px solid rgba(0,255,136,0.3);
+  outline: none;
+}
+
+.diagnostic-game-panel .premium-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(45deg, #00ff88, #00cc6a);
+  cursor: pointer;
+  box-shadow: 
+    0 0 10px rgba(0,255,136,0.6),
+    0 2px 4px rgba(0,0,0,0.3);
+  border: 2px solid rgba(255,255,255,0.2);
+}
+
+.diagnostic-game-panel .audio-type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.diagnostic-game-panel .audio-type-card {
+  background: linear-gradient(135deg, rgba(0,255,136,0.05) 0%, rgba(0,150,255,0.05) 100%);
+  border: 1px solid rgba(0,255,136,0.2);
+  border-radius: 8px;
+  padding: 10px 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.diagnostic-game-panel .audio-type-card:hover {
+  background: linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(0,150,255,0.1) 100%);
+  border-color: rgba(0,255,136,0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,255,136,0.2);
+}
+
+.diagnostic-game-panel .audio-type-card.active {
+  background: linear-gradient(135deg, rgba(0,255,136,0.2) 0%, rgba(0,150,255,0.2) 100%);
+  border-color: rgba(0,255,136,0.6);
+  box-shadow: 0 0 15px rgba(0,255,136,0.3);
+}
+
+.diagnostic-game-panel .type-icon {
+  font-size: 16px;
+  filter: drop-shadow(0 0 5px rgba(0,255,136,0.6));
+}
+
+.diagnostic-game-panel .type-name {
+  font-size: 9px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.diagnostic-game-panel .type-status {
+  font-size: 8px;
+  color: rgba(255,255,255,0.6);
+  font-weight: 500;
+}
+
+.diagnostic-game-panel .audio-type-card.active .type-status {
+  color: #00ff88;
+  text-shadow: 0 0 5px rgba(0,255,136,0.5);
+}
+
+/* RESPONSIVE: Mobile optimization */
+@media (max-width: 768px) {
+  .diagnostic-game-panel .section-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  
+  .diagnostic-game-panel .audio-main-toggle {
+    justify-content: center;
+  }
+  
+  .diagnostic-game-panel .audio-type-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  
+  .diagnostic-game-panel .audio-type-card {
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 8px 12px;
+  }
+}

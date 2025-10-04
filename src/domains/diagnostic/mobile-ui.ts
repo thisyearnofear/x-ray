@@ -1,4 +1,4 @@
-// MOBILE-FIRST: Responsive UI manager for small screens and touch interactions
+// CLEAN: Mobile responsiveness integrated with new diagnostic systems
 export interface MobileUIConfig {
   isCollapsed: boolean
   panelPosition: 'top' | 'bottom' | 'floating'
@@ -20,28 +20,28 @@ export class MobileUIManager {
       touchOptimized: this.isMobile,
       gesturesEnabled: this.isMobile
     }
-    
+
     this.setupResizeListener()
     this.setupGestureHandlers()
   }
 
   // CLEAN: Device detection with multiple checks
   private detectMobile(): boolean {
-    return window.innerWidth < this.breakpoint || 
-           /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           ('ontouchstart' in window)
+    return window.innerWidth < this.breakpoint ||
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      ('ontouchstart' in window)
   }
 
   // PERFORMANT: Responsive breakpoint management
   private setupResizeListener(): void {
     let resizeTimeout: NodeJS.Timeout
-    
+
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimeout)
       resizeTimeout = setTimeout(() => {
         const wasMobile = this.isMobile
         this.isMobile = this.detectMobile()
-        
+
         if (wasMobile !== this.isMobile) {
           this.updateConfig()
           this.notifyListeners('layout-change')
@@ -70,7 +70,7 @@ export class MobileUIManager {
 
     document.addEventListener('touchend', () => {
       if (!isDragging) return
-      
+
       const deltaY = currentY - startY
       const threshold = 50
 
@@ -81,7 +81,7 @@ export class MobileUIManager {
           this.notifyListeners('swipe-up')
         }
       }
-      
+
       isDragging = false
     }, { passive: true })
   }
@@ -113,10 +113,10 @@ export class MobileUIManager {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, [])
     }
-    
+
     const eventListeners = this.listeners.get(event)!
     eventListeners.push(callback)
-    
+
     return () => {
       const index = eventListeners.indexOf(callback)
       if (index > -1) eventListeners.splice(index, 1)
@@ -205,7 +205,7 @@ export class MobileUIManager {
         }
       }
     `
-    
+
     return baseStyles + mobileStyles
   }
 

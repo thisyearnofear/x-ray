@@ -1,3 +1,4 @@
+import React from 'react';
 import CanvasComponent from './components/Canvas';
 
 export default function Home() {

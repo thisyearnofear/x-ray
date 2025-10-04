@@ -1,7 +1,9 @@
-// MODULAR: Game phase management for enhanced onboarding experience
+// CLEAN: Phase management integrated with GameManager (no duplicate state)
+import { GameManager } from './GameManager'
+
 export enum GamePhase {
   WELCOME = 'welcome',
-  TUTORIAL = 'tutorial', 
+  TUTORIAL = 'tutorial',
   EXPLORATION = 'exploration',
   READY = 'ready',
   ACTIVE = 'active',
@@ -9,37 +11,24 @@ export enum GamePhase {
   COMPLETE = 'complete'
 }
 
-export interface GameState {
-  phase: GamePhase
-  score: number
-  timeRemaining: number
-  currentCase?: any
-  explorationProgress: number
-  tutorialStep: number
-}
-
-// CLEAN: Centralized phase management with clear state transitions
+// AGGRESSIVE CONSOLIDATION: Removed duplicate GameState interface
+// State management is now handled by GameManager
 export class GamePhaseManager {
   private currentPhase: GamePhase = GamePhase.WELCOME
   private listeners: Map<GamePhase, (() => void)[]> = new Map()
-  private state: GameState
+  private gameManager: GameManager
 
-  constructor() {
-    this.state = {
-      phase: GamePhase.WELCOME,
-      score: 0,
-      timeRemaining: 300, // 5 minutes default
-      explorationProgress: 0,
-      tutorialStep: 0
-    }
-    
+  constructor(gameManager?: GameManager) {
+    // ENHANCEMENT FIRST: Use existing GameManager instead of creating new state
+    this.gameManager = gameManager || new GameManager()
+
     // Initialize listeners for all phases
     Object.values(GamePhase).forEach(phase => {
       this.listeners.set(phase, [])
     })
   }
 
-  // PERFORMANT: Efficient phase transitions with validation
+  // CLEAN: Simplified phase transitions using GameManager state
   transitionTo(newPhase: GamePhase): boolean {
     // Allow same-phase transitions for welcome screen
     if (this.currentPhase === newPhase && newPhase === GamePhase.WELCOME) {
@@ -48,7 +37,7 @@ export class GamePhaseManager {
       phaseListeners.forEach(listener => listener())
       return true
     }
-    
+
     if (!this.isValidTransition(this.currentPhase, newPhase)) {
       console.warn(`Invalid transition from ${this.currentPhase} to ${newPhase}`)
       return false
@@ -56,11 +45,27 @@ export class GamePhaseManager {
 
     const previousPhase = this.currentPhase
     this.currentPhase = newPhase
-    this.state.phase = newPhase
+
+    // Update phase in GameManager if available
+    if (this.gameManager) {
+      const gameState = this.gameManager.getGameState()
+      // Map GamePhase enum to GameManager phase type
+      const phaseMap: Record<GamePhase, 'scanning' | 'analyzing' | 'solved'> = {
+        [GamePhase.ACTIVE]: 'scanning',
+        [GamePhase.PAUSED]: 'scanning',
+        [GamePhase.COMPLETE]: 'solved',
+        [GamePhase.WELCOME]: 'scanning',
+        [GamePhase.TUTORIAL]: 'scanning',
+        [GamePhase.EXPLORATION]: 'scanning',
+        [GamePhase.READY]: 'scanning'
+      }
+      const mappedPhase = phaseMap[newPhase] || 'scanning'
+      this.gameManager['gameState'] = { ...gameState, phase: mappedPhase }
+    }
 
     // Trigger phase-specific actions
     this.onPhaseEnter(newPhase, previousPhase)
-    
+
     // Notify listeners
     const phaseListeners = this.listeners.get(newPhase) || []
     phaseListeners.forEach(listener => listener())
@@ -83,22 +88,11 @@ export class GamePhaseManager {
     return validTransitions[from]?.includes(to) || false
   }
 
-  // DRY: Centralized phase entry logic
+  // CLEAN: Simplified phase entry logic - timer management delegated to GameManager
   private onPhaseEnter(phase: GamePhase, previousPhase: GamePhase): void {
-    switch (phase) {
-      case GamePhase.WELCOME:
-        this.resetGameState()
-        break
-      case GamePhase.ACTIVE:
-        this.startTimer()
-        break
-      case GamePhase.PAUSED:
-        this.pauseTimer()
-        break
-      case GamePhase.COMPLETE:
-        this.stopTimer()
-        break
-    }
+    // Phase-specific logic now handled by GameManager and DiagnosticUI
+    // This manager focuses solely on phase transitions and UI state
+    console.log(`Phase transitioned from ${previousPhase} to ${phase}`)
   }
 
   // MODULAR: Event subscription system
@@ -117,57 +111,16 @@ export class GamePhaseManager {
     }
   }
 
-  // PERFORMANT: Efficient state management
-  updateState(updates: Partial<GameState>): void {
-    this.state = { ...this.state, ...updates }
-  }
-
-  getState(): Readonly<GameState> {
-    return { ...this.state }
-  }
-
+  // CLEAN: Simplified API - state management delegated to GameManager
   getCurrentPhase(): GamePhase {
     return this.currentPhase
   }
 
-  // Timer management methods
-  private timerInterval?: number
+  // AGGRESSIVE CONSOLIDATION: Removed duplicate timer and state management
+  // These are now handled by GameManager to follow DRY principle
 
-  private startTimer(): void {
-    this.stopTimer() // Clear any existing timer
-    this.timerInterval = window.setInterval(() => {
-      if (this.state.timeRemaining > 0) {
-        this.updateState({ timeRemaining: this.state.timeRemaining - 1 })
-      } else {
-        this.transitionTo(GamePhase.COMPLETE)
-      }
-    }, 1000)
-  }
-
-  private pauseTimer(): void {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval)
-      this.timerInterval = undefined
-    }
-  }
-
-  private stopTimer(): void {
-    this.pauseTimer()
-  }
-
-  private resetGameState(): void {
-    this.updateState({
-      score: 0,
-      timeRemaining: 300,
-      explorationProgress: 0,
-      tutorialStep: 0,
-      currentCase: undefined
-    })
-  }
-
-  // CLEAN: Explicit cleanup
+  // CLEAN: Explicit cleanup - timer management delegated to GameManager
   destroy(): void {
-    this.stopTimer()
     this.listeners.clear()
   }
 }

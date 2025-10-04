@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 
 const CanvasComponent = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Loading X-RAI...');
   const initializingRef = useRef(false);
   const canvasInstanceRef = useRef<any>(null);
 
@@ -25,6 +26,8 @@ const CanvasComponent = () => {
           }
 
           console.log('🎮 Initializing Canvas...');
+          setLoadingMessage('Loading 3D medical model...');
+          
           if (!canvasInstanceRef.current) {
             canvasInstanceRef.current = new Canvas(canvasRef.current!);
           }
@@ -32,7 +35,14 @@ const CanvasComponent = () => {
             (window as any).__XRAI_CANVAS_ACTIVE__ = true;
           }
           console.log('✅ Canvas initialized successfully');
-          setIsLoaded(true);
+          
+          // Show UI after canvas initialization
+          setTimeout(() => {
+            setLoadingMessage('🏥 Loading patient data...');
+            setTimeout(() => {
+              setIsLoaded(true);
+            }, 1000);
+          }, 1500);
         } catch (error) {
           console.error('❌ Canvas initialization failed:', error);
           initializingRef.current = false;
@@ -67,9 +77,11 @@ const CanvasComponent = () => {
           left: '50%',
           transform: 'translate(-50%, -50%)',
           color: 'white',
-          fontSize: '18px'
+          fontSize: '18px',
+          textAlign: 'center'
         }}>
-          Loading X-RAI...
+          <div style={{ marginBottom: '1rem' }}>🏥</div>
+          <div>{loadingMessage}</div>
         </div>
       )}
     </>

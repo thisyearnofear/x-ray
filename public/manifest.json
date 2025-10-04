@@ -126,11 +126,5 @@
   "launch_handler": {
     "client_mode": ["focus-existing", "auto"]
   },
-  "handle_links": "preferred",
-  "protocol_handlers": [
-    {
-      "protocol": "web+x-rai-diagnostic",
-      "url": "/?protocol=%s"
-    }
-  ]
+  "handle_links": "preferred"
 }

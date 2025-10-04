@@ -86,7 +86,7 @@ export default class XRayEffect {
     this.createSkeleton()
     this.initializeMedicalMarkers()
     this.instructionsPanel = new InstructionsPanel()
-    this.diagnosticUI = new DiagnosticUI()
+    this.diagnosticUI = new DiagnosticUI(this.audioManager)
 
     // PREVENT BLOAT: Single event listener with cleanup
     this.keyHandler = (event: KeyboardEvent) => this.onPressKey(event)
