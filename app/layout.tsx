@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import '../src/styles/global-animations.css';
 
 export const metadata: Metadata = {
   title: 'X-RAI: AI Medical Diagnostic Game',

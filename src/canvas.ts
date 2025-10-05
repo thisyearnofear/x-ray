@@ -10,6 +10,7 @@ import { XRayControls } from "./components/xray-controls"
 import { MobileCamera } from "./components/mobile-camera"
 import { AudioManager } from "./components/AudioManager"
 import { SoundType } from "./components/AudioManager"
+import { ScanFeedbackSystem } from "./components/ScanFeedbackSystem"
 
 export default class Canvas {
   element: HTMLCanvasElement
@@ -35,6 +36,9 @@ export default class Canvas {
   // Audio system
   audioManager: AudioManager
 
+  // ENHANCEMENT FIRST: Visual scan feedback system
+  scanFeedbackSystem: ScanFeedbackSystem | null = null
+
   // Control RAF and listeners
   private _rafId: number | null = null
   private _disposed = false
@@ -58,6 +62,7 @@ export default class Canvas {
     this.createXRayEffect()
     this.createLights()
     this.createAudioManager()
+    this.createScanFeedbackSystem()
     this.createMobileComponents()
     this.render()
   }
@@ -92,6 +97,14 @@ export default class Canvas {
 
   createAudioManager() {
     this.audioManager = new AudioManager(this.camera)
+
+    // Start background audio immediately when canvas initializes
+    setTimeout(() => {
+      if (this.audioManager) {
+        console.log('🎵 Starting background audio...')
+        this.audioManager.startHospitalAmbience()
+      }
+    }, 1000) // Small delay to ensure everything is loaded
   }
 
   createOrbitControls() {
@@ -130,11 +143,11 @@ export default class Canvas {
     this.element.style.position = 'fixed';
     this.element.style.top = '0';
     this.element.style.left = '0';
-    
+
     console.log('Canvas element size:', this.element.clientWidth, 'x', this.element.clientHeight);
     console.log('Window size:', window.innerWidth, 'x', window.innerHeight);
     console.log('Dimensions:', this.dimensions);
-    
+
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.element,
       antialias: true,
@@ -145,7 +158,7 @@ export default class Canvas {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 1.2
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
-    
+
     console.log('Renderer size set to:', this.dimensions.width, 'x', this.dimensions.height);
   }
 
@@ -185,6 +198,20 @@ export default class Canvas {
     window.addEventListener("mousemove", this.onMouseMove)
     window.addEventListener("click", this.onMouseClick)
     window.addEventListener("resize", this.onResize)
+
+    // Start audio on first user interaction (browser autoplay policy)
+    const startAudioOnInteraction = () => {
+      if (this.audioManager && !this.audioManager['isAmbiencePlaying']) {
+        console.log('🎵 Starting audio after user interaction...')
+        this.audioManager.startHospitalAmbience()
+      }
+      // Remove listeners after first interaction
+      window.removeEventListener("mousemove", startAudioOnInteraction)
+      window.removeEventListener("click", startAudioOnInteraction)
+    }
+
+    window.addEventListener("mousemove", startAudioOnInteraction)
+    window.addEventListener("click", startAudioOnInteraction)
   }
 
   onMouseClick = (event: MouseEvent) => {
@@ -224,11 +251,21 @@ export default class Canvas {
     })
   }
 
+  createScanFeedbackSystem() {
+    // ENHANCEMENT FIRST: Initialize visual scan feedback
+    this.scanFeedbackSystem = new ScanFeedbackSystem(this.scene)
+    console.log('✨ ScanFeedbackSystem initialized')
+  }
+
   render() {
     if (this._disposed) return;
     this.time = this.clock.getElapsedTime()
+    const deltaTime = this.clock.getDelta()
 
     this.orbitControls.update()
+
+    // PERFORMANT: Update scan feedback system
+    this.scanFeedbackSystem?.update(deltaTime)
 
     this.xRayEffect?.render()
 
@@ -284,8 +321,9 @@ export default class Canvas {
     window.removeEventListener("mousemove", this.onMouseMove)
     window.removeEventListener("click", this.onMouseClick)
     window.removeEventListener("resize", this.onResize)
-    try { this.xRayEffect?.destroy() } catch {}
-    try { this.renderer?.dispose() } catch {}
+    try { this.scanFeedbackSystem?.destroy() } catch { }
+    try { this.xRayEffect?.destroy() } catch { }
+    try { this.renderer?.dispose() } catch { }
     // Clean up scene resources
     if (this.scene) {
       this.scene.traverse((obj: any) => {

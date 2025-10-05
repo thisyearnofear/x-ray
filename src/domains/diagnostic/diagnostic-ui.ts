@@ -9,6 +9,15 @@ import { LearningTracker } from "./LearningTracker"
 import { MedicalWorkflowManager, PatientCase } from "./MedicalWorkflowManager"
 import { Web3SkillTracker } from "./Web3SkillTracker"
 
+// ENHANCEMENT FIRST: Voice consultation integration
+import { VoiceConsultationManager, ConsultationContext } from "../voice/VoiceConsultationManager"
+
+// DRY: Import design tokens for consistent styling
+import { colors, spacing, typography, borders, effects, animation, zIndex } from '../../styles/design-tokens'
+
+// ENHANCEMENT FIRST: Interactive tutorial system
+import { InteractiveTutorial } from '../tutorial/InteractiveTutorial'
+
 export class DiagnosticUI {
     private audioManager: AudioManager
     private phaseManager: GamePhaseManager
@@ -19,6 +28,12 @@ export class DiagnosticUI {
     private learningTracker: LearningTracker
     private workflowManager: MedicalWorkflowManager
     private web3Tracker: Web3SkillTracker
+
+    // ENHANCEMENT FIRST: Voice consultation system
+    private voiceConsultation: VoiceConsultationManager
+
+    // MODULAR: Interactive tutorial system
+    private tutorial: InteractiveTutorial | null = null
 
     private scanProgress: Map<string, number> = new Map()
     private panel: HTMLElement | null = null
@@ -41,6 +56,9 @@ export class DiagnosticUI {
         this.workflowManager = new MedicalWorkflowManager(cerebrasService)
 
         this.web3Tracker = new Web3SkillTracker()
+
+        // ENHANCEMENT FIRST: Initialize voice consultation system
+        this.voiceConsultation = new VoiceConsultationManager()
 
         // ENHANCEMENT FIRST: Pass GameManager to GamePhaseManager for integration
         this.phaseManager = new GamePhaseManager(this.gameManager)
@@ -95,19 +113,38 @@ export class DiagnosticUI {
         this.web3Tracker.on('nftMinted', (data: { nftReward: any }) => {
             this.showNFTRewardNotification(data.nftReward)
         })
+
+        // ENHANCEMENT FIRST: Voice consultation system integration
+        this.voiceConsultation.on('consultationStarted', (session: any) => {
+            this.handleConsultationStarted(session)
+        })
+
+        this.voiceConsultation.on('guidanceReceived', (data: { guidance: string; session: any }) => {
+            this.handleGuidanceReceived(data.guidance)
+        })
+
+        this.voiceConsultation.on('consultationEnded', (data: { insights: string[] }) => {
+            this.handleConsultationEnded(data.insights)
+        })
+
+        this.voiceConsultation.on('gamePauseRequested', () => {
+            this.pauseGameForConsultation()
+        })
+
+        this.voiceConsultation.on('gameResumeRequested', () => {
+            this.resumeGameFromConsultation()
+        })
     }
 
     private initialize() {
         if (this.isInitialized) return
 
         this.createDiagnosticPanel()
-        this.createOnboardingOverlay()
-        this.showWelcomeScreen() // Show onboarding first
         this.setupPhaseManagement()
         this.isInitialized = true
 
-        // Make DiagnosticUI globally accessible for onboarding buttons
-        ; (window as any).diagnosticUI = this
+            // Make DiagnosticUI globally accessible for phase transitions
+            ; (window as any).diagnosticUI = this
     }
 
     // PREMIUM: Premium diagnostic panel positioned on LEFT for desktop
@@ -141,12 +178,12 @@ export class DiagnosticUI {
 
         this.panel.innerHTML = `
       ${svgDefs}
-      <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid rgba(0,255,136,0.2); cursor: pointer; user-select: none;">
+      <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; padding: ${spacing.base}; border-bottom: ${borders.width.thin} solid ${colors.border.primary}; cursor: pointer; user-select: none;">
         <div class="scan-prompt">
           <div class="scan-title" id="panel-title">🏥 MEDICAL DIAGNOSTIC SYSTEM</div>
           <div class="scan-subtitle" id="panel-subtitle">AI-Powered Medical Analysis & Training</div>
         </div>
-        <div class="collapse-toggle" id="collapse-toggle" style="font-size: 18px; color: #00ff88; cursor: pointer; padding: 8px; border-radius: 50%; background: rgba(0,255,136,0.1); transition: all 0.3s ease;">
+        <div class="collapse-toggle" id="collapse-toggle" style="font-size: ${typography.fontSize.xl}; color: ${colors.primary.base}; cursor: pointer; padding: ${spacing.sm}; border-radius: ${borders.radius.full}; background: ${colors.background.primaryGlow}; transition: all ${animation.duration.base} ${animation.easing.smooth};">
           ${this.isCollapsed ? '▶' : '◀'}
         </div>
       </div>
@@ -180,19 +217,19 @@ export class DiagnosticUI {
         </div>
 
         <!-- Scanning Progress -->
-        <div id="scan-progress" style="margin-top: 1.5rem;">
-          <div style="color: #00ff88; font-size: 12px; margin-bottom: 1rem; text-align: center; letter-spacing: 1px;">🔍 SCANNING PROGRESS</div>
+        <div id="scan-progress" style="margin-top: ${spacing.xl};">
+          <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.md}; margin-bottom: ${spacing.base}; text-align: center; letter-spacing: ${typography.letterSpacing.wider};">🔍 SCANNING PROGRESS</div>
           <div id="progress-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
         </div>
 
         <!-- AI Analysis Stream -->
-        <div id="analysis-section" class="analysis-stream" style="margin-top: 1rem; padding: 1rem; display: none; position: relative;">
-          <div style="color: #ffaa00; font-size: 11px; margin-bottom: 0.5rem; text-shadow: 0 0 10px rgba(255,170,0,0.5);">🔬 CEREBRAS AI ANALYSIS</div>
-          <div id="analysis-content" style="font-family: 'Courier New', monospace; font-size: 10px; line-height: 1.4; color: #00ff88; text-shadow: 0 0 5px rgba(0,255,136,0.3); min-height: 60px;"></div>
+        <div id="analysis-section" class="analysis-stream" style="margin-top: ${spacing.base}; padding: ${spacing.base}; display: none; position: relative;">
+          <div style="color: ${colors.accent.base}; font-size: ${typography.fontSize.base}; margin-bottom: ${spacing.sm}; text-shadow: ${effects.textShadow.accent};">🔬 CEREBRAS AI ANALYSIS</div>
+          <div id="analysis-content" style="font-family: ${typography.fontFamily.monospace}; font-size: ${typography.fontSize.sm}; line-height: ${typography.lineHeight.base}; color: ${colors.primary.base}; text-shadow: ${effects.textShadow.sm}; min-height: 60px;"></div>
         </div>
 
         <!-- Enhanced Action Buttons -->
-        <div class="progress-actions" id="action-buttons" style="margin-top: 1rem; display: none;">
+        <div class="progress-actions" id="action-buttons" style="margin-top: ${spacing.base}; display: none;">
           <button class="action-btn solve-btn" id="solve-btn">
             <div class="btn-icon">🎯</div>
             <div class="btn-text">DIAGNOSE</div>
@@ -203,18 +240,33 @@ export class DiagnosticUI {
             <div class="btn-text">HINT</div>
             <div class="btn-count" id="hint-count">3</div>
           </button>
+          <button class="action-btn consultation-btn" id="consultation-btn" style="display: none;">
+            <div class="btn-icon">🎙️</div>
+            <div class="btn-text">CONSULT AI</div>
+            <div class="btn-count" id="consultation-count">∞</div>
+          </button>
+        </div>
+
+        <!-- Diagnosis Submission Section -->
+        <div class="diagnosis-submission" id="diagnosis-submission" style="margin-top: ${spacing.base}; display: none;">
+          <div style="color: ${colors.accent.base}; font-size: ${typography.fontSize.base}; margin-bottom: ${spacing.sm}; text-shadow: ${effects.textShadow.accent}; letter-spacing: ${typography.letterSpacing.wider};">🏥 SUBMIT FINAL DIAGNOSIS</div>
+          <div id="diagnosis-options" style="margin-bottom: ${spacing.base};"></div>
+          <button class="action-btn submit-diagnosis-btn" id="submit-diagnosis-btn" style="width: 100%;">
+            <div class="btn-icon">📋</div>
+            <div class="btn-text">SUBMIT DIAGNOSIS</div>
+          </button>
         </div>
 
         <!-- Contextual Hints Panel -->
-        <div id="hints-panel" class="hints-panel" style="margin-top: 1rem; display: none;">
-          <div style="color: #ffaa00; font-size: 11px; margin-bottom: 0.5rem; text-shadow: 0 0 10px rgba(255,170,0,0.5);">💡 CONTEXTUAL HINTS</div>
-          <div id="hints-content" style="font-size: 10px; line-height: 1.4; color: #cccccc;"></div>
+        <div id="hints-panel" class="hints-panel" style="margin-top: ${spacing.base}; display: none;">
+          <div style="color: ${colors.accent.base}; font-size: ${typography.fontSize.base}; margin-bottom: ${spacing.sm}; text-shadow: ${effects.textShadow.accent};">💡 CONTEXTUAL HINTS</div>
+          <div id="hints-content" style="font-size: ${typography.fontSize.sm}; line-height: ${typography.lineHeight.base}; color: ${colors.neutral.light};"></div>
         </div>
 
         <!-- Learning Progress -->
-        <div id="learning-progress" style="margin-top: 1rem; padding: 0.75rem; background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2); border-radius: 8px;">
-          <div style="color: #00ff88; font-size: 10px; margin-bottom: 0.5rem; letter-spacing: 1px;">📈 LEARNING PROGRESS</div>
-          <div id="learning-stats" style="font-size: 9px; color: #999; display: flex; justify-content: space-between;">
+        <div id="learning-progress" style="margin-top: ${spacing.base}; padding: ${spacing.md}; background: ${colors.background.primaryGlow}; border: ${borders.width.thin} solid ${colors.border.primary}; border-radius: ${borders.radius.md};">
+          <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.sm}; margin-bottom: ${spacing.sm}; letter-spacing: ${typography.letterSpacing.wider};">📈 LEARNING PROGRESS</div>
+          <div id="learning-stats" style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.base}; display: flex; justify-content: space-between;">
             <span>Accuracy: <span id="accuracy-display">0%</span></span>
             <span>Efficiency: <span id="efficiency-display">0%</span></span>
             <span>Achievements: <span id="achievements-count">0</span></span>
@@ -227,6 +279,9 @@ export class DiagnosticUI {
         this.setupTimerAnimation()
         this.addResponsiveStyles()
         this.setupCollapsibleFunctionality()
+        this.setupDiagnosisSubmission()
+        this.addDiagnosisSubmissionStyles()
+        this.setupVoiceConsultation()
     }
 
     private addResponsiveStyles() {
@@ -296,6 +351,119 @@ export class DiagnosticUI {
             }
         `
         document.head.appendChild(responsiveStyle)
+    }
+
+    private addDiagnosisSubmissionStyles() {
+        // Add premium diagnosis submission styles matching our holographic design ethos
+        if (!document.querySelector('#diagnosis-submission-styles')) {
+            const style = document.createElement('style')
+            style.id = 'diagnosis-submission-styles'
+            style.textContent = `
+                /* PREMIUM: Diagnosis submission section with holographic effects */
+                .diagnosis-submission {
+                    background: 
+                        linear-gradient(135deg, rgba(255,170,0,0.05) 0%, rgba(255,140,0,0.05) 100%),
+                        radial-gradient(circle at 30% 30%, rgba(255,170,0,0.1) 0%, transparent 50%);
+                    border: 1px solid rgba(255,170,0,0.3);
+                    border-radius: 8px;
+                    padding: 1rem;
+                    position: relative;
+                    overflow: hidden;
+                    animation: glow-pulse 4s ease-in-out infinite;
+                }
+
+                .diagnosis-submission::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: 
+                        repeating-linear-gradient(
+                            0deg,
+                            transparent,
+                            transparent 2px,
+                            rgba(255,170,0,0.03) 2px,
+                            rgba(255,170,0,0.03) 4px
+                        );
+                    pointer-events: none;
+                    animation: scan-line 5s linear infinite;
+                }
+
+                /* PREMIUM: Enhanced diagnosis options with shimmer effect */
+                .diagnosis-option::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+                    transition: left 0.5s;
+                }
+
+                .diagnosis-option:hover::before {
+                    left: 100%;
+                }
+
+                .diagnosis-option input[type="checkbox"]:checked + span {
+                    color: #00ff88 !important;
+                    text-shadow: 0 0 8px rgba(0,255,136,0.5);
+                }
+
+                .diagnosis-option:has(input[type="checkbox"]:checked) {
+                    background: linear-gradient(135deg, rgba(0,255,136,0.2) 0%, rgba(0,150,255,0.2) 100%) !important;
+                    border-color: rgba(0,255,136,0.6) !important;
+                    box-shadow: 0 0 20px rgba(0,255,136,0.3) !important;
+                }
+
+                /* PREMIUM: Enhanced submit button with holographic styling */
+                .submit-diagnosis-btn {
+                    background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%) !important;
+                    color: #000 !important;
+                    font-weight: bold !important;
+                    box-shadow: 
+                        0 4px 15px rgba(0,255,136,0.4),
+                        inset 0 1px 0 rgba(255,255,255,0.2) !important;
+                    text-shadow: 0 1px 2px rgba(0,0,0,0.3) !important;
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .submit-diagnosis-btn::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+                    transition: left 0.5s;
+                }
+
+                .submit-diagnosis-btn:hover::before {
+                    left: 100%;
+                }
+
+                .submit-diagnosis-btn:hover {
+                    transform: translateY(-2px) !important;
+                    box-shadow: 
+                        0 8px 25px rgba(0,255,136,0.5),
+                        inset 0 1px 0 rgba(255,255,255,0.3) !important;
+                }
+
+                /* PERFORMANT: Hardware acceleration for diagnosis submission */
+                .diagnosis-submission,
+                .diagnosis-submission *,
+                .diagnosis-submission::before,
+                .diagnosis-option::before {
+                    transform: translateZ(0);
+                    will-change: transform, opacity;
+                }
+            `
+            document.head.appendChild(style)
+        }
     }
 
     private setupCollapsibleFunctionality() {
@@ -398,25 +566,10 @@ export class DiagnosticUI {
     }
 
     private setupPhaseManagement() {
-        // Listen for phase changes and update UI accordingly
+        // AGGRESSIVE CONSOLIDATION: Use new InteractiveTutorial instead of old static screens
         this.phaseManager.onPhaseChange(GamePhase.WELCOME, () => {
             this.updatePanelForPhase('welcome')
-            this.showWelcomeScreen()
-        })
-
-        this.phaseManager.onPhaseChange(GamePhase.TUTORIAL, () => {
-            this.updatePanelForPhase('tutorial')
-            this.showTutorialScreen()
-        })
-
-        this.phaseManager.onPhaseChange(GamePhase.EXPLORATION, () => {
-            this.updatePanelForPhase('exploration')
-            this.showExplorationScreen()
-        })
-
-        this.phaseManager.onPhaseChange(GamePhase.READY, () => {
-            this.updatePanelForPhase('ready')
-            this.showReadyScreen()
+            this.startInteractiveTutorial()
         })
 
         this.phaseManager.onPhaseChange(GamePhase.ACTIVE, () => {
@@ -424,9 +577,27 @@ export class DiagnosticUI {
             this.gameManager['gameState'] = { ...gameState, phase: 'scanning' }
             this.updatePhaseDisplay()
             this.updatePanelForPhase('active')
-            this.hideOnboarding()
             this.startDiagnosticSession()
         })
+    }
+
+    private startInteractiveTutorial() {
+        // ENHANCEMENT FIRST: Initialize new interactive tutorial system
+        this.tutorial = new InteractiveTutorial({
+            onStepComplete: (stepId) => {
+                console.log('✅ Tutorial step completed:', stepId)
+            },
+            onTutorialComplete: () => {
+                console.log('🎉 Tutorial complete!')
+                this.phaseManager.transitionTo(GamePhase.ACTIVE)
+            },
+            onActionRequired: (action, data) => {
+                console.log('🎯 Action required:', action)
+                // TODO: Connect to x-ray-effect.ts for scan feedback
+            }
+        })
+
+        this.tutorial.start()
     }
 
     private updatePanelForPhase(phase: string) {
@@ -830,27 +1001,25 @@ export class DiagnosticUI {
 
         const indicator = document.createElement('div')
         indicator.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="font-size: 20px;">🏆</div>
+            <div style="display: flex; align-items: center; gap: ${spacing.sm};">
+                <div style="font-size: ${typography.fontSize['3xl']};">🏆</div>
                 <div>
-                    <div style="color: #ffaa00; font-weight: bold; font-size: 14px;">ACHIEVEMENT UNLOCKED</div>
-                    <div style="color: #00ff88; font-size: 12px;">${messages[achievementId as keyof typeof messages] || 'Achievement!'}</div>
+                    <div style="color: ${colors.accent.base}; font-weight: ${typography.fontWeight.bold}; font-size: ${typography.fontSize.lg};">ACHIEVEMENT UNLOCKED</div>
+                    <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.md};">${messages[achievementId as keyof typeof messages] || 'Achievement!'}</div>
                 </div>
             </div>
         `
 
         indicator.style.cssText = `
-            position: fixed; top: 20px; right: 50%; transform: translateX(50%);
+            position: fixed; top: ${spacing['2xl']}; right: 50%; transform: translateX(50%);
             background:
-                linear-gradient(135deg, rgba(255,170,0,0.95) 0%, rgba(255,140,0,0.95) 100%),
+                linear-gradient(135deg, ${colors.accent.base}ee 0%, ${colors.accent.dark}ee 100%),
                 radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 50%);
-            border: 2px solid #ffaa00;
-            border-radius: 12px; padding: 12px 16px;
-            box-shadow:
-                0 10px 30px rgba(255,170,0,0.3),
-                0 0 20px rgba(255,170,0,0.2);
-            z-index: 1002; pointer-events: none;
-            animation: achievementSlideDown 4s ease-out forwards;
+            border: ${borders.width.base} solid ${colors.accent.base};
+            border-radius: ${borders.radius.lg}; padding: ${spacing.md} ${spacing.base};
+            box-shadow: ${effects.shadow.lg}, ${effects.shadow.accentGlow};
+            z-index: ${zIndex.notification}; pointer-events: none;
+            animation: achievementSlideDown 4s ${animation.easing.easeOut} forwards;
         `
 
         document.body.appendChild(indicator)
@@ -961,29 +1130,25 @@ export class DiagnosticUI {
         // Create floating points indicator with premium styling
         const indicator = document.createElement('div')
         indicator.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="font-size: 20px;">${reason === 'discovery' ? '🔍' : '🧠'}</div>
+            <div style="display: flex; align-items: center; gap: ${spacing.sm};">
+                <div style="font-size: ${typography.fontSize['3xl']};">${reason === 'discovery' ? '🔍' : '🧠'}</div>
                 <div>
-                    <div style="color: #00ff88; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(0,255,136,0.8);">+${points}</div>
-                    <div style="color: rgba(255,255,255,0.8); font-size: 10px; letter-spacing: 1px;">${reason.toUpperCase()}</div>
+                    <div style="color: ${colors.primary.base}; font-weight: ${typography.fontWeight.bold}; font-size: ${typography.fontSize.xl}; text-shadow: ${effects.textShadow.md};">+${points}</div>
+                    <div style="color: ${colors.neutral.lightest}cc; font-size: ${typography.fontSize.sm}; letter-spacing: ${typography.letterSpacing.wider};">${reason.toUpperCase()}</div>
                 </div>
             </div>
         `
 
         indicator.style.cssText = `
-            position: fixed; top: 50%; left: 420px; z-index: 1001; transform: translateY(-50%);
-            background:
-                linear-gradient(135deg, rgba(0,20,40,0.95) 0%, rgba(0,40,80,0.95) 100%),
-                radial-gradient(circle at 30% 30%, rgba(0,255,136,0.1) 0%, transparent 50%);
-            border: 1px solid rgba(0,255,136,0.5);
-            border-radius: 12px; padding: 12px 16px;
-            box-shadow:
-                0 10px 30px rgba(0,0,0,0.3),
-                0 0 20px rgba(0,255,136,0.2),
-                inset 0 1px 0 rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
+            position: fixed; top: 50%; left: 420px; z-index: ${zIndex.tooltip}; transform: translateY(-50%);
+            background: ${colors.background.gradient.panel},
+                radial-gradient(circle at 30% 30%, ${colors.background.primaryGlow} 0%, transparent 50%);
+            border: ${borders.width.thin} solid ${colors.border.primaryStrong};
+            border-radius: ${borders.radius.lg}; padding: ${spacing.md} ${spacing.base};
+            box-shadow: ${effects.shadow.lg}, ${effects.shadow.primaryGlow}, ${effects.inset.medium};
+            backdrop-filter: ${effects.blur.base};
             pointer-events: none;
-            animation: premiumFloatUp 3s ease-out forwards;
+            animation: premiumFloatUp 3s ${animation.easing.easeOut} forwards;
         `
 
         document.body.appendChild(indicator)
@@ -1024,13 +1189,16 @@ export class DiagnosticUI {
     }
 
     private checkDiagnosisComplete() {
-        // Check if we've discovered all major conditions
+        // ENHANCEMENT FIRST: Show diagnosis submission UI instead of auto-completing
         const gameState = this.gameManager.getGameState()
-        const totalConditions = Object.keys(MEDICAL_CONDITIONS).length
         const discoveredCount = gameState.discoveredConditions.size
 
-        if (discoveredCount >= Math.min(totalConditions, 3)) { // At least 3 conditions for demo
-            this.endDiagnosis('complete')
+        if (discoveredCount >= 1) { // Show consultation after discovering at least 1 condition
+            this.showConsultationButton()
+        }
+
+        if (discoveredCount >= 2) { // Allow submission after discovering at least 2 conditions
+            this.showDiagnosisSubmissionUI()
         }
     }
 
@@ -1095,6 +1263,360 @@ export class DiagnosticUI {
             this.panel.style.cursor = 'pointer'
             this.panel.onclick = () => this.restartDiagnosis()
         }
+    }
+
+    // ENHANCEMENT FIRST: Add diagnosis submission functionality
+    private setupDiagnosisSubmission() {
+        if (!this.panel) return
+
+        const submitBtn = this.panel.querySelector('#submit-diagnosis-btn') as HTMLElement
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => this.handleDiagnosisSubmission())
+        }
+    }
+
+    private showDiagnosisSubmissionUI() {
+        if (!this.panel) return
+
+        const submissionSection = this.panel.querySelector('#diagnosis-submission') as HTMLElement
+        const optionsContainer = this.panel.querySelector('#diagnosis-options') as HTMLElement
+
+        if (submissionSection && optionsContainer) {
+            // Show the submission section
+            submissionSection.style.display = 'block'
+
+            // REUSE: Get discovered conditions from existing game state
+            const gameState = this.gameManager.getGameState()
+            const discoveredConditions = Array.from(gameState.discoveredConditions)
+
+            // Create diagnosis options from discovered conditions
+            const optionsHTML = discoveredConditions.map(conditionId => {
+                const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId)
+                if (!condition) return ''
+
+                return `
+                    <label class="diagnosis-option" style="display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(0,150,255,0.1) 100%); border: 1px solid rgba(0,255,136,0.3); border-radius: 6px; margin-bottom: 6px; cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden;">
+                        <input type="checkbox" name="diagnosis" value="${conditionId}" style="accent-color: #00ff88; transform: scale(1.1);">
+                        <span style="color: #ffffff; font-size: 11px; flex: 1; font-weight: 500;">${condition.name}</span>
+                        <span style="color: #ffaa00; font-size: 9px; opacity: 0.8; font-weight: 600; letter-spacing: 0.5px;">${condition.severity.toUpperCase()}</span>
+                    </label>
+                `
+            }).join('')
+
+            optionsContainer.innerHTML = `
+                <div style="color: #cccccc; font-size: 10px; margin-bottom: 8px; letter-spacing: 0.5px; opacity: 0.9;">Select conditions for your final diagnosis:</div>
+                ${optionsHTML}
+            `
+
+            // Add premium hover effects matching our design ethos
+            const labels = optionsContainer.querySelectorAll('label')
+            labels.forEach(label => {
+                label.addEventListener('mouseenter', () => {
+                    label.style.background = 'linear-gradient(135deg, rgba(0,255,136,0.2) 0%, rgba(0,150,255,0.2) 100%)'
+                    label.style.borderColor = 'rgba(0,255,136,0.5)'
+                    label.style.boxShadow = '0 8px 25px rgba(0,255,136,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
+                    label.style.transform = 'translateY(-1px)'
+                })
+                label.addEventListener('mouseleave', () => {
+                    label.style.background = 'linear-gradient(135deg, rgba(0,255,136,0.1) 0%, rgba(0,150,255,0.1) 100%)'
+                    label.style.borderColor = 'rgba(0,255,136,0.3)'
+                    label.style.boxShadow = 'none'
+                    label.style.transform = 'translateY(0)'
+                })
+            })
+        }
+    }
+
+    private handleDiagnosisSubmission() {
+        if (!this.panel) return
+
+        // Get selected diagnoses
+        const checkboxes = this.panel.querySelectorAll('input[name="diagnosis"]:checked') as NodeListOf<HTMLInputElement>
+        const selectedConditions = Array.from(checkboxes).map(cb => cb.value)
+
+        if (selectedConditions.length === 0) {
+            this.showSubmissionError('Please select at least one condition for your diagnosis.')
+            return
+        }
+
+        // CLEAN: Use existing workflow manager for validation
+        this.submitFinalDiagnosis(selectedConditions)
+    }
+
+    private submitFinalDiagnosis(selectedConditions: string[]) {
+        // REUSE: Complete the final diagnosis workflow step
+        const success = this.workflowManager.completeWorkflowStep('final_diagnosis', selectedConditions)
+
+        if (success) {
+            // Calculate diagnostic accuracy using existing systems
+            const accuracy = this.calculateDiagnosticAccuracy(selectedConditions)
+
+            // REUSE: Award points using existing scoring system
+            const basePoints = 500
+            const accuracyBonus = Math.floor(accuracy * 300)
+            const totalPoints = this.gameManager.awardPoints(basePoints + accuracyBonus, 'final_diagnosis', { accuracy, selectedConditions })
+
+            // Complete the workflow and show results
+            this.showDiagnosisResults(selectedConditions, accuracy, totalPoints)
+
+            // REUSE: Transition to complete phase using existing phase manager
+            this.phaseManager.transitionTo(GamePhase.COMPLETE)
+        } else {
+            this.showSubmissionError('Unable to submit diagnosis. Please try again.')
+        }
+    }
+
+    private calculateDiagnosticAccuracy(selectedConditions: string[]): number {
+        // REUSE: Get AI-generated differential diagnosis from workflow manager
+        const differentialDiagnosis = this.workflowManager.getDifferentialDiagnosis()
+        const expectedConditions = differentialDiagnosis.map(d => d.condition.toLowerCase())
+
+        if (expectedConditions.length === 0) {
+            // Fallback: Use discovered conditions as baseline
+            const gameState = this.gameManager.getGameState()
+            const totalDiscovered = gameState.discoveredConditions.size
+            const correctSelections = selectedConditions.length
+            return Math.min(correctSelections / Math.max(totalDiscovered, 1), 1.0)
+        }
+
+        // Calculate accuracy based on AI differential diagnosis
+        let correctCount = 0
+        selectedConditions.forEach(conditionId => {
+            const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId)
+            if (condition && expectedConditions.some(expected =>
+                expected.includes(condition.name.toLowerCase()) ||
+                condition.name.toLowerCase().includes(expected)
+            )) {
+                correctCount++
+            }
+        })
+
+        return correctCount / Math.max(selectedConditions.length, 1)
+    }
+
+    private showDiagnosisResults(selectedConditions: string[], accuracy: number, totalPoints: number) {
+        if (!this.panel) return
+
+        const gameState = this.gameManager.getGameState()
+        const selectedConditionNames = selectedConditions.map(id => {
+            const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === id)
+            return condition?.name || id
+        })
+
+        this.panel.innerHTML = `
+            <div style="padding: 2rem; text-align: center;">
+                <div style="color: #00ff88; font-size: 24px; margin-bottom: 1rem; text-shadow: 0 0 20px rgba(0,255,136,0.8);">🏆 DIAGNOSIS SUBMITTED</div>
+                
+                <div style="background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); border-radius: 12px; padding: 1.5rem; margin: 1rem 0;">
+                    <div style="color: #ffaa00; font-size: 14px; margin-bottom: 1rem; font-weight: bold;">YOUR DIAGNOSIS:</div>
+                    <div style="color: #ffffff; margin-bottom: 1rem; font-size: 12px;">
+                        ${selectedConditionNames.map(name => `• ${name}`).join('<br>')}
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(0,255,136,0.2);">
+                        <div style="text-align: left;">
+                            <div style="color: #ffffff; font-size: 11px;">Diagnostic Accuracy:</div>
+                            <div style="color: ${this.getPerformanceColor(accuracy)}; font-size: 16px; font-weight: bold;">${Math.round(accuracy * 100)}%</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="color: #ffffff; font-size: 11px;">Final Score:</div>
+                            <div style="color: #00ff88; font-size: 18px; font-weight: bold; text-shadow: 0 0 10px rgba(0,255,136,0.8);">${gameState.score}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: #ffffff; font-size: 11px;">Time Bonus:</div>
+                            <div style="color: #ffaa00; font-size: 16px; font-weight: bold;">+${gameState.timeRemaining * 2}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="color: #00ff88; font-size: 12px; margin-top: 1rem; opacity: 0.9;">Click anywhere to continue</div>
+            </div>
+        `
+
+        // Make panel clickable to restart
+        this.panel.style.cursor = 'pointer'
+        this.panel.onclick = () => this.restartDiagnosis()
+
+        // Play completion sound
+        this.audioManager.playSound(SoundType.CONDITION_FOUND)
+    }
+
+    private showSubmissionError(message: string) {
+        // Show temporary error message
+        const errorDiv = document.createElement('div')
+        errorDiv.innerHTML = `
+            <div style="background: ${colors.error.base}ee; color: ${colors.neutral.white}; padding: ${spacing.md}; border-radius: ${borders.radius.md}; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: ${zIndex.modal}; text-align: center; font-size: ${typography.fontSize.lg}; box-shadow: ${effects.shadow.md};">
+                ⚠️ ${message}
+            </div>
+        `
+
+        document.body.appendChild(errorDiv)
+
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.parentNode.removeChild(errorDiv)
+            }
+        }, 3000)
+    }
+
+    // ENHANCEMENT FIRST: Voice consultation system integration
+    private setupVoiceConsultation() {
+        if (!this.panel) return
+
+        const consultationBtn = this.panel.querySelector('#consultation-btn') as HTMLElement
+        if (consultationBtn) {
+            consultationBtn.addEventListener('click', () => this.startVoiceConsultation())
+        }
+    }
+
+    private showConsultationButton() {
+        if (!this.panel) return
+
+        const consultationBtn = this.panel.querySelector('#consultation-btn') as HTMLElement
+        const actionButtons = this.panel.querySelector('#action-buttons') as HTMLElement
+
+        if (consultationBtn && actionButtons) {
+            consultationBtn.style.display = 'flex'
+            actionButtons.style.display = 'flex'
+        }
+    }
+
+    private async startVoiceConsultation() {
+        const gameState = this.gameManager.getGameState()
+        const patientCase = this.workflowManager.getCurrentCase()
+
+        // REUSE: Build consultation context from existing game state
+        const context: ConsultationContext = {
+            patientCase: patientCase,
+            discoveredConditions: gameState.discoveredConditions,
+            scanProgress: this.scanProgress,
+            timeRemaining: gameState.timeRemaining,
+            gamePhase: gameState.phase,
+            currentScore: gameState.score
+        }
+
+        console.log('🎙️ Starting voice consultation with context:', context)
+
+        const success = await this.voiceConsultation.startConsultation(context)
+        if (!success) {
+            this.showSubmissionError('Unable to start consultation. Please try again.')
+        }
+    }
+
+    // CLEAN: Handle consultation lifecycle events
+    private handleConsultationStarted(session: any) {
+        console.log('🎙️ Consultation started:', session.id)
+        this.showConsultationUI()
+        this.pauseGameForConsultation()
+    }
+
+    private handleGuidanceReceived(guidance: string) {
+        console.log('🧠 Guidance received:', guidance.substring(0, 100) + '...')
+        this.displayConsultationGuidance(guidance)
+    }
+
+    private handleConsultationEnded(insights: string[]) {
+        console.log('🎙️ Consultation ended with', insights.length, 'insights')
+        this.hideConsultationUI()
+        this.resumeGameFromConsultation()
+        this.showConsultationInsights(insights)
+    }
+
+    // PERFORMANT: Pause game state during consultation
+    private pauseGameForConsultation() {
+        if (this.timer) {
+            clearInterval(this.timer)
+            this.timer = null
+        }
+
+        // Dim the 3D scene (if accessible)
+        this.emit('gamePaused')
+        console.log('⏸️ Game paused for consultation')
+    }
+
+    // PERFORMANT: Resume game state after consultation
+    private resumeGameFromConsultation() {
+        this.startGameTimer()
+        this.emit('gameResumed')
+        console.log('▶️ Game resumed from consultation')
+    }
+
+    private showConsultationUI() {
+        if (!this.panel) return
+
+        // Create consultation overlay
+        const consultationOverlay = document.createElement('div')
+        consultationOverlay.id = 'consultation-overlay'
+        consultationOverlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8); z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(10px);
+        `
+
+        consultationOverlay.innerHTML = `
+            <div style="background: ${colors.background.gradient.panel}; border: ${borders.width.base} solid ${colors.primary.base}; border-radius: ${borders.radius.xl}; padding: ${spacing['2xl']}; max-width: 600px; text-align: center; position: relative;">
+                <h2 style="color: ${colors.primary.base}; margin-bottom: ${spacing.base}; text-shadow: ${effects.textShadow.md};">🎙️ AI Medical Consultation</h2>
+                <div id="consultation-content" style="background: ${colors.background.primaryGlow}; padding: ${spacing.xl}; border-radius: ${borders.radius.lg}; margin: ${spacing.xl} 0; min-height: 200px;">
+                    <div style="color: ${colors.accent.base}; margin-bottom: ${spacing.base};">🧠 Analyzing your progress with Cerebras AI...</div>
+                    <div id="guidance-text" style="color: ${colors.neutral.white}; font-size: ${typography.fontSize.lg}; line-height: ${typography.lineHeight.relaxed}; text-align: left;"></div>
+                </div>
+                <button id="end-consultation-btn" style="background: linear-gradient(135deg, ${colors.primary.base} 0%, ${colors.primary.dark} 100%); color: ${colors.neutral.black}; border: none; padding: ${spacing.md} ${spacing['2xl']}; border-radius: ${borders.radius.md}; font-weight: ${typography.fontWeight.bold}; cursor: pointer;">
+                    End Consultation
+                </button>
+            </div>
+        `
+
+        document.body.appendChild(consultationOverlay)
+
+        // Setup end consultation button
+        const endBtn = consultationOverlay.querySelector('#end-consultation-btn') as HTMLElement
+        if (endBtn) {
+            endBtn.addEventListener('click', () => this.endVoiceConsultation())
+        }
+    }
+
+    private displayConsultationGuidance(guidance: string) {
+        const guidanceText = document.querySelector('#guidance-text') as HTMLElement
+        if (guidanceText) {
+            guidanceText.innerHTML = guidance.replace(/\n/g, '<br>')
+        }
+    }
+
+    private hideConsultationUI() {
+        const overlay = document.querySelector('#consultation-overlay')
+        if (overlay && overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay)
+        }
+    }
+
+    private async endVoiceConsultation() {
+        const insights = await this.voiceConsultation.endConsultation()
+        console.log('🎙️ Consultation ended with insights:', insights)
+    }
+
+    private showConsultationInsights(insights: string[]) {
+        if (insights.length === 0) return
+
+        // Add insights to hints panel
+        const hintsPanel = this.panel?.querySelector('#hints-panel') as HTMLElement
+        const hintsContent = this.panel?.querySelector('#hints-content') as HTMLElement
+
+        if (hintsPanel && hintsContent) {
+            hintsContent.innerHTML = `
+                <div style="background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); border-radius: 6px; padding: 8px;">
+                    <div style="color: #00ff88; font-weight: bold; margin-bottom: 8px;">🎙️ AI Consultation Insights:</div>
+                    ${insights.map(insight => `<div style="margin-bottom: 6px; font-size: 10px; line-height: 1.4;">${insight}</div>`).join('')}
+                </div>
+            `
+            hintsPanel.style.display = 'block'
+        }
+    }
+
+    // MODULAR: Event emission for external systems
+    private emit(event: string, data?: any) {
+        // Could integrate with external game systems if needed
+        console.log('🎮 Game event:', event, data)
     }
 
     private restartDiagnosis() {
@@ -1169,11 +1691,11 @@ export class DiagnosticUI {
         // Show notification for newly minted NFT rewards
         const indicator = document.createElement('div')
         indicator.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <div style="font-size: 20px;">🏆</div>
+            <div style="display: flex; align-items: center; gap: ${spacing.sm};">
+                <div style="font-size: ${typography.fontSize['3xl']};">🏆</div>
                 <div>
-                    <div style="color: #ffaa00; font-weight: bold; font-size: 14px;">NFT MINTED!</div>
-                    <div style="color: #00ff88; font-size: 12px;">${nftReward.name}</div>
+                    <div style="color: ${colors.accent.base}; font-weight: ${typography.fontWeight.bold}; font-size: ${typography.fontSize.lg};">NFT MINTED!</div>
+                    <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.md};">${nftReward.name}</div>
                 </div>
             </div>
         `
@@ -1181,15 +1703,13 @@ export class DiagnosticUI {
         indicator.style.cssText = `
             position: fixed; top: 100px; left: 50%; transform: translateX(-50%);
             background:
-                linear-gradient(135deg, rgba(255,170,0,0.95) 0%, rgba(255,140,0,0.95) 100%),
+                linear-gradient(135deg, ${colors.accent.base}ee 0%, ${colors.accent.dark}ee 100%),
                 radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 50%);
-            border: 2px solid #ffaa00;
-            border-radius: 12px; padding: 12px 16px;
-            box-shadow:
-                0 10px 30px rgba(255,170,0,0.3),
-                0 0 20px rgba(255,170,0,0.2);
-            z-index: 1002; pointer-events: none;
-            animation: achievementSlideDown 4s ease-out forwards;
+            border: ${borders.width.base} solid ${colors.accent.base};
+            border-radius: ${borders.radius.lg}; padding: ${spacing.md} ${spacing.base};
+            box-shadow: ${effects.shadow.lg}, ${effects.shadow.accentGlow};
+            z-index: ${zIndex.notification}; pointer-events: none;
+            animation: achievementSlideDown 4s ${animation.easing.easeOut} forwards;
         `
 
         document.body.appendChild(indicator)
@@ -1201,214 +1721,6 @@ export class DiagnosticUI {
         }, 4000)
     }
 
-    private showWelcomeScreen() {
-        this.createOnboardingOverlay()
-        
-        // PERFORMANT: Start ambient audio immediately for immersion
-        if (this.audioManager && typeof this.audioManager.startHospitalAmbience === 'function') {
-            this.audioManager.startHospitalAmbience()
-        }
-        
-        if (this.onboardingContainer) {
-            this.onboardingContainer.innerHTML = `
-                <div style="background: linear-gradient(135deg, rgba(0,20,40,0.95) 0%, rgba(0,40,80,0.95) 100%); border: 2px solid #00ff88; border-radius: 16px; padding: 2rem; max-width: 600px; text-align: center; position: relative; overflow: hidden;">
-                    <!-- ENHANCEMENT: Animated scanning lines -->
-                    <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, #00ff88, transparent); animation: scan 3s infinite;"></div>
-                    
-                    <h1 id="title" style="color: #00ff88; font-size: 2.5rem; margin-bottom: 1rem; text-shadow: 0 0 20px rgba(0,255,136,0.5);">🏥 X-RAI</h1>
-                    <div id="protocol" style="color: #ffaa00; font-size: 0.9rem; margin-bottom: 1.5rem; letter-spacing: 2px; opacity: 0;">EMERGENCY DIAGNOSTIC PROTOCOL ACTIVATED</div>
-                    
-                    <div style="background: rgba(0,255,136,0.1); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0; border: 1px solid rgba(0,255,136,0.3);">
-                        <h2 style="color: #00ff88; margin-bottom: 1rem;">📋 PATIENT BRIEFING - PRIORITY: URGENT</h2>
-                        <div id="briefing-content" style="opacity: 0;">
-                            <p style="font-size: 0.95rem; margin-bottom: 0.5rem; color: #ccc;">
-                                <strong>Location:</strong> Emergency Department Bay 3<br>
-                                <strong>Time:</strong> 14:30 EST | <strong>Attending:</strong> Dr. ${this.getUserName()}
-                            </p>
-                            <div style="margin: 1rem 0; padding: 1rem; background: rgba(255,170,0,0.1); border-radius: 8px; border-left: 4px solid #ffaa00;">
-                                <p style="font-size: 1rem; line-height: 1.5; margin-bottom: 0.5rem;">
-                                    ⚠️ <strong>INCOMING PATIENT ALERT</strong><br>
-                                    Patient presents with acute symptoms requiring immediate diagnostic assessment.
-                                </p>
-                            </div>
-                            <p id="emergency-alert" style="color: #ff4444; font-weight: bold; font-size: 1.1rem; animation: pulse 2s infinite; opacity: 0;">
-                                🚨 DIAGNOSTIC INTERVENTION REQUIRED
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <div id="action-buttons" style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; opacity: 0;">
-                        <button class="onboarding-btn secondary" onclick="window.diagnosticUI?.transitionToPhase('exploration')" onmouseenter="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,255,136,0.4)';" onmouseleave="this.style.transform=''; this.style.boxShadow='';">Skip to Diagnosis</button>
-                        <button class="onboarding-btn primary" onclick="window.diagnosticUI?.transitionToPhase('tutorial')" onmouseenter="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,255,136,0.6)';" onmouseleave="this.style.transform=''; this.style.boxShadow='';">Begin Training Protocol</button>
-                    </div>
-                </div>
-            `
-            
-            // ENHANCEMENT FIRST: Add CSS animations to existing style system
-            this.addWelcomeAnimations()
-            
-            // PERFORMANT: Staggered animation sequence
-            this.playWelcomeSequence()
-            
-            this.showOnboarding()
-        }
-    }
-
-    // MODULAR: Separate animation logic
-    private addWelcomeAnimations() {
-        if (!document.querySelector('#welcome-animations')) {
-            const style = document.createElement('style')
-            style.id = 'welcome-animations'
-            style.textContent = `
-                @keyframes scan { 0% { left: -100%; } 100% { left: 100%; } }
-                @keyframes pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
-                @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-            `
-            document.head.appendChild(style)
-        }
-    }
-
-    // CLEAN: Separate sequence logic with clear timing
-    private playWelcomeSequence() {
-        setTimeout(() => {
-            const protocol = document.querySelector('#protocol') as HTMLElement
-            if (protocol) protocol.style.cssText += 'opacity: 1; animation: fadeInUp 0.8s ease;'
-        }, 500)
-
-        setTimeout(() => {
-            const briefing = document.querySelector('#briefing-content') as HTMLElement
-            if (briefing) briefing.style.cssText += 'opacity: 1; animation: fadeInUp 0.8s ease;'
-        }, 1200)
-
-        setTimeout(() => {
-            const alert = document.querySelector('#emergency-alert') as HTMLElement
-            if (alert) alert.style.opacity = '1'
-            // ENHANCEMENT: Play alert sound
-            if (this.audioManager && typeof this.audioManager.playSound === 'function') {
-                this.audioManager.playSound('medical_beep' as any)
-            }
-        }, 2000)
-
-        setTimeout(() => {
-            const buttons = document.querySelector('#action-buttons') as HTMLElement
-            if (buttons) buttons.style.cssText += 'opacity: 1; animation: fadeInUp 0.8s ease;'
-        }, 2800)
-    }
-
-    // DRY: Single source for user name
-    private getUserName(): string {
-        return 'Resident'
-    }
-
-    private showTutorialScreen() {
-        if (this.onboardingContainer) {
-            this.onboardingContainer.innerHTML = `
-                <div style="background: linear-gradient(135deg, rgba(0,20,40,0.95) 0%, rgba(0,40,80,0.95) 100%); border: 2px solid #00ff88; border-radius: 16px; padding: 2rem; max-width: 600px; text-align: center;">
-                    <h2 style="color: #00ff88; margin-bottom: 1rem;">🔍 X-Ray Navigation</h2>
-                    <div style="background: rgba(0,255,136,0.1); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
-                        <p style="font-size: 1.1rem; line-height: 1.6;">Use your mouse to rotate and zoom the 3D model. Look for anatomical markers and abnormalities.</p>
-                    </div>
-                    <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
-                        <button class="onboarding-btn secondary" onclick="window.diagnosticUI?.transitionToPhase('welcome')">Previous</button>
-                        <button class="onboarding-btn primary" onclick="window.diagnosticUI?.transitionToPhase('exploration')">Continue</button>
-                    </div>
-                </div>
-            `
-            this.showOnboarding()
-        }
-    }
-
-    private showExplorationScreen() {
-        if (this.onboardingContainer) {
-            this.onboardingContainer.innerHTML = `
-                <div style="background: linear-gradient(135deg, rgba(0,20,40,0.95) 0%, rgba(0,40,80,0.95) 100%); border: 2px solid #00ff88; border-radius: 16px; padding: 2rem; max-width: 600px; text-align: center;">
-                    <h2 style="color: #00ff88; margin-bottom: 1rem;">🔬 Explore the Patient</h2>
-                    <div style="background: rgba(255,170,0,0.1); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0; border: 1px solid #ffaa00;">
-                        <p style="font-size: 1.1rem; margin-bottom: 1rem;">Take your time to examine the 3D model. Rotate, zoom, and identify key anatomical structures.</p>
-                        <p style="color: #00ff88; font-weight: bold;">💡 The more you explore, the better prepared you'll be for diagnosis!</p>
-                    </div>
-                    <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
-                        <button class="onboarding-btn secondary" onclick="window.diagnosticUI?.transitionToPhase('tutorial')">Back to Tutorial</button>
-                        <button class="onboarding-btn primary" onclick="window.diagnosticUI?.transitionToPhase('ready')">I'm Ready!</button>
-                    </div>
-                </div>
-            `
-            this.showOnboarding()
-        }
-    }
-
-    private showReadyScreen() {
-        if (this.onboardingContainer) {
-            this.onboardingContainer.innerHTML = `
-                <div style="background: linear-gradient(135deg, rgba(0,20,40,0.95) 0%, rgba(0,40,80,0.95) 100%); border: 2px solid #00ff88; border-radius: 16px; padding: 2rem; max-width: 600px; text-align: center;">
-                    <h2 style="color: #00ff88; margin-bottom: 1rem;">🚀 Ready for Diagnosis</h2>
-                    <div style="background: rgba(255,170,0,0.1); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0; border: 1px solid #ffaa00;">
-                        <h3 style="color: #ffaa00; margin-bottom: 1rem;">⚠️ Final Briefing</h3>
-                        <p style="font-size: 1.1rem; margin-bottom: 1rem;">Once you start the timer, you'll have <strong>5 minutes</strong> to make your diagnosis.</p>
-                        <p style="color: #00ff88; font-weight: bold;">🎯 Remember: Accuracy and speed both matter!</p>
-                    </div>
-                    <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
-                        <button class="onboarding-btn secondary" onclick="window.diagnosticUI?.transitionToPhase('exploration')">More Practice</button>
-                        <button class="onboarding-btn primary" onclick="window.diagnosticUI?.transitionToPhase('active')">Start Diagnosis!</button>
-                    </div>
-                </div>
-            `
-            this.showOnboarding()
-        }
-    }
-
-    private createOnboardingOverlay() {
-        if (!this.onboardingContainer) {
-            this.onboardingContainer = document.createElement('div')
-            this.onboardingContainer.className = 'onboarding-overlay'
-            this.onboardingContainer.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0, 0, 0, 0.95); z-index: 9999;
-                display: flex; align-items: center; justify-content: center;
-                opacity: 0; transition: opacity 0.5s ease; pointer-events: none;
-                padding: 1rem; box-sizing: border-box;
-            `
-
-            // Add onboarding button styles
-            const style = document.createElement('style')
-            style.textContent = `
-                .onboarding-btn {
-                    padding: 0.875rem 1.5rem; border: 2px solid #00ff88;
-                    background: transparent; color: #00ff88; border-radius: 8px;
-                    cursor: pointer; font-weight: bold; font-size: 14px;
-                    min-height: 44px; transition: all 0.3s ease;
-                }
-                .onboarding-btn.primary {
-                    background: #00ff88; color: #000;
-                }
-                .onboarding-btn:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4);
-                }
-            `
-            document.head.appendChild(style)
-
-            document.body.appendChild(this.onboardingContainer)
-        }
-    }
-
-    private showOnboarding() {
-        if (this.onboardingContainer) {
-            this.onboardingContainer.style.pointerEvents = 'auto'
-            this.onboardingContainer.style.opacity = '1'
-        }
-    }
-
-    private hideOnboarding() {
-        if (this.onboardingContainer) {
-            this.onboardingContainer.style.opacity = '0'
-            setTimeout(() => {
-                if (this.onboardingContainer) {
-                    this.onboardingContainer.style.pointerEvents = 'none'
-                }
-            }, 500)
-        }
-    }
 
     private async startDiagnosticSession() {
         // Generate AI-powered patient case and start the diagnostic session
@@ -1511,7 +1823,7 @@ export class DiagnosticUI {
         const age = patientCase.age || 35
         const gender = patientCase.gender || 'Unknown'
         const chiefComplaint = patientCase.chiefComplaint || 'Diagnostic evaluation required'
-        
+
         // Use first 150 characters of HPI for better display
         const hpi = patientCase.historyOfPresentIllness || patientCase.aiDescription || 'Patient requires comprehensive diagnostic assessment.'
         const displayHPI = hpi.length > 150 ? hpi.substring(0, 150) + '...' : hpi
@@ -1531,7 +1843,7 @@ export class DiagnosticUI {
         const scanProgressSection = this.panel.querySelector('#scan-progress')
         if (scanProgressSection) {
             scanProgressSection.insertAdjacentHTML('beforebegin', patientInfoSection)
-            
+
             // Add CSS for expandable functionality
             if (!document.querySelector('#patient-info-styles')) {
                 const style = document.createElement('style')

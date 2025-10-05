@@ -1,0 +1,173 @@
+/**
+ * X-RAI Global Animations
+ * Keyframe animations and global styles for consistent visual effects
+ * 
+ * CORE PRINCIPLE: DRY - Defined once, used everywhere
+ */
+
+/* ============================================================================
+ * KEYFRAME ANIMATIONS
+ * ============================================================================ */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 0.7;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+    }
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -100% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes scan {
+    0% {
+        left: -100%;
+    }
+
+    100% {
+        left: 100%;
+    }
+}
+
+@keyframes achievementSlideDown {
+    0% {
+        transform: translateX(-50%) translateY(-100px);
+        opacity: 0;
+    }
+
+    20%,
+    80% {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(-50%) translateY(-100px);
+        opacity: 0;
+    }
+}
+
+@keyframes premiumFloatUp {
+    0% {
+        transform: translateY(-50%) scale(0.8);
+        opacity: 0;
+    }
+
+    10% {
+        transform: translateY(-50%) scale(1.1);
+        opacity: 1;
+    }
+
+    70% {
+        transform: translateY(-50%) scale(1) translateY(-100px);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-50%) scale(0.9) translateY(-200px);
+        opacity: 0;
+    }
+}
+
+/* ============================================================================
+ * UTILITY CLASSES
+ * ============================================================================ */
+
+/* Hardware acceleration for smooth animations */
+.hardware-accelerated {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+}
+
+/* Smooth transitions */
+.smooth-transition {
+    transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Glow effect */
+.holographic-glow {
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
+
+/* Interactive hover effects */
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.hover-glow:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 0 20px rgba(0, 255, 136, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.hover-brighten:hover {
+    filter: brightness(1.1);
+}

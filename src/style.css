@@ -882,3 +882,46 @@ canvas {
 .hint-btn .btn-icon {
   filter: drop-shadow(0 0 8px rgba(255,215,0,0.8));
 }
+
+/* PREMIUM: Voice consultation button styling */
+.consultation-btn {
+  background: linear-gradient(135deg, rgba(0,255,136,0.2) 0%, rgba(0,150,255,0.2) 100%) !important;
+  border-color: rgba(0,255,136,0.5) !important;
+  box-shadow: 
+    0 4px 15px rgba(0,255,136,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.1) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.consultation-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0,255,136,0.3), transparent);
+  transition: left 0.5s;
+}
+
+.consultation-btn:hover::before {
+  left: 100%;
+}
+
+.consultation-btn:hover {
+  background: linear-gradient(135deg, rgba(0,255,136,0.3) 0%, rgba(0,150,255,0.3) 100%) !important;
+  box-shadow: 
+    0 8px 25px rgba(0,255,136,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.2) !important;
+  transform: translateY(-2px) !important;
+}
+
+.consultation-btn .btn-icon {
+  filter: drop-shadow(0 0 8px rgba(0,255,136,0.8));
+}
+
+.consultation-btn .btn-count {
+  color: #00ff88 !important;
+  font-weight: bold;
+}
