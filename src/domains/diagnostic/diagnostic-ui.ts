@@ -621,7 +621,8 @@ export class DiagnosticUI {
             // ENHANCEMENT FIRST: Pass references to enable real scanning during tutorial
             xRayEffect: this.xRayEffect,
             scanFeedbackSystem: this.scanFeedbackSystem,
-            diagnosticUI: this
+            diagnosticUI: this,
+            audioManager: this.audioManager // Pass audioManager directly
         })
 
         this.tutorial.start()
@@ -691,6 +692,13 @@ export class DiagnosticUI {
         if (this.scanFeedbackSystem) {
             this.scanFeedbackSystem.startScanning('tutorial-scan', position)
         }
+
+        // ENHANCEMENT FIRST: Auto-complete this step after scan starts
+        setTimeout(() => {
+            if (this.tutorial) {
+                this.tutorial.actionPerformed('scan-start', true)
+            }
+        }, 2000) // Give 2 seconds to see the scan effect
     }
 
     private monitorTutorialScanProgress() {

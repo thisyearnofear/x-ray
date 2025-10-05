@@ -137,6 +137,7 @@ export class InteractiveTutorial {
     private xRayEffect: any = null
     private scanFeedbackSystem: any = null
     private diagnosticUI: any = null
+    private audioManager: any = null
 
     constructor(callbacks?: {
         onStepComplete?: (stepId: string) => void
@@ -145,6 +146,7 @@ export class InteractiveTutorial {
         xRayEffect?: any
         scanFeedbackSystem?: any
         diagnosticUI?: any
+        audioManager?: any
     }) {
         this.onStepComplete = callbacks?.onStepComplete
         this.onTutorialComplete = callbacks?.onTutorialComplete
@@ -154,6 +156,7 @@ export class InteractiveTutorial {
         this.xRayEffect = callbacks?.xRayEffect
         this.scanFeedbackSystem = callbacks?.scanFeedbackSystem
         this.diagnosticUI = callbacks?.diagnosticUI
+        this.audioManager = callbacks?.audioManager
     }
 
     start(): void {
@@ -170,9 +173,8 @@ export class InteractiveTutorial {
 
     private enableAudioSystems(): void {
         // CLEAN: Single responsibility - enable all audio systems
-        // Access through xRayEffect which has the audioManager
-        if (this.xRayEffect?.audioManager) {
-            this.xRayEffect.audioManager.startHospitalAmbience()
+        if (this.audioManager) {
+            this.audioManager.startHospitalAmbience()
             console.log('🎵 Audio systems enabled via user interaction')
         } else {
             console.warn('⚠️ AudioManager not available')
