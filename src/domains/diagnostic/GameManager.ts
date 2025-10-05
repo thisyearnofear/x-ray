@@ -234,4 +234,31 @@ export class GameManager {
         return new Set(this.gameState.unlockedTechniques)
     }
 
+    public updateTimeRemaining(newTime: number) {
+        this.gameState.timeRemaining = newTime;
+        this.emit('gameStateUpdated', this.gameState);
+    }
+
+    public updatePhase(newPhase: 'scanning' | 'analyzing' | 'solved') {
+        this.gameState.phase = newPhase;
+        this.emit('gameStateUpdated', this.gameState);
+    }
+
+    // AGGRESSIVE CONSOLIDATION: Single updateState method for all state changes
+    public updateState(updates: Partial<GameState>) {
+        this.gameState = { ...this.gameState, ...updates };
+        this.emit('gameStateUpdated', this.gameState);
+    }
+
+    // Reset the game state to initial values
+    public resetGameState(difficulty: 'easy' | 'medium' | 'hard' = 'medium') {
+        const timeMap: Record<string, number> = { 'easy': 420, 'medium': 300, 'hard': 240 };
+        this.gameState = {
+            ...this.initializeGameState(),
+            timeRemaining: timeMap[difficulty] || 300,
+            difficulty: difficulty
+        };
+        this.emit('gameStateUpdated', this.gameState);
+    }
+
 }

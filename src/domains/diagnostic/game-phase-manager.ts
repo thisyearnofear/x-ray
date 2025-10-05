@@ -32,6 +32,7 @@ export class GamePhaseManager {
   transitionTo(newPhase: GamePhase): boolean {
     // Allow same-phase transitions for welcome screen
     if (this.currentPhase === newPhase && newPhase === GamePhase.WELCOME) {
+      console.log(`Same-phase transition allowed for WELCOME: ${this.currentPhase} -> ${newPhase}`)
       this.onPhaseEnter(newPhase, this.currentPhase)
       const phaseListeners = this.listeners.get(newPhase) || []
       phaseListeners.forEach(listener => listener())
@@ -40,16 +41,16 @@ export class GamePhaseManager {
 
     if (!this.isValidTransition(this.currentPhase, newPhase)) {
       console.warn(`Invalid transition from ${this.currentPhase} to ${newPhase}`)
+      console.log(`Valid transitions from ${this.currentPhase}:`, this.validTransitions[this.currentPhase as keyof typeof this.validTransitions])
       return false
     }
 
     const previousPhase = this.currentPhase
+    console.log(`Phase transition: ${previousPhase} -> ${newPhase}`)
     this.currentPhase = newPhase
 
     // Update phase in GameManager if available
     if (this.gameManager) {
-      const gameState = this.gameManager.getGameState()
-      // Map GamePhase enum to GameManager phase type
       const phaseMap: Record<GamePhase, 'scanning' | 'analyzing' | 'solved'> = {
         [GamePhase.ACTIVE]: 'scanning',
         [GamePhase.PAUSED]: 'scanning',
@@ -60,7 +61,7 @@ export class GamePhaseManager {
         [GamePhase.READY]: 'scanning'
       }
       const mappedPhase = phaseMap[newPhase] || 'scanning'
-      this.gameManager['gameState'] = { ...gameState, phase: mappedPhase }
+      this.gameManager.updatePhase(mappedPhase)
     }
 
     // Trigger phase-specific actions

@@ -213,6 +213,18 @@ export class AudioManager {
     }
   }
 
+  // Method to ensure audio context is running
+  public async ensureAudioContext(): Promise<void> {
+    if (this.context.state === 'suspended') {
+      try {
+        await this.context.resume();
+        console.log('🎵 Audio context resumed successfully');
+      } catch (error) {
+        console.warn('⚠️ Failed to resume audio context:', error);
+      }
+    }
+  }
+
   // Enhanced hospital ambience methods
   private createAmbienceSound(): THREE.Audio {
     return this.createProceduralSound(2.0, 60, 120, 'sine', 0.05);

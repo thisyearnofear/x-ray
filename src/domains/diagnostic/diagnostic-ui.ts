@@ -557,13 +557,18 @@ export class DiagnosticUI {
     }
 
     private startGameTimer() {
+        // Clear any existing timer to prevent multiple timers running
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+        
         this.timer = setInterval(() => {
             const gameState = this.gameManager.getGameState()
             const newTimeRemaining = gameState.timeRemaining - 1
 
-            // Update the game state in the manager
-            const updatedState = { ...gameState, timeRemaining: newTimeRemaining }
-            this.gameManager['gameState'] = updatedState
+            // Update the game state in the manager using consolidated method
+            this.gameManager.updateState({ timeRemaining: newTimeRemaining });
 
             this.updateTimerDisplay()
 
@@ -597,15 +602,14 @@ export class DiagnosticUI {
         })
 
         this.phaseManager.onPhaseChange(GamePhase.ACTIVE, () => {
-            const gameState = this.gameManager.getGameState()
-            this.gameManager['gameState'] = { ...gameState, phase: 'scanning' }
+            this.gameManager.updateState({ phase: 'scanning' })
             this.updatePhaseDisplay()
             this.updatePanelForPhase('active')
             this.startDiagnosticSession()
         })
     }
 
-    private startInteractiveTutorial() {
+    private async startInteractiveTutorial() {
         // ENHANCEMENT FIRST: Initialize new interactive tutorial system with game system references
         this.tutorial = new InteractiveTutorial({
             onStepComplete: (stepId) => {
@@ -630,6 +634,9 @@ export class DiagnosticUI {
             audioManager: this.audioManager // Pass audioManager directly
         })
 
+        // Ensure audio context is running before starting tutorial (user interaction context)
+        await this.audioManager.ensureAudioContext();
+        
         this.tutorial.start()
     }
 
@@ -946,8 +953,7 @@ export class DiagnosticUI {
         }
 
         // Update game state in manager
-        const gameState = this.gameManager.getGameState()
-        this.gameManager['gameState'] = { ...gameState, phase: 'analyzing' }
+        this.gameManager.updateState({ phase: 'analyzing' })
         this.updatePhaseDisplay()
 
         // Show analysis section
@@ -1082,10 +1088,10 @@ export class DiagnosticUI {
 
         const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId)
         if (condition) {
-            // Update game state in manager
+            // Update game state in manager using consolidated method
             const newDiscoveredConditions = new Set(gameState.discoveredConditions)
             newDiscoveredConditions.add(conditionId)
-            this.gameManager['gameState'] = { ...gameState, discoveredConditions: newDiscoveredConditions }
+            this.gameManager.updateState({ discoveredConditions: newDiscoveredConditions })
 
             // Calculate contextual points based on multiple factors
             const basePoints = this.calculateDiscoveryPoints(condition)
@@ -1163,7 +1169,7 @@ export class DiagnosticUI {
         const newLearningProgress = new Map(gameState.learningProgress)
         newLearningProgress.set(conditionId, Math.min(current + 0.1, 1.0))
 
-        this.gameManager['gameState'] = { ...gameState, learningProgress: newLearningProgress }
+        this.gameManager.updateState({ learningProgress: newLearningProgress })
     }
 
     private checkAchievements(type: string, data: any) {
@@ -1189,7 +1195,7 @@ export class DiagnosticUI {
         const newAchievements = new Set(gameState.achievements)
         newAchievements.add(achievementId)
 
-        this.gameManager['gameState'] = { ...gameState, achievements: newAchievements }
+        this.gameManager.updateState({ achievements: newAchievements })
         this.showAchievementNotification(achievementId)
         this.awardPoints(100, 'achievement')
     }
@@ -1259,12 +1265,8 @@ export class DiagnosticUI {
         const streakBonus = newStreak > 1 ? newStreak * 10 : 0
         const finalScore = newScore + streakBonus
 
-        // Update game state in manager
-        this.gameManager['gameState'] = {
-            ...gameState,
-            score: finalScore,
-            streak: newStreak
-        }
+        // Update game state in manager using consolidated method
+        this.gameManager.updateState({ score: finalScore, streak: newStreak })
 
         // Update efficiency metrics
         this.updateEfficiencyMetrics()
@@ -1294,12 +1296,7 @@ export class DiagnosticUI {
             accuracy = totalProgress / conditionsFound
         }
 
-        // Update game state with new metrics
-        this.gameManager['gameState'] = {
-            ...gameState,
-            efficiency,
-            accuracy
-        }
+        this.gameManager.updateState({ accuracy, efficiency })
     }
 
     private updateLearningDisplay() {
@@ -1827,25 +1824,8 @@ export class DiagnosticUI {
     private restartDiagnosis() {
         // Reset game state with enhanced properties using the gameManager
         const currentGameState = this.gameManager.getGameState()
-        const newGameState = {
-            score: 0,
-            streak: 0,
-            timeRemaining: this.getTimeForDifficulty(),
-            phase: 'scanning' as const,
-            discoveredConditions: new Set<string>(),
-            sessionStartTime: Date.now(),
-            hintsUsed: 0,
-            accuracy: 0,
-            efficiency: 0,
-            learningProgress: new Map<string, number>(),
-            achievements: new Set<string>(),
-            difficulty: currentGameState.difficulty,
-            patientCase: null,
-            specialization: currentGameState.specialization,
-            unlockedTechniques: currentGameState.unlockedTechniques
-        }
-
-        this.gameManager['gameState'] = newGameState
+        
+        this.gameManager.resetGameState(currentGameState.difficulty);
         this.scanProgress.clear()
 
         // Recreate the panel
@@ -1933,6 +1913,9 @@ export class DiagnosticUI {
     private async startDiagnosticSession() {
         // Generate AI-powered patient case and start the diagnostic session
         console.log('🚀 Starting AI-powered diagnostic session...')
+
+        // Ensure audio context is running (needed for Web Audio API policies)
+        await this.audioManager.ensureAudioContext();
 
         // Start the game timer when diagnosis begins
         this.startGameTimer()
