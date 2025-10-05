@@ -2112,44 +2112,6 @@ export class DiagnosticUI {
     }
 
     // DYNAMIC: Show condition discovery opportunity
-    private showConditionDiscoveryOpportunity(message: string) {
-        if (!this.panel) return;
-        
-        console.log('🔬 Condition discovery opportunity:', message);
-        
-        // Create a temporary discovery notification element
-        const discoveryElement = document.createElement('div');
-        discoveryElement.className = 'discovery-opportunity';
-        
-        // Create the inner HTML structure
-        discoveryElement.innerHTML = '<div style="' +
-            'position: fixed;' +
-            'top: 30%;' +
-            'left: 50%;' +
-            'transform: translateX(-50%);' +
-            'background: rgba(136, 0, 255, 0.2);' +
-            'border: 1px solid rgba(136, 0, 255, 0.5);' +
-            'border-radius: 8px;' +
-            'padding: 12px 24px;' +
-            'color: #8800ff;' +
-            'font-size: 14px;' +
-            'font-weight: bold;' +
-            'z-index: 10000;' +
-            'text-align: center;' +
-            'box-shadow: 0 0 20px rgba(136, 0, 255, 0.3);' +
-            'backdrop-filter: blur(10px);' +
-            'animation: fadeInOut 5s ease-in-out forwards;' +
-            '">' + message + '</div>';
-        
-        document.body.appendChild(discoveryElement);
-        
-        // Remove the discovery notification after animation completes
-        setTimeout(() => {
-            if (discoveryElement.parentNode) {
-                discoveryElement.parentNode.removeChild(discoveryElement);
-            }
-        }, 5000);
-    }
 
     // DYNAMIC: Show dynamic hint to the user
     private showDynamicHint(hint: string) {
@@ -2209,47 +2171,6 @@ export class DiagnosticUI {
     }
 
     // DYNAMIC: Show dynamic clue to the user
-    private showDynamicClue(clue: string) {
-        if (!this.panel) return;
-        
-        console.log('🔍 Dynamic clue:', clue);
-        
-        // Create a temporary clue display element
-        const clueElement = document.createElement('div');
-        clueElement.className = 'dynamic-clue';
-        clueElement.innerHTML = `
-            <div style="
-                position: fixed;
-                top: 25%;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(255, 200, 0, 0.2);
-                border: 1px solid rgba(255, 200, 0, 0.5);
-                border-radius: 8px;
-                padding: 12px 24px;
-                color: #ffc800;
-                font-size: 14px;
-                font-weight: bold;
-                z-index: 10000;
-                text-align: center;
-                box-shadow: 0 0 20px rgba(255, 200, 0, 0.3);
-                backdrop-filter: blur(10px);
-                animation: fadeInOut 5s ease-in-out forwards;
-            ">
-                ${clue}
-            </div>
-        `;
-        
-        document.body.appendChild(clueElement);
-        
-        // Remove the clue after animation completes
-        setTimeout(() => {
-            if (clueElement.parentNode) {
-                clueElement.parentNode.removeChild(clueElement);
-            }
-        }, 5000);
-    }
-
     // DYNAMIC: Show dynamic clue to the user
     private showDynamicClueWithMessage(clue: string) {
         if (!this.panel) return;
@@ -2321,22 +2242,6 @@ export class DiagnosticUI {
                 box-shadow: 0 0 20px rgba(136, 0, 255, 0.3);
                 backdrop-filter: blur(10px);
                 animation: fadeInOut 5s ease-in-out forwards;
-            ">
-                ${message}
-            </div>
-        `;
-        
-        document.body.appendChild(discoveryElement);
-        
-        // Remove the discovery notification after animation completes
-        setTimeout(() => {
-            if (discoveryElement.parentNode) {
-                discoveryElement.parentNode.removeChild(discoveryElement);
-            }
-        }, 5000);
-    }
-}
-
             ">
                 ${message}
             </div>
