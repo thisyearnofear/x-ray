@@ -77,7 +77,7 @@ export class GamePhaseManager {
   private isValidTransition(from: GamePhase, to: GamePhase): boolean {
     const validTransitions: Record<GamePhase, GamePhase[]> = {
       [GamePhase.WELCOME]: [GamePhase.TUTORIAL, GamePhase.EXPLORATION],
-      [GamePhase.TUTORIAL]: [GamePhase.EXPLORATION, GamePhase.READY],
+      [GamePhase.TUTORIAL]: [GamePhase.WELCOME, GamePhase.EXPLORATION, GamePhase.READY],
       [GamePhase.EXPLORATION]: [GamePhase.READY, GamePhase.TUTORIAL],
       [GamePhase.READY]: [GamePhase.ACTIVE, GamePhase.EXPLORATION],
       [GamePhase.ACTIVE]: [GamePhase.PAUSED, GamePhase.COMPLETE],

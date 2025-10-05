@@ -1215,7 +1215,7 @@ export class DiagnosticUI {
                     <!-- ENHANCEMENT: Animated scanning lines -->
                     <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, #00ff88, transparent); animation: scan 3s infinite;"></div>
                     
-                    <h1 id="title" style="color: #00ff88; font-size: 2.5rem; margin-bottom: 1rem; text-shadow: 0 0 20px rgba(0,255,136,0.5);">🏥 X-RAI MEDICAL SIMULATOR</h1>
+                    <h1 id="title" style="color: #00ff88; font-size: 2.5rem; margin-bottom: 1rem; text-shadow: 0 0 20px rgba(0,255,136,0.5);">🏥 X-RAI</h1>
                     <div id="protocol" style="color: #ffaa00; font-size: 0.9rem; margin-bottom: 1.5rem; letter-spacing: 2px; opacity: 0;">EMERGENCY DIAGNOSTIC PROTOCOL ACTIVATED</div>
                     
                     <div style="background: rgba(0,255,136,0.1); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0; border: 1px solid rgba(0,255,136,0.3);">
