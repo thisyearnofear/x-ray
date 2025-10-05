@@ -613,7 +613,12 @@ export class DiagnosticUI {
             },
             onTutorialComplete: () => {
                 console.log('🎉 Tutorial complete!')
-                this.phaseManager.transitionTo(GamePhase.ACTIVE)
+                // Transition to READY first, then to ACTIVE
+                this.phaseManager.transitionTo(GamePhase.READY)
+                // Small delay to ensure READY transition completes
+                setTimeout(() => {
+                    this.phaseManager.transitionTo(GamePhase.ACTIVE)
+                }, 100)
             },
             onActionRequired: (action, data) => {
                 this.handleTutorialAction(action, data)
@@ -650,6 +655,11 @@ export class DiagnosticUI {
                 if (this.scanFeedbackSystem && data?.highlightArea) {
                     this.startTutorialScanFeedback(data.highlightArea)
                 }
+                break
+
+            case 'scan-demo':
+                // Handle scan demo for tutorial
+                this.handleScanDemo()
                 break
 
             case 'scan-progress-100':
@@ -711,6 +721,12 @@ export class DiagnosticUI {
                 console.warn('⚠️ Tutorial system not available')
             }
         }, 1500) // Reduced to 1.5 seconds for faster progression
+    }
+
+    private handleScanDemo() {
+        // Handle the scan-demo action for tutorial
+        console.log('🔍 Handling scan demo for tutorial')
+        // No special handling needed, just let tutorial auto-progress
     }
 
     private monitorTutorialScanProgress() {
@@ -920,8 +936,14 @@ export class DiagnosticUI {
     analyzeCondition(condition: any) {
         console.log('🔍 Analyzing condition:', condition.name)
 
-        // Play analysis sound
-        this.audioManager.playSound(SoundType.AI_PROCESSING)
+        // Play analysis sound (with null check)
+        if (this.audioManager && this.audioManager.playSound) {
+            try {
+                this.audioManager.playSound(SoundType.AI_PROCESSING)
+            } catch (error) {
+                console.warn('⚠️ Analysis sound failed:', error)
+            }
+        }
 
         // Update game state in manager
         const gameState = this.gameManager.getGameState()

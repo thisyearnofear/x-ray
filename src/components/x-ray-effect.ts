@@ -461,17 +461,23 @@ export default class XRayEffect {
       // Get condition details for both audio and visual feedback
       const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId);
       if (condition) {
-        // Play discovery sound based on severity
-        switch (condition.severity) {
-          case 'low':
-            this.audioManager.playSound(SoundTypeType.LOW_SEVERITY);
-            break;
-          case 'medium':
-            this.audioManager.playSound(SoundTypeType.MEDIUM_SEVERITY);
-            break;
-          case 'high':
-            this.audioManager.playSound(SoundTypeType.HIGH_SEVERITY);
-            break;
+        // Play discovery sound based on severity (with null check)
+        if (this.audioManager && this.audioManager.playSound) {
+          try {
+            switch (condition.severity) {
+              case 'low':
+                this.audioManager.playSound(SoundType.LOW_SEVERITY);
+                break;
+              case 'medium':
+                this.audioManager.playSound(SoundType.MEDIUM_SEVERITY);
+                break;
+              case 'high':
+                this.audioManager.playSound(SoundType.HIGH_SEVERITY);
+                break;
+            }
+          } catch (error) {
+            console.warn('⚠️ Audio playback failed:', error)
+          }
         }
 
         // Create visual feedback as audio alternative

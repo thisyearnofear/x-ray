@@ -31,6 +31,7 @@ export class InteractiveTutorial {
     private overlay: HTMLElement | null = null
     private highlightElement: HTMLElement | null = null
     private practiceMode: boolean = true // No timer in tutorial
+    private autoProgressTimeouts: Set<number> = new Set() // Track active auto-progress timeouts
 
     private steps: TutorialStep[] = [
         {
@@ -235,46 +236,61 @@ export class InteractiveTutorial {
     private setupStepAutoProgression(): void {
         // Auto-progress through all tutorial steps for demo mode
         const checkStepProgression = () => {
+            const stepKey = this.currentStep
+            if (this.autoProgressTimeouts.has(stepKey)) {
+                return // Already have a timeout for this step
+            }
+
             switch (this.currentStep) {
                 case 3: // scanning-intro step
-                    setTimeout(() => {
+                    const timeout3 = setTimeout(() => {
                         if (this.currentStep === 3) {
                             console.log('🔍 Scanning demo in tutorial mode - auto-progressing')
                             this.actionPerformed('scan-demo', true)
                         }
-                    }, 1000) // Auto-progress after 1 second
+                        this.autoProgressTimeouts.delete(stepKey)
+                    }, 2500) // Increased to 2.5 seconds for better demo experience
+                    this.autoProgressTimeouts.add(stepKey)
                     break
                 case 4: // scanning-progress step
-                    setTimeout(() => {
+                    const timeout4 = setTimeout(() => {
                         if (this.currentStep === 4) {
                             console.log('⏱️ Scan progress step - auto-progressing')
                             this.actionPerformed('scan-progress-100', true)
                         }
-                    }, 1500)
+                        this.autoProgressTimeouts.delete(stepKey)
+                    }, 3000) // Increased to 3 seconds
+                    this.autoProgressTimeouts.add(stepKey)
                     break
                 case 5: // discovery step
-                    setTimeout(() => {
+                    const timeout5 = setTimeout(() => {
                         if (this.currentStep === 5) {
                             console.log('🎯 Discovery step - auto-progressing')
                             this.actionPerformed('click-condition', true)
                         }
-                    }, 1000)
+                        this.autoProgressTimeouts.delete(stepKey)
+                    }, 2000) // Increased to 2 seconds
+                    this.autoProgressTimeouts.add(stepKey)
                     break
                 case 6: // consultation-intro step
-                    setTimeout(() => {
+                    const timeout6 = setTimeout(() => {
                         if (this.currentStep === 6) {
                             console.log('🎙️ Auto-acknowledging consultation feature')
                             this.actionPerformed('acknowledge', true)
                         }
-                    }, 2000)
+                        this.autoProgressTimeouts.delete(stepKey)
+                    }, 3000) // Increased to 3 seconds
+                    this.autoProgressTimeouts.add(stepKey)
                     break
                 case 7: // complete step
-                    setTimeout(() => {
+                    const timeout7 = setTimeout(() => {
                         if (this.currentStep === 7) {
                             console.log('🏆 Auto-starting diagnostic session')
                             this.actionPerformed('start-game', true)
                         }
-                    }, 1500)
+                        this.autoProgressTimeouts.delete(stepKey)
+                    }, 2500) // Increased to 2.5 seconds
+                    this.autoProgressTimeouts.add(stepKey)
                     break
             }
         }
@@ -285,6 +301,7 @@ export class InteractiveTutorial {
                 checkStepProgression()
             } else {
                 clearInterval(progressionInterval)
+                this.autoProgressTimeouts.clear()
             }
         }, 500)
     }
@@ -536,5 +553,7 @@ export class InteractiveTutorial {
         this.overlay = null
         this.highlightElement = null
         this.isActive = false
+        // Clear any pending auto-progress timeouts
+        this.autoProgressTimeouts.clear()
     }
 }
