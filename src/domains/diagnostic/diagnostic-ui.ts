@@ -155,6 +155,11 @@ export class DiagnosticUI {
 
             // Make DiagnosticUI globally accessible for phase transitions
             ; (window as any).diagnosticUI = this
+
+        // ENHANCEMENT FIRST: Auto-start tutorial on page load
+        setTimeout(() => {
+            this.phaseManager.transitionTo(GamePhase.WELCOME)
+        }, 500) // Small delay to ensure everything is loaded
     }
 
     // PREMIUM: Premium diagnostic panel positioned on LEFT for desktop
@@ -190,8 +195,8 @@ export class DiagnosticUI {
       ${svgDefs}
       <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; padding: ${spacing.base}; border-bottom: ${borders.width.thin} solid ${colors.border.primary}; cursor: pointer; user-select: none;">
         <div class="scan-prompt">
-          <div class="scan-title" id="panel-title">🏥 MEDICAL DIAGNOSTIC SYSTEM</div>
-          <div class="scan-subtitle" id="panel-subtitle">AI-Powered Medical Analysis & Training</div>
+          <div class="scan-title" id="panel-title">⚡ EMERGENCY DIAGNOSTIC</div>
+          <div class="scan-subtitle" id="panel-subtitle">Critical Patient - Rapid Assessment Required</div>
         </div>
         <div class="collapse-toggle" id="collapse-toggle" style="font-size: ${typography.fontSize.xl}; color: ${colors.primary.base}; cursor: pointer; padding: ${spacing.sm}; border-radius: ${borders.radius.full}; background: ${colors.background.primaryGlow}; transition: all ${animation.duration.base} ${animation.easing.smooth};">
           ${this.isCollapsed ? '▶' : '◀'}
@@ -211,13 +216,13 @@ export class DiagnosticUI {
                       style="filter: url(#hologram-glow);"/>
             </svg>
           </div>
-          <div class="timer-label">TIME REMAINING</div>
+          <div class="timer-label">⏱️ TIME CRITICAL</div>
         </div>
 
         <!-- Score and Streak Display -->
         <div class="score-section">
           <div class="score-display">
-            <div class="score-label">DIAGNOSTIC SCORE</div>
+            <div class="score-label">🏥 DIAGNOSTIC POINTS</div>
             <div class="score-value" id="score">0</div>
           </div>
           <div class="streak-display">
@@ -228,31 +233,31 @@ export class DiagnosticUI {
 
         <!-- Scanning Progress -->
         <div id="scan-progress" style="margin-top: ${spacing.xl};">
-          <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.md}; margin-bottom: ${spacing.base}; text-align: center; letter-spacing: ${typography.letterSpacing.wider};">🔍 SCANNING PROGRESS</div>
+          <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.md}; margin-bottom: ${spacing.base}; text-align: center; letter-spacing: ${typography.letterSpacing.wider};">🔍 ACTIVE SCANS</div>
           <div id="progress-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
         </div>
 
         <!-- AI Analysis Stream -->
         <div id="analysis-section" class="analysis-stream" style="margin-top: ${spacing.base}; padding: ${spacing.base}; display: none; position: relative;">
-          <div style="color: ${colors.accent.base}; font-size: ${typography.fontSize.base}; margin-bottom: ${spacing.sm}; text-shadow: ${effects.textShadow.accent};">🔬 CEREBRAS AI ANALYSIS</div>
+          <div style="color: ${colors.accent.base}; font-size: ${typography.fontSize.base}; margin-bottom: ${spacing.sm}; text-shadow: ${effects.textShadow.accent};">🧠 AI MEDICAL ANALYSIS</div>
           <div id="analysis-content" style="font-family: ${typography.fontFamily.monospace}; font-size: ${typography.fontSize.sm}; line-height: ${typography.lineHeight.base}; color: ${colors.primary.base}; text-shadow: ${effects.textShadow.sm}; min-height: 60px;"></div>
         </div>
 
         <!-- Enhanced Action Buttons -->
         <div class="progress-actions" id="action-buttons" style="margin-top: ${spacing.base}; display: none;">
           <button class="action-btn solve-btn" id="solve-btn">
-            <div class="btn-icon">🎯</div>
-            <div class="btn-text">DIAGNOSE</div>
+            <div class="btn-icon">🩺</div>
+            <div class="btn-text">SUBMIT DIAGNOSIS</div>
             <div class="btn-count" id="solve-count">0</div>
           </button>
           <button class="action-btn hint-btn" id="hint-btn">
             <div class="btn-icon">💡</div>
-            <div class="btn-text">HINT</div>
+            <div class="btn-text">CLINICAL HINT</div>
             <div class="btn-count" id="hint-count">3</div>
           </button>
           <button class="action-btn consultation-btn" id="consultation-btn" style="display: none;">
             <div class="btn-icon">🎙️</div>
-            <div class="btn-text">CONSULT AI</div>
+            <div class="btn-text">CONSULT SPECIALIST</div>
             <div class="btn-count" id="consultation-count">∞</div>
           </button>
         </div>
@@ -275,11 +280,11 @@ export class DiagnosticUI {
 
         <!-- Learning Progress -->
         <div id="learning-progress" style="margin-top: ${spacing.base}; padding: ${spacing.md}; background: ${colors.background.primaryGlow}; border: ${borders.width.thin} solid ${colors.border.primary}; border-radius: ${borders.radius.md};">
-          <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.sm}; margin-bottom: ${spacing.sm}; letter-spacing: ${typography.letterSpacing.wider};">📈 LEARNING PROGRESS</div>
+          <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.sm}; margin-bottom: ${spacing.sm}; letter-spacing: ${typography.letterSpacing.wider};">📊 PERFORMANCE METRICS</div>
           <div id="learning-stats" style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.base}; display: flex; justify-content: space-between;">
             <span>Accuracy: <span id="accuracy-display">0%</span></span>
-            <span>Efficiency: <span id="efficiency-display">0%</span></span>
-            <span>Achievements: <span id="achievements-count">0</span></span>
+            <span>Speed: <span id="efficiency-display">0%</span></span>
+            <span>Discoveries: <span id="achievements-count">0</span></span>
           </div>
         </div>
       </div>
