@@ -29,9 +29,12 @@ export interface MedicalSpecialization {
 export class GameManager {
     private gameState: GameState
     private callbacks: Map<string, Function[]> = new Map()
+    private dynamicElementsInterval: number | null = null
+    private dynamicTimer: number = 0
 
     constructor() {
         this.gameState = this.initializeGameState()
+        this.startDynamicElementsSystem()
     }
 
     private initializeGameState(): GameState {
@@ -259,6 +262,122 @@ export class GameManager {
             difficulty: difficulty
         };
         this.emit('gameStateUpdated', this.gameState);
+    }
+
+    // DYNAMIC: Start the dynamic elements system that periodically adds clues and hints
+    private startDynamicElementsSystem() {
+        // Run the dynamic elements update every 30 seconds
+        this.dynamicElementsInterval = window.setInterval(() => {
+            this.updateDynamicElements();
+        }, 30000); // 30 seconds
+    }
+
+    // DYNAMIC: Update dynamic game elements
+    private updateDynamicElements() {
+        // Increment the timer to track when to show dynamic elements
+        this.dynamicTimer++;
+        
+        const timeRemaining = this.gameState.timeRemaining;
+        const conditionsFound = this.gameState.discoveredConditions.size;
+        
+        // Every 30 seconds, provide a hint or clue based on game state
+        if (timeRemaining > 0) {
+            this.provideDynamicHint();
+        }
+        
+        // Sometimes reveal a new possible condition after some time has passed
+        if (this.dynamicTimer % 2 === 0 && conditionsFound > 0) { // Every 60 seconds if conditions found
+            this.maybeRevealNewClue();
+        }
+    }
+
+    // DYNAMIC: Provide contextual hints based on game progress
+    private provideDynamicHint() {
+        const conditionsFound = this.gameState.discoveredConditions.size;
+        const timeRemaining = this.gameState.timeRemaining;
+        const hints: string[] = [];
+        
+        if (conditionsFound === 0) {
+            hints.push("🔍 Remember to scan systematically. Start with the center of the image.");
+            hints.push("💡 Look for areas that appear different from the surrounding anatomy.");
+            hints.push("🔍 X-ray findings often appear as changes in density or shape.");
+        } else if (conditionsFound === 1) {
+            hints.push("🎯 Great start! Continue exploring the image for additional findings.");
+            hints.push("💡 Remember that some conditions might be subtle or located in less obvious areas.");
+        } else if (conditionsFound >= 2) {
+            hints.push("🚀 Excellent progress! You're developing diagnostic skills.");
+            hints.push("💡 Try to correlate your findings with the patient's symptoms.");
+        }
+        
+        if (timeRemaining < 60) {
+            hints.push("⏰ Time is running out! Focus on areas you haven't examined thoroughly.");
+        } else if (timeRemaining < 120) {
+            hints.push("⏳ Consider the most critical anatomical regions next.");
+        }
+        
+        // Select a random hint if available
+        if (hints.length > 0) {
+            const randomHint = hints[Math.floor(Math.random() * hints.length)];
+            this.emit('dynamicHintReceived', { hint: randomHint });
+        }
+    }
+
+    // DYNAMIC: Maybe reveal a new clue based on game state
+    private maybeRevealNewClue() {
+        // 30% chance to reveal a contextual clue
+        if (Math.random() < 0.3) {
+            const clues = [
+                "🔎 There's an interesting density difference in the upper quadrant",
+                "💡 Pay attention to the symmetry of anatomical structures",
+                "🔍 Notice any unusual opacities or lucencies",
+                "💡 Check the borders of organs and structures",
+                "🔎 Look for any unexpected calcifications",
+                "💡 The pathology might be subtle - examine margins carefully"
+            ];
+            
+            const randomClue = clues[Math.floor(Math.random() * clues.length)];
+            this.emit('dynamicClueReceived', { clue: randomClue });
+        }
+    }
+
+    // DYNAMIC: Add a new condition discovery opportunity (advanced feature)
+    public triggerRandomConditionDiscovery() {
+        // This could potentially reveal a new possible condition
+        // In a real implementation, this might highlight an area or provide an audio cue
+        const conditionDiscoveryMessages = [
+            "🌟 New discovery opportunity detected!",
+            "💡 Potential finding identified in a different region",
+            "🔬 Scanning reveals additional area of interest"
+        ];
+        
+        const randomMessage = conditionDiscoveryMessages[Math.floor(Math.random() * conditionDiscoveryMessages.length)];
+        this.emit('conditionDiscoveryOpportunity', { message: randomMessage });
+        
+        return randomMessage;
+    }
+
+    // DYNAMIC: Get a relevant educational tip based on current game state
+    public getEducationalTip(): string {
+        const tips = [
+            "💡 In radiology, always check for 'normal' first before looking for 'abnormal'",
+            "🔍 The key to radiology is systematic evaluation: Bones, Airways, Breathing, Circulation",
+            "💡 Remember: A finding is only significant if it's different from the patient's previous studies or the normal population",
+            "💡 Always correlate imaging findings with clinical symptoms",
+            "🔍 Look for the 'sunset sign' in chest X-rays - indicates pneumothorax",
+            "💡 'Air bronchograms' are air-filled bronchi seen in consolidated lung tissue",
+            "💡 The 'bat wing' pattern is associated with pulmonary edema",
+            "💡 Always look for foreign bodies, especially in trauma cases"
+        ];
+        
+        return tips[Math.floor(Math.random() * tips.length)];
+    }
+
+    // DYNAMIC: Clean up the dynamic elements system
+    public destroy() {
+        if (this.dynamicElementsInterval) {
+            clearInterval(this.dynamicElementsInterval);
+            this.dynamicElementsInterval = null;
+        }
     }
 
 }

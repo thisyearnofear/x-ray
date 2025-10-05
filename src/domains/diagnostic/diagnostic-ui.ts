@@ -31,8 +31,12 @@ import { LearningProgressPanel } from './learning-progress-panel'
 // ENHANCEMENT FIRST: Game status panel for timer, score, and scanning progress
 import { GameStatusPanel } from './game-status-panel'
 
+// ENHANCEMENT FIRST: Audio management system for all audio-related functionality
+import { AudioManagementSystem } from '../audio/audio-management-system'
+
 export class DiagnosticUI {
     private audioManager: AudioManager
+    private audioManagementSystem: AudioManagementSystem
     private phaseManager: GamePhaseManager
 
     // MODULAR: Sophisticated backend systems
@@ -76,6 +80,8 @@ export class DiagnosticUI {
         scanFeedbackSystem?: any
     }) {
         this.audioManager = audioManager
+        // ENHANCEMENT FIRST: Initialize audio management system
+        this.audioManagementSystem = new AudioManagementSystem(audioManager)
         this.xRayEffect = config?.xRayEffect
         this.scanFeedbackSystem = config?.scanFeedbackSystem
 
@@ -197,6 +203,18 @@ export class DiagnosticUI {
         this.voiceConsultation.on('gameResumeRequested', () => {
             this.resumeGameFromConsultation()
         })
+        
+        // DYNAMIC: Listen for dynamic hints and clues from the game manager
+        this.gameManager.on('dynamicHintReceived', (data: { hint: string }) => {
+            this.showDynamicHint(data.hint);
+        });
+        
+        this.gameManager.on('dynamicClueReceived', (data: { clue: string }) => {
+            this.showDynamicClueWithMessage(data.clue);
+        });
+        this.gameManager.on('conditionDiscoveryOpportunity', (data: { message: string }) => {
+            this.showConditionDiscoveryOpportunity(data.message);
+        });
     }
 
     private initialize() {
@@ -530,7 +548,7 @@ export class DiagnosticUI {
         }
     }
 
-    // Show dynamic clues to help the user
+    // DYNAMIC: Show dynamic clue to the user
     private showDynamicClue() {
         const gameState = this.gameManager.getGameState()
         const discoveredCount = gameState.discoveredConditions.size
@@ -548,14 +566,8 @@ export class DiagnosticUI {
         // Add clue to the learning progress panel
         this.learningProgressPanel?.addContextualHint('dynamic-clue', clueMessage)
         
-        // Play a subtle sound to indicate new clue
-        if (this.audioManager && this.audioManager.playSound) {
-            try {
-                this.audioManager.playSound(SoundType.MEDICAL_BEEP)
-            } catch (error) {
-                console.warn('⚠️ Clue sound failed:', error)
-            }
-        }
+        // Play a subtle sound to indicate new clue through audio management system
+        this.audioManagementSystem.playSound(SoundType.MEDICAL_BEEP)
     }
 
     // Add new conditions dynamically during gameplay
@@ -610,7 +622,10 @@ export class DiagnosticUI {
         // AGGRESSIVE CONSOLIDATION: Use new InteractiveTutorial instead of old static screens
         this.phaseManager.onPhaseChange(GamePhase.WELCOME, () => {
             this.updatePanelForPhase('welcome')
-            this.startInteractiveTutorial()
+            // Start the tutorial immediately when entering WELCOME phase
+            setTimeout(() => {
+                this.startInteractiveTutorial()
+            }, 100)
         })
 
         this.phaseManager.onPhaseChange(GamePhase.ACTIVE, () => {
@@ -948,14 +963,8 @@ export class DiagnosticUI {
     analyzeCondition(condition: any) {
         console.log('🔍 Analyzing condition:', condition.name)
 
-        // Play analysis sound (with null check)
-        if (this.audioManager && this.audioManager.playSound) {
-            try {
-                this.audioManager.playSound(SoundType.AI_PROCESSING)
-            } catch (error) {
-                console.warn('⚠️ Analysis sound failed:', error)
-            }
-        }
+        // Play analysis sound through audio management system
+        this.audioManagementSystem.playSound(SoundType.AI_PROCESSING)
 
         // Update game state in manager
         this.gameManager.updateState({ phase: 'analyzing' })
@@ -1126,24 +1135,8 @@ export class DiagnosticUI {
             const streakMultiplier = gameState.streak * 0.1 + 1
             const totalPoints = Math.floor((basePoints + timeBonus) * streakMultiplier)
 
-            // Play discovery sound based on severity
-            if (this.audioManager && this.audioManager.playSound) {
-                try {
-                    switch (condition.severity) {
-                        case 'low':
-                            this.audioManager.playSound(SoundType.LOW_SEVERITY)
-                            break
-                        case 'medium':
-                            this.audioManager.playSound(SoundType.MEDIUM_SEVERITY)
-                            break
-                        case 'high':
-                            this.audioManager.playSound(SoundType.HIGH_SEVERITY)
-                            break
-                    }
-                } catch (error) {
-                    console.warn('⚠️ Discovery sound failed:', error)
-                }
-            }
+            // Play discovery sound based on severity through audio management system
+            this.audioManagementSystem.playDiscoverySound(condition.severity)
 
             // Award points with enhanced feedback
             this.awardPoints(totalPoints, 'discovery')
@@ -1375,7 +1368,7 @@ export class DiagnosticUI {
         }
 
         if (reason === 'complete') {
-            this.audioManager.playSound(SoundType.CONDITION_FOUND)
+            this.audioManagementSystem.playSound(SoundType.CONDITION_FOUND)
             this.showDiagnosisComplete()
         } else {
             this.showDiagnosisTimeout()
@@ -1603,8 +1596,8 @@ export class DiagnosticUI {
         this.panel.style.cursor = 'pointer'
         this.panel.onclick = () => this.restartDiagnosis()
 
-        // Play completion sound
-        this.audioManager.playSound(SoundType.CONDITION_FOUND)
+        // Play completion sound through audio management system
+        this.audioManagementSystem.playSound(SoundType.CONDITION_FOUND)
     }
 
     private showSubmissionError(message: string) {
@@ -1693,9 +1686,33 @@ export class DiagnosticUI {
     private focusOnPatientChatPanel() {
         // Ensure the patient chat panel is visible and brought to focus
         if (this.patientChatPanel) {
-            // If the panel exists, we could add methods to maximize it or bring it to focus
-            // For now, we'll just log that we're focusing on it
-            console.log('🔍 Focusing on patient chat panel for consultation')
+            // Make sure the panel is shown and not minimized
+            // The show() method should make sure the panel is created and visible
+            this.patientChatPanel.show();
+            
+            // If the panel was minimized, restore it
+            // We don't have direct access to the minimized state, so we'll ensure the panel is in normal state
+            const panel = document.querySelector('.patient-chat-panel') as HTMLElement;
+            if (panel) {
+                // Make sure the panel is not hidden (in case it was minimized)
+                const content = panel.querySelector('.panel-content') as HTMLElement;
+                if (content) {
+                    content.style.display = 'flex';
+                }
+                
+                // Set a visual indicator that consultation is active
+                const header = panel.querySelector('.panel-header') as HTMLElement;
+                if (header) {
+                    header.style.background = 'linear-gradient(135deg, rgba(0,255,136,0.3), rgba(0,150,255,0.3))';
+                }
+                
+                // Bring panel to front by increasing z-index
+                panel.style.zIndex = '9999';
+            }
+            
+            console.log('🔍 Patient chat panel is now active and focused for consultation');
+        } else {
+            console.warn('Patient chat panel not available for consultation');
         }
     }
 
@@ -1970,50 +1987,61 @@ export class DiagnosticUI {
             existingPatientInfo.remove()
         }
 
-        // Extract consistent data from AI content or use fallbacks
-        const patientName = patientCase.patientName || 'Anonymous Patient'
-        const age = patientCase.age || 35
-        const gender = patientCase.gender || 'Unknown'
-        const chiefComplaint = patientCase.chiefComplaint || 'Diagnostic evaluation required'
+        // Extract consistent data from AI content with better fallbacks for medical cases
+        const patientName = patientCase.patientName || patientCase.conditionName || 'Anonymous Patient'
+        const age = patientCase.age || patientCase.patientInfo?.age || 35
+        const gender = patientCase.gender || patientCase.patientInfo?.gender || 'Unknown'
+        const chiefComplaint = patientCase.chiefComplaint || patientCase.patientInfo?.chiefComplaint || 'Diagnostic evaluation required'
+        const conditionName = patientCase.conditionName || patientCase.patientInfo?.conditionName || 'Unknown Condition'
+        const conditionDescription = patientCase.conditionDescription || patientCase.patientInfo?.conditionDescription || 'Condition details not available'
+        const conditionLocation = patientCase.conditionLocation || patientCase.patientInfo?.conditionLocation || 'Location not specified'
 
         // Use first 150 characters of HPI for better display
-        const hpi = patientCase.historyOfPresentIllness || patientCase.aiDescription || 'Patient requires comprehensive diagnostic assessment.'
+        const hpi = patientCase.historyOfPresentIllness || patientCase.aiDescription || patientCase.patientInfo?.medicalHistory || 'Patient requires comprehensive diagnostic assessment.'
         const displayHPI = hpi.length > 150 ? hpi.substring(0, 150) + '...' : hpi
 
-        // Create new patient info section
+        // Create new patient info section with enhanced medical case details
         const patientInfoSection = `
             <div class="patient-info-section" style="background: rgba(0,255,136,0.05); border: 1px solid rgba(0,255,136,0.2); border-radius: 8px; padding: 1rem; margin-top: 1rem; cursor: pointer; transition: all 0.3s ease;" onclick="this.classList.toggle('expanded')">
+                <div style="color: #00ff88; font-size: 10px; margin-bottom: 0.25rem; letter-spacing: 1px;">🔍 CURRENT CASE: ${conditionName}</div>
                 <div style="color: #00ff88; font-size: 10px; margin-bottom: 0.5rem; letter-spacing: 1px;">👤 PATIENT INFORMATION <span style="float: right; font-size: 8px; opacity: 0.7;">Click to expand</span></div>
                 <div style="font-size: 10px; color: #fff; margin-bottom: 0.25rem;"><strong>Name:</strong> ${patientName}</div>
                 <div style="font-size: 10px; color: #fff; margin-bottom: 0.25rem;"><strong>Age:</strong> ${age} | <strong>Gender:</strong> ${gender}</div>
-                <div style="font-size: 10px; color: #ffaa00; margin-bottom: 0.5rem;"><strong>Chief Complaint:</strong> ${chiefComplaint}</div>
+                <div style="font-size: 10px; color: #ffaa00; margin-bottom: 0.25rem;"><strong>Chief Complaint:</strong> ${chiefComplaint}</div>
+                <div style="font-size: 10px; color: #ff5555; margin-bottom: 0.25rem;"><strong>Condition:</strong> ${conditionDescription}</div>
+                <div style="font-size: 10px; color: #ff5555; margin-bottom: 0.5rem;"><strong>Location:</strong> ${conditionLocation}</div>
                 <div class="hpi-content" style="font-size: 9px; color: #ccc; line-height: 1.3;"><strong>HPI:</strong> <span class="hpi-short">${displayHPI}</span><span class="hpi-full" style="display: none;">${hpi}</span></div>
             </div>
         `
 
-        // Insert patient info before the scanning progress section
+        // Insert patient info in the panel - try multiple approaches to ensure it appears
         const scanProgressSection = this.panel.querySelector('#scan-progress')
+        const panelContent = this.panel.querySelector('.panel-content') || this.panel
+        
         if (scanProgressSection) {
             scanProgressSection.insertAdjacentHTML('beforebegin', patientInfoSection)
+        } else {
+            // If no scan progress section exists, insert at the beginning of panel content
+            panelContent.insertAdjacentHTML('afterbegin', patientInfoSection)
+        }
 
-            // Add CSS for expandable functionality
-            if (!document.querySelector('#patient-info-styles')) {
-                const style = document.createElement('style')
-                style.id = 'patient-info-styles'
-                style.textContent = `
-                    .patient-info-section:hover {
-                        background: rgba(0,255,136,0.08) !important;
-                        border-color: rgba(0,255,136,0.4) !important;
-                    }
-                    .patient-info-section.expanded .hpi-short {
-                        display: none !important;
-                    }
-                    .patient-info-section.expanded .hpi-full {
-                        display: inline !important;
-                    }
-                `
-                document.head.appendChild(style)
-            }
+        // Add CSS for expandable functionality
+        if (!document.querySelector('#patient-info-styles')) {
+            const style = document.createElement('style')
+            style.id = 'patient-info-styles'
+            style.textContent = `
+                .patient-info-section:hover {
+                    background: rgba(0,255,136,0.08) !important;
+                    border-color: rgba(0,255,136,0.4) !important;
+                }
+                .patient-info-section.expanded .hpi-short {
+                    display: none !important;
+                }
+                .patient-info-section.expanded .hpi-full {
+                    display: inline !important;
+                }
+            `
+            document.head.appendChild(style)
         }
     }
 
@@ -2024,10 +2052,8 @@ export class DiagnosticUI {
         // Show the game status panel
         this.gameStatusPanel?.show()
 
-        // Use procedural audio instead of ElevenLabs
-        if (this.audioManager && typeof this.audioManager.startHospitalAmbience === 'function') {
-            this.audioManager.startHospitalAmbience()
-        }
+        // Start hospital ambience through audio management system
+        this.audioManagementSystem.startHospitalAmbience()
 
         // Generate basic patient case
         const fallbackCase = {
@@ -2083,5 +2109,246 @@ export class DiagnosticUI {
                 this.phaseManager.transitionTo(GamePhase.ACTIVE)
                 break
         }
+    }
+
+    // DYNAMIC: Show condition discovery opportunity
+    private showConditionDiscoveryOpportunity(message: string) {
+        if (!this.panel) return;
+        
+        console.log('🔬 Condition discovery opportunity:', message);
+        
+        // Create a temporary discovery notification element
+        const discoveryElement = document.createElement('div');
+        discoveryElement.className = 'discovery-opportunity';
+        
+        // Create the inner HTML structure
+        discoveryElement.innerHTML = '<div style="' +
+            'position: fixed;' +
+            'top: 30%;' +
+            'left: 50%;' +
+            'transform: translateX(-50%);' +
+            'background: rgba(136, 0, 255, 0.2);' +
+            'border: 1px solid rgba(136, 0, 255, 0.5);' +
+            'border-radius: 8px;' +
+            'padding: 12px 24px;' +
+            'color: #8800ff;' +
+            'font-size: 14px;' +
+            'font-weight: bold;' +
+            'z-index: 10000;' +
+            'text-align: center;' +
+            'box-shadow: 0 0 20px rgba(136, 0, 255, 0.3);' +
+            'backdrop-filter: blur(10px);' +
+            'animation: fadeInOut 5s ease-in-out forwards;' +
+            '">' + message + '</div>';
+        
+        document.body.appendChild(discoveryElement);
+        
+        // Remove the discovery notification after animation completes
+        setTimeout(() => {
+            if (discoveryElement.parentNode) {
+                discoveryElement.parentNode.removeChild(discoveryElement);
+            }
+        }, 5000);
+    }
+
+    // DYNAMIC: Show dynamic hint to the user
+    private showDynamicHint(hint: string) {
+        if (!this.panel) return;
+        
+        console.log('💡 Dynamic hint:', hint);
+        
+        // Create a temporary hint display element
+        const hintElement = document.createElement('div');
+        hintElement.className = 'dynamic-hint';
+        hintElement.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 20%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0, 255, 136, 0.2);
+                border: 1px solid rgba(0, 255, 136, 0.5);
+                border-radius: 8px;
+                padding: 12px 24px;
+                color: #00ff88;
+                font-size: 14px;
+                font-weight: bold;
+                z-index: 10000;
+                text-align: center;
+                box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+                backdrop-filter: blur(10px);
+                animation: fadeInOut 5s ease-in-out forwards;
+            ">
+                ${hint}
+            </div>
+        `;
+        
+        document.body.appendChild(hintElement);
+        
+        // Remove the hint after animation completes
+        setTimeout(() => {
+            if (hintElement.parentNode) {
+                hintElement.parentNode.removeChild(hintElement);
+            }
+        }, 5000);
+        
+        // Add CSS animation if not already present
+        if (!document.querySelector('#dynamic-hint-styles')) {
+            const style = document.createElement('style');
+            style.id = 'dynamic-hint-styles';
+            style.textContent = `
+                @keyframes fadeInOut {
+                    0% { opacity: 0; top: 15%; }
+                    10% { opacity: 1; top: 20%; }
+                    90% { opacity: 1; top: 20%; }
+                    100% { opacity: 0; top: 25%; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    // DYNAMIC: Show dynamic clue to the user
+    private showDynamicClue(clue: string) {
+        if (!this.panel) return;
+        
+        console.log('🔍 Dynamic clue:', clue);
+        
+        // Create a temporary clue display element
+        const clueElement = document.createElement('div');
+        clueElement.className = 'dynamic-clue';
+        clueElement.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 25%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(255, 200, 0, 0.2);
+                border: 1px solid rgba(255, 200, 0, 0.5);
+                border-radius: 8px;
+                padding: 12px 24px;
+                color: #ffc800;
+                font-size: 14px;
+                font-weight: bold;
+                z-index: 10000;
+                text-align: center;
+                box-shadow: 0 0 20px rgba(255, 200, 0, 0.3);
+                backdrop-filter: blur(10px);
+                animation: fadeInOut 5s ease-in-out forwards;
+            ">
+                ${clue}
+            </div>
+        `;
+        
+        document.body.appendChild(clueElement);
+        
+        // Remove the clue after animation completes
+        setTimeout(() => {
+            if (clueElement.parentNode) {
+                clueElement.parentNode.removeChild(clueElement);
+            }
+        }, 5000);
+    }
+
+    // DYNAMIC: Show dynamic clue to the user
+    private showDynamicClueWithMessage(clue: string) {
+        if (!this.panel) return;
+        
+        console.log('🔍 Dynamic clue:', clue);
+        
+        // Create a temporary clue display element
+        const clueElement = document.createElement('div');
+        clueElement.className = 'dynamic-clue';
+        clueElement.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 25%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(255, 200, 0, 0.2);
+                border: 1px solid rgba(255, 200, 0, 0.5);
+                border-radius: 8px;
+                padding: 12px 24px;
+                color: #ffc800;
+                font-size: 14px;
+                font-weight: bold;
+                z-index: 10000;
+                text-align: center;
+                box-shadow: 0 0 20px rgba(255, 200, 0, 0.3);
+                backdrop-filter: blur(10px);
+                animation: fadeInOut 5s ease-in-out forwards;
+            ">
+                ${clue}
+            </div>
+        `;
+        
+        document.body.appendChild(clueElement);
+        
+        // Remove the clue after animation completes
+        setTimeout(() => {
+            if (clueElement.parentNode) {
+                clueElement.parentNode.removeChild(clueElement);
+            }
+        }, 5000);
+    }
+
+    // DYNAMIC: Show condition discovery opportunity
+    private showConditionDiscoveryOpportunity(message: string) {
+        if (!this.panel) return;
+        
+        console.log('🔬 Condition discovery opportunity:', message);
+        
+        // Create a temporary discovery notification element
+        const discoveryElement = document.createElement('div');
+        discoveryElement.className = 'discovery-opportunity';
+        
+        // Create the inner HTML structure
+        discoveryElement.innerHTML = \`
+            <div style="
+                position: fixed;
+                top: 30%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(136, 0, 255, 0.2);
+                border: 1px solid rgba(136, 0, 255, 0.5);
+                border-radius: 8px;
+                padding: 12px 24px;
+                color: #8800ff;
+                font-size: 14px;
+                font-weight: bold;
+                z-index: 10000;
+                text-align: center;
+                box-shadow: 0 0 20px rgba(136, 0, 255, 0.3);
+                backdrop-filter: blur(10px);
+                animation: fadeInOut 5s ease-in-out forwards;
+            ">
+                \${message}
+            </div>
+        \`;
+        
+        document.body.appendChild(discoveryElement);
+        
+        // Remove the discovery notification after animation completes
+        setTimeout(() => {
+            if (discoveryElement.parentNode) {
+                discoveryElement.parentNode.removeChild(discoveryElement);
+            }
+        }, 5000);
+    }
+}
+
+            ">
+                ${message}
+            </div>
+        `;
+        
+        document.body.appendChild(discoveryElement);
+        
+        // Remove the discovery notification after animation completes
+        setTimeout(() => {
+            if (discoveryElement.parentNode) {
+                discoveryElement.parentNode.removeChild(discoveryElement);
+            }
+        }, 5000);
     }
 }

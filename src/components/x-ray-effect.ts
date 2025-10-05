@@ -13,6 +13,7 @@ import gsap from "gsap"
 import { MedicalMarker } from "./MedicalMarker"
 import { AudioManager as AudioManagerType, SoundType as SoundTypeType } from "./AudioManager"
 import { VisualFeedbackSystem } from "./VisualFeedbackSystem"
+import { AudioManagementSystem } from "../domains/audio/audio-management-system"
 
 const rtParams = {
   format: THREE.RGBAFormat,
@@ -47,6 +48,8 @@ export default class XRayEffect {
   leePerry: LeePerry
   skeleton: Skeleton
   medicalMarkers: Map<string, MedicalMarker> = new Map()
+  // Track whether medical markers are currently visible
+  private areConditionsVisible: boolean = true
   diagnosticUI: DiagnosticUI
   instructionsPanel: InstructionsPanel
   mouse: {
@@ -60,6 +63,8 @@ export default class XRayEffect {
 
   // Audio system
   audioManager: AudioManagerType;
+  // Audio management system
+  audioManagementSystem: AudioManagementSystem;
 
   // Visual feedback system for accessibility
   visualFeedbackSystem: VisualFeedbackSystem;
@@ -79,6 +84,7 @@ export default class XRayEffect {
     this.renderer = renderer
     this.camera = camera
     this.audioManager = audioManager;
+    this.audioManagementSystem = new AudioManagementSystem(audioManager);
     this.scanFeedbackSystem = scanFeedbackSystem;
     this.visualFeedbackSystem = new VisualFeedbackSystem(this.scene);
     this.mouse = {
@@ -355,8 +361,8 @@ export default class XRayEffect {
     const medicalMarker = new MedicalMarker(markerOptions);
     const markerGroup = medicalMarker.getMarkerGroup();
 
-    // CLEAN: Ensure markers are visible and properly positioned
-    markerGroup.visible = true;
+    // CLEAN: Ensure markers respect current visibility state and are properly positioned
+    markerGroup.visible = this.areConditionsVisible;
     this.scene.add(markerGroup);
     this.medicalMarkers.set(condition.id, medicalMarker);
 
@@ -375,13 +381,18 @@ export default class XRayEffect {
   }
 
   toggleConditions() {
-    // Toggle visibility of all medical markers
+    // Toggle visibility of all medical markers based on current state
+    const newState = !this.areConditionsVisible;
+    
     this.medicalMarkers.forEach((marker) => {
       const markerGroup = marker.getMarkerGroup();
-      markerGroup.visible = !markerGroup.visible;
+      markerGroup.visible = newState;
     })
     
-    console.log('Toggled conditions visibility');
+    // Update our internal state
+    this.areConditionsVisible = newState;
+    
+    console.log(`Toggled conditions visibility - Now showing: ${newState}, Total markers: ${this.medicalMarkers.size}`);
   }
 
   // MODULAR: Clean interaction handlers with consistent UX
@@ -413,9 +424,7 @@ export default class XRayEffect {
       }
 
       // Also provide audio feedback for hover to maintain consistency
-      if (this.audioManager) {
-        this.audioManager.playSound(SoundTypeType.HOVER);
-      }
+      this.audioManagementSystem.playSound(SoundTypeType.HOVER);
     }
 
     document.body.style.cursor = medicalIntersect ? 'pointer' : 'default'
@@ -431,10 +440,8 @@ export default class XRayEffect {
         markerGroup.children.includes(intersect.object as THREE.Object3D) ||
         markerGroup === intersect.object
       )) {
-        // Play click sound for consistency (with null check)
-        if (this.audioManager) {
-          this.audioManager.playSound(SoundTypeType.CLICK);
-        }
+        // Play click sound for consistency
+        this.audioManagementSystem.playSound(SoundTypeType.CLICK);
 
         // ENHANCEMENT FIRST: Trigger streaming analysis for immediate feedback
         const condition = MEDICAL_CONDITIONS.find(c => c.id === conditionId)
@@ -464,24 +471,8 @@ export default class XRayEffect {
       // Get condition details for both audio and visual feedback
       const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId);
       if (condition) {
-        // Play discovery sound based on severity (with null check)
-        if (this.audioManager && this.audioManager.playSound) {
-          try {
-            switch (condition.severity) {
-              case 'low':
-                this.audioManager.playSound(SoundTypeType.LOW_SEVERITY);
-                break;
-              case 'medium':
-                this.audioManager.playSound(SoundTypeType.MEDIUM_SEVERITY);
-                break;
-              case 'high':
-                this.audioManager.playSound(SoundTypeType.HIGH_SEVERITY);
-                break;
-            }
-          } catch (error) {
-            console.warn('⚠️ Audio playback failed:', error)
-          }
-        }
+        // Play discovery sound based on severity through audio management system
+        this.audioManagementSystem.playDiscoverySound(condition.severity)
 
         // Create visual feedback as audio alternative
         this.visualFeedbackSystem.createConditionDiscoveryFeedback(
@@ -502,8 +493,8 @@ export default class XRayEffect {
 
     console.log(`Switching from ${this.currentModel} to ${modelType} model`)
 
-    // Play transition sound
-    this.audioManager.playSound(SoundTypeType.DISCOVERY);
+    // Play transition sound through audio management system
+    this.audioManagementSystem.playSound(SoundTypeType.DISCOVERY);
 
     // Create a transition effect
     this.performRealityShift(modelType);
@@ -558,8 +549,8 @@ export default class XRayEffect {
       }
     });
 
-    // Play transition sound
-    this.audioManager.playSound(SoundTypeType.CONDITION_FOUND);
+    // Play transition sound through audio management system
+    this.audioManagementSystem.playSound(SoundTypeType.CONDITION_FOUND);
   }
 
   // INTEGRATION: Get conditions visible in current model (for diagnostic UI filtering)

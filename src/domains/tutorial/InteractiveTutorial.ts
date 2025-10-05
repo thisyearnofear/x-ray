@@ -9,7 +9,9 @@
  * - DRY: Uses design tokens for consistent styling
  */
 
-import { colors, spacing, typography, borders, effects, animation, zIndex } from '../../styles/design-tokens'
+import { zIndex, spacing, colors, borders, effects, animation, typography } from '../../styles/design-tokens'
+import { AudioManagementSystem } from '../audio/audio-management-system'
+import { SoundType } from '../../components/AudioManager'
 
 export interface TutorialStep {
     id: string
@@ -32,6 +34,7 @@ export class InteractiveTutorial {
     private highlightElement: HTMLElement | null = null
     private practiceMode: boolean = true // No timer in tutorial
     private autoProgressTimeouts: Set<number> = new Set() // Track active auto-progress timeouts
+    private audioManagementSystem: AudioManagementSystem | null = null
 
     private steps: TutorialStep[] = [
         {
@@ -138,7 +141,6 @@ export class InteractiveTutorial {
     private xRayEffect: any = null
     private scanFeedbackSystem: any = null
     private diagnosticUI: any = null
-    private audioManager: any = null
 
     constructor(callbacks?: {
         onStepComplete?: (stepId: string) => void
@@ -157,7 +159,11 @@ export class InteractiveTutorial {
         this.xRayEffect = callbacks?.xRayEffect
         this.scanFeedbackSystem = callbacks?.scanFeedbackSystem
         this.diagnosticUI = callbacks?.diagnosticUI
-        this.audioManager = callbacks?.audioManager
+        
+        // Initialize audio management system if audioManager is provided
+        if (callbacks?.audioManager) {
+            this.audioManagementSystem = new AudioManagementSystem(callbacks.audioManager)
+        }
     }
 
     start(): void {
@@ -176,38 +182,13 @@ export class InteractiveTutorial {
         // CLEAN: Single responsibility - enable all audio systems
         console.log('🎵 Audio should be enabled now from tutorial')
         
-        // Add a small delay to ensure audio manager is fully initialized
-        setTimeout(() => {
-            if (this.audioManager) {
-                try {
-                    // Ensure AudioContext is resumed
-                    if (this.audioManager.getAudioListener) {
-                        const listener = this.audioManager.getAudioListener()
-                        if (listener && listener.context && listener.context.state === 'suspended') {
-                            listener.context.resume().then(() => {
-                                console.log('🎵 AudioContext resumed')
-                            })
-                        }
-                    }
-
-                    this.audioManager.startHospitalAmbience()
-                    console.log('🎵 Audio systems enabled via user interaction')
-                } catch (error) {
-                    console.warn('⚠️ AudioManager start failed:', error)
-                    // Try fallback audio start
-                    try {
-                        if (this.audioManager.playSound) {
-                            this.audioManager.playSound('hospital_ambience', true)
-                            console.log('🎵 Fallback audio started')
-                        }
-                    } catch (fallbackError) {
-                        console.warn('⚠️ Fallback audio failed:', fallbackError)
-                    }
-                }
-            } else {
-                console.warn('⚠️ AudioManager not available')
-            }
-        }, 100) // Small delay to ensure proper initialization
+        if (!this.audioManagementSystem) {
+            console.warn('⚠️ AudioManagementSystem not available')
+            return
+        }
+        
+        // Enable audio systems through the audio management system
+        this.audioManagementSystem.enableAudioSystems()
     }
 
     private setupAutoProgression(): void {
@@ -417,16 +398,16 @@ export class InteractiveTutorial {
                 if (step.requiresAction === 'start-experience') {
                     console.log('🎵 Starting audio immediately on user interaction')
                     this.enableAudioSystems()
-                    // Try immediate audio playback
-                    if (this.audioManager && this.audioManager.playSound) {
+                    // Try immediate audio playback through audio management system
+                    if (this.audioManagementSystem) {
                         try {
-                            this.audioManager.playSound('hospital_ambience', true)
+                            this.audioManagementSystem.playSound(SoundType.HOSPITAL_AMBIENCE, true)
                             console.log('🎵 Hospital ambience started immediately')
                         } catch (e) {
                             console.warn('⚠️ Immediate audio failed, trying fallback:', e)
                             // Try other sounds
                             try {
-                                this.audioManager.playSound('background_music', true)
+                                this.audioManagementSystem.playSound(SoundType.BACKGROUND_MUSIC, true)
                                 console.log('🎵 Background music started as fallback')
                             } catch (e2) {
                                 console.warn('⚠️ All audio attempts failed:', e2)
