@@ -34,6 +34,17 @@ export class InteractiveTutorial {
 
     private steps: TutorialStep[] = [
         {
+            id: 'welcome',
+            title: '🏥 X-RAI Medical Simulator',
+            instruction: 'AI-powered diagnostic training with immersive 3D visualization and real-time audio feedback',
+            requiresAction: 'start-experience',
+            feedback: {
+                incomplete: 'Click "Start Experience" to begin',
+                progress: 'Initializing audio systems...',
+                complete: '✅ Audio enabled! Starting tutorial...'
+            }
+        },
+        {
             id: 'intro',
             title: '🔍 X-Ray Vision Activated',
             instruction: 'Move your mouse over the 3D model to begin scanning',
@@ -152,6 +163,39 @@ export class InteractiveTutorial {
         this.currentStep = 0
         this.createTutorialOverlay()
         this.showCurrentStep()
+
+        // ENHANCEMENT FIRST: Auto-detect mouse movement and camera rotation
+        this.setupAutoProgression()
+    }
+
+    private enableAudioSystems(): void {
+        // CLEAN: Single responsibility - enable all audio systems
+        if (this.diagnosticUI?.audioManager) {
+            this.diagnosticUI.audioManager.startHospitalAmbience()
+        }
+        console.log('🎵 Audio systems enabled via user interaction')
+    }
+
+    private setupAutoProgression(): void {
+        // Auto-detect mousemove for first step
+        const mouseMoveHandler = () => {
+            if (this.currentStep === 0) {
+                this.actionPerformed('mousemove', true)
+                window.removeEventListener('mousemove', mouseMoveHandler)
+            }
+        }
+        window.addEventListener('mousemove', mouseMoveHandler)
+
+        // Auto-detect camera rotation for second step
+        const mouseDownHandler = () => {
+            if (this.currentStep === 1) {
+                setTimeout(() => {
+                    this.actionPerformed('camera-move', true)
+                }, 2000) // Give user 2 seconds to rotate
+                window.removeEventListener('mousedown', mouseDownHandler)
+            }
+        }
+        window.addEventListener('mousedown', mouseDownHandler)
     }
 
     private createTutorialOverlay(): void {
@@ -184,10 +228,8 @@ export class InteractiveTutorial {
         const instructionPanel = this.createInstructionPanel(step)
         this.overlay.appendChild(instructionPanel)
 
-        // Create highlight if needed
-        if (step.highlightArea) {
-            this.createHighlight(step.highlightArea)
-        }
+        // REMOVED: Green highlight barrier - was cluttering UI
+        // Tutorial instructions are clear enough without visual barriers
 
         // Create progress indicator
         const progressIndicator = this.createProgressIndicator()
@@ -236,7 +278,7 @@ export class InteractiveTutorial {
                     ${step.feedback?.incomplete || ''}
                 </div>
 
-                ${step.requiresAction === 'acknowledge' || step.requiresAction === 'start-game' ? `
+                ${step.requiresAction === 'acknowledge' || step.requiresAction === 'start-game' || step.requiresAction === 'start-experience' ? `
                     <button id="tutorial-continue-btn" style="
                         background: linear-gradient(135deg, ${colors.primary.base} 0%, ${colors.primary.dark} 100%);
                         color: ${colors.neutral.black};
@@ -249,7 +291,7 @@ export class InteractiveTutorial {
                         transition: all ${animation.duration.base} ${animation.easing.smooth};
                         box-shadow: ${effects.shadow.base}, ${effects.shadow.primaryGlow};
                     ">
-                        ${step.requiresAction === 'start-game' ? 'Start Diagnosis' : 'Continue'}
+                        ${step.requiresAction === 'start-game' ? 'Start Diagnosis' : step.requiresAction === 'start-experience' ? '🔊 Start Experience' : 'Continue'}
                     </button>
                 ` : ''}
             </div>
@@ -258,7 +300,13 @@ export class InteractiveTutorial {
         // Add button event listener
         const continueBtn = panel.querySelector('#tutorial-continue-btn')
         if (continueBtn) {
-            continueBtn.addEventListener('click', () => this.completeCurrentStep())
+            continueBtn.addEventListener('click', () => {
+                // ENHANCEMENT FIRST: Enable audio on first user interaction
+                if (step.requiresAction === 'start-experience') {
+                    this.enableAudioSystems()
+                }
+                this.completeCurrentStep()
+            })
             continueBtn.addEventListener('mouseenter', (e) => {
                 (e.target as HTMLElement).style.transform = 'translateY(-2px)'
                     ; (e.target as HTMLElement).style.boxShadow = `${effects.shadow.md}, ${effects.shadow.primaryGlow}`
@@ -272,32 +320,6 @@ export class InteractiveTutorial {
         return panel
     }
 
-    private createHighlight(area: string): void {
-        // Create pulsing highlight overlay for specific areas
-        this.highlightElement = document.createElement('div')
-        this.highlightElement.style.cssText = `
-            position: fixed;
-            border: 3px solid ${colors.primary.base};
-            border-radius: ${borders.radius.lg};
-            box-shadow: 0 0 30px ${colors.primary.glow}, inset 0 0 30px ${colors.primary.glow};
-            pointer-events: none;
-            animation: pulse 2s ${animation.easing.easeInOut} infinite;
-            z-index: ${zIndex.overlay - 1};
-        `
-
-        // Position based on area (simplified - would need actual element positions)
-        const positions: Record<string, { top: string; left: string; width: string; height: string }> = {
-            'model': { top: '50%', left: '50%', width: '60%', height: '60%' },
-            'head': { top: '30%', left: '50%', width: '30%', height: '30%' },
-            'panel': { top: '2rem', left: '2rem', width: '380px', height: '80vh' }
-        }
-
-        const position = positions[area] || positions['model']
-        Object.assign(this.highlightElement.style, position)
-        this.highlightElement.style.transform = 'translate(-50%, -50%)'
-
-        this.overlay?.appendChild(this.highlightElement)
-    }
 
     private createProgressIndicator(): HTMLElement {
         const indicator = document.createElement('div')

@@ -428,8 +428,10 @@ export default class XRayEffect {
         markerGroup.children.includes(intersect.object as THREE.Object3D) ||
         markerGroup === intersect.object
       )) {
-        // Play click sound for consistency
-        this.audioManager.playSound(SoundTypeType.CLICK);
+        // Play click sound for consistency (with null check)
+        if (this.audioManager) {
+          this.audioManager.playSound(SoundTypeType.CLICK);
+        }
 
         // ENHANCEMENT FIRST: Trigger streaming analysis for immediate feedback
         const condition = MEDICAL_CONDITIONS.find(c => c.id === conditionId)

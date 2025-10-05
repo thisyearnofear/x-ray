@@ -98,13 +98,8 @@ export default class Canvas {
   createAudioManager() {
     this.audioManager = new AudioManager(this.camera)
 
-    // Start background audio immediately when canvas initializes
-    setTimeout(() => {
-      if (this.audioManager) {
-        console.log('🎵 Starting background audio...')
-        this.audioManager.startHospitalAmbience()
-      }
-    }, 1000) // Small delay to ensure everything is loaded
+    // AGGRESSIVE CONSOLIDATION: Audio now controlled by tutorial system
+    // No auto-start needed - welcome screen handles user interaction
   }
 
   createOrbitControls() {
@@ -199,19 +194,8 @@ export default class Canvas {
     window.addEventListener("click", this.onMouseClick)
     window.addEventListener("resize", this.onResize)
 
-    // Start audio on first user interaction (browser autoplay policy)
-    const startAudioOnInteraction = () => {
-      if (this.audioManager && !this.audioManager['isAmbiencePlaying']) {
-        console.log('🎵 Starting audio after user interaction...')
-        this.audioManager.startHospitalAmbience()
-      }
-      // Remove listeners after first interaction
-      window.removeEventListener("mousemove", startAudioOnInteraction)
-      window.removeEventListener("click", startAudioOnInteraction)
-    }
-
-    window.addEventListener("mousemove", startAudioOnInteraction)
-    window.addEventListener("click", startAudioOnInteraction)
+    // AGGRESSIVE CONSOLIDATION: Audio now handled by tutorial welcome screen
+    // Tutorial's "Start Experience" button enables audio with proper user consent
   }
 
   onMouseClick = (event: MouseEvent) => {
