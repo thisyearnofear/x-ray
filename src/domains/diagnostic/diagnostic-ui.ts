@@ -19,6 +19,9 @@ import { colors, spacing, typography, borders, effects, animation, zIndex } from
 // ENHANCEMENT FIRST: Interactive tutorial system
 import { InteractiveTutorial } from '../tutorial/InteractiveTutorial'
 
+// ENHANCEMENT FIRST: Patient chat panel for AI consultation
+import { PatientChatPanel } from './patient-chat-panel'
+
 export class DiagnosticUI {
     private audioManager: AudioManager
     private phaseManager: GamePhaseManager
@@ -35,6 +38,9 @@ export class DiagnosticUI {
 
     // MODULAR: Interactive tutorial system
     private tutorial: InteractiveTutorial | null = null
+
+    // MODULAR: Patient chat panel
+    private patientChatPanel: PatientChatPanel | null = null
 
     private scanProgress: Map<string, number> = new Map()
     private panel: HTMLElement | null = null
@@ -69,6 +75,9 @@ export class DiagnosticUI {
 
         // ENHANCEMENT FIRST: Initialize voice consultation system
         this.voiceConsultation = new VoiceConsultationManager()
+
+        // ENHANCEMENT FIRST: Initialize patient chat panel
+        this.patientChatPanel = new PatientChatPanel(this.voiceConsultation)
 
         // ENHANCEMENT FIRST: Pass GameManager to GamePhaseManager for integration
         this.phaseManager = new GamePhaseManager(this.gameManager)
@@ -623,6 +632,10 @@ export class DiagnosticUI {
 
         // ENHANCEMENT FIRST: Connect tutorial actions to real game mechanics
         switch (action) {
+            case 'start-experience':
+                // Welcome screen - audio enabled by tutorial itself
+                break
+
             case 'mousemove':
                 // User needs to move mouse - tutorial will detect this automatically
                 break
@@ -1796,6 +1809,9 @@ export class DiagnosticUI {
             this.panel.parentNode.removeChild(this.panel)
         }
 
+        // ENHANCEMENT FIRST: Clean up patient chat panel
+        this.patientChatPanel?.destroy()
+
         this.scanProgress.clear()
         this.isInitialized = false
     }
@@ -1866,6 +1882,9 @@ export class DiagnosticUI {
 
             // Update UI with patient information
             this.updatePatientInfoInPanel(patientCase)
+
+            // ENHANCEMENT FIRST: Show patient chat panel with generated case
+            this.patientChatPanel?.show(patientCase)
 
             console.log('✅ AI case generated:', patientCase.patientName)
             console.log('🎵 Contextual audio environment created')
@@ -2013,6 +2032,9 @@ export class DiagnosticUI {
         }
 
         this.updatePatientInfoInPanel(fallbackCase)
+
+        // ENHANCEMENT FIRST: Show patient chat panel with fallback case
+        this.patientChatPanel?.show(fallbackCase)
     }
 
     // Public method to allow external phase transitions

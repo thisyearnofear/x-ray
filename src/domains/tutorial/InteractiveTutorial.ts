@@ -35,7 +35,7 @@ export class InteractiveTutorial {
     private steps: TutorialStep[] = [
         {
             id: 'welcome',
-            title: '🏥 X-RAI Medical Simulator',
+            title: 'X-RAI',
             instruction: 'AI-powered diagnostic training with immersive 3D visualization and real-time audio feedback',
             requiresAction: 'start-experience',
             feedback: {
@@ -170,25 +170,28 @@ export class InteractiveTutorial {
 
     private enableAudioSystems(): void {
         // CLEAN: Single responsibility - enable all audio systems
-        if (this.diagnosticUI?.audioManager) {
-            this.diagnosticUI.audioManager.startHospitalAmbience()
+        // Access through xRayEffect which has the audioManager
+        if (this.xRayEffect?.audioManager) {
+            this.xRayEffect.audioManager.startHospitalAmbience()
+            console.log('🎵 Audio systems enabled via user interaction')
+        } else {
+            console.warn('⚠️ AudioManager not available')
         }
-        console.log('🎵 Audio systems enabled via user interaction')
     }
 
     private setupAutoProgression(): void {
-        // Auto-detect mousemove for first step
+        // Auto-detect mousemove for intro step (now step 1 after welcome)
         const mouseMoveHandler = () => {
-            if (this.currentStep === 0) {
+            if (this.currentStep === 1) {
                 this.actionPerformed('mousemove', true)
                 window.removeEventListener('mousemove', mouseMoveHandler)
             }
         }
         window.addEventListener('mousemove', mouseMoveHandler)
 
-        // Auto-detect camera rotation for second step
+        // Auto-detect camera rotation for rotation step (now step 2)
         const mouseDownHandler = () => {
-            if (this.currentStep === 1) {
+            if (this.currentStep === 2) {
                 setTimeout(() => {
                     this.actionPerformed('camera-move', true)
                 }, 2000) // Give user 2 seconds to rotate
