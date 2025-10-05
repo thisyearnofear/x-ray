@@ -452,13 +452,13 @@ export default class XRayEffect {
         // Play discovery sound based on severity
         switch (condition.severity) {
           case 'low':
-            this.audioManager.playSound(SoundTypeType.LOW_SEVERITY, medicalMarker.getMarkerGroup().position);
+            this.audioManager.playSound(SoundTypeType.LOW_SEVERITY);
             break;
           case 'medium':
-            this.audioManager.playSound(SoundTypeType.MEDIUM_SEVERITY, medicalMarker.getMarkerGroup().position);
+            this.audioManager.playSound(SoundTypeType.MEDIUM_SEVERITY);
             break;
           case 'high':
-            this.audioManager.playSound(SoundTypeType.HIGH_SEVERITY, medicalMarker.getMarkerGroup().position);
+            this.audioManager.playSound(SoundTypeType.HIGH_SEVERITY);
             break;
         }
 
