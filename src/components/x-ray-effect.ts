@@ -32,6 +32,7 @@ interface Props {
   renderer: THREE.WebGLRenderer
   camera: THREE.PerspectiveCamera
   audioManager: AudioManagerType
+  scanFeedbackSystem?: any
 }
 
 export default class XRayEffect {
@@ -63,18 +64,22 @@ export default class XRayEffect {
   // Visual feedback system for accessibility
   visualFeedbackSystem: VisualFeedbackSystem;
 
+  // ENHANCEMENT FIRST: Reference to scan feedback system from canvas
+  scanFeedbackSystem: any;
+
   // INTEGRATION: Progressive discovery and model switching
   currentModel: 'head' | 'torso' | 'fullbody' = 'head'
   scanProgress: Map<string, number> = new Map() // Track scanning progress per condition
   discoveredConditions: Set<string> = new Set() // Track discovered conditions
   visibleAnatomy: string[] = ['head', 'neck', 'cervical_spine', 'jaw', 'face'] // Current visible anatomy
 
-  constructor({ scene, composer, renderer, camera, audioManager }: Props) {
+  constructor({ scene, composer, renderer, camera, audioManager, scanFeedbackSystem }: Props) {
     this.scene = scene
     this.composer = composer
     this.renderer = renderer
     this.camera = camera
     this.audioManager = audioManager;
+    this.scanFeedbackSystem = scanFeedbackSystem;
     this.visualFeedbackSystem = new VisualFeedbackSystem(this.scene);
     this.mouse = {
       current: { x: 0, y: 0 },
@@ -86,7 +91,12 @@ export default class XRayEffect {
     this.createSkeleton()
     this.initializeMedicalMarkers()
     this.instructionsPanel = new InstructionsPanel()
-    this.diagnosticUI = new DiagnosticUI(this.audioManager)
+
+    // ENHANCEMENT FIRST: Pass system references to DiagnosticUI
+    this.diagnosticUI = new DiagnosticUI(this.audioManager, {
+      xRayEffect: this,
+      scanFeedbackSystem: this.scanFeedbackSystem
+    })
 
     // PREVENT BLOAT: Single event listener with cleanup
     this.keyHandler = (event: KeyboardEvent) => this.onPressKey(event)

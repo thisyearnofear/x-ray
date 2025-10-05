@@ -122,14 +122,27 @@ export class InteractiveTutorial {
     private onTutorialComplete?: () => void
     private onActionRequired?: (action: string, data?: any) => void
 
+    // ENHANCEMENT FIRST: References to game systems
+    private xRayEffect: any = null
+    private scanFeedbackSystem: any = null
+    private diagnosticUI: any = null
+
     constructor(callbacks?: {
         onStepComplete?: (stepId: string) => void
         onTutorialComplete?: () => void
         onActionRequired?: (action: string, data?: any) => void
+        xRayEffect?: any
+        scanFeedbackSystem?: any
+        diagnosticUI?: any
     }) {
         this.onStepComplete = callbacks?.onStepComplete
         this.onTutorialComplete = callbacks?.onTutorialComplete
         this.onActionRequired = callbacks?.onActionRequired
+
+        // Store references to game systems
+        this.xRayEffect = callbacks?.xRayEffect
+        this.scanFeedbackSystem = callbacks?.scanFeedbackSystem
+        this.diagnosticUI = callbacks?.diagnosticUI
     }
 
     start(): void {

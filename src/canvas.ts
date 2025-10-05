@@ -248,6 +248,7 @@ export default class Canvas {
       renderer: this.renderer,
       camera: this.camera,
       audioManager: this.audioManager,
+      scanFeedbackSystem: this.scanFeedbackSystem,
     })
   }
 

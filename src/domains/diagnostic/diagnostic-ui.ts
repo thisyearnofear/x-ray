@@ -1,3 +1,4 @@
+import * as THREE from 'three'
 import { AudioManager, SoundType } from "../../components/AudioManager"
 import { MEDICAL_CONDITIONS } from "../../domains/medical/medical-data"
 import { GamePhaseManager, GamePhase } from "./game-phase-manager"
@@ -42,8 +43,17 @@ export class DiagnosticUI {
     private isCollapsed: boolean = false
     private onboardingContainer: HTMLElement | null = null
 
-    constructor(audioManager: AudioManager) {
+    // ENHANCEMENT FIRST: References to canvas systems
+    private xRayEffect: any = null
+    private scanFeedbackSystem: any = null
+
+    constructor(audioManager: AudioManager, config?: {
+        xRayEffect?: any
+        scanFeedbackSystem?: any
+    }) {
         this.audioManager = audioManager
+        this.xRayEffect = config?.xRayEffect
+        this.scanFeedbackSystem = config?.scanFeedbackSystem
 
         // Initialize sophisticated backend systems
         this.gameManager = new GameManager()
@@ -582,7 +592,7 @@ export class DiagnosticUI {
     }
 
     private startInteractiveTutorial() {
-        // ENHANCEMENT FIRST: Initialize new interactive tutorial system
+        // ENHANCEMENT FIRST: Initialize new interactive tutorial system with game system references
         this.tutorial = new InteractiveTutorial({
             onStepComplete: (stepId) => {
                 console.log('✅ Tutorial step completed:', stepId)
@@ -592,12 +602,125 @@ export class DiagnosticUI {
                 this.phaseManager.transitionTo(GamePhase.ACTIVE)
             },
             onActionRequired: (action, data) => {
-                console.log('🎯 Action required:', action)
-                // TODO: Connect to x-ray-effect.ts for scan feedback
-            }
+                this.handleTutorialAction(action, data)
+            },
+            // ENHANCEMENT FIRST: Pass references to enable real scanning during tutorial
+            xRayEffect: this.xRayEffect,
+            scanFeedbackSystem: this.scanFeedbackSystem,
+            diagnosticUI: this
         })
 
         this.tutorial.start()
+    }
+
+    private handleTutorialAction(action: string, data?: any) {
+        console.log('🎯 Tutorial action required:', action, data)
+
+        // ENHANCEMENT FIRST: Connect tutorial actions to real game mechanics
+        switch (action) {
+            case 'mousemove':
+                // User needs to move mouse - tutorial will detect this automatically
+                break
+
+            case 'camera-move':
+                // User needs to rotate camera - OrbitControls handle this
+                break
+
+            case 'scan-start':
+                // Start visual feedback for scanning practice
+                if (this.scanFeedbackSystem && data?.highlightArea) {
+                    this.startTutorialScanFeedback(data.highlightArea)
+                }
+                break
+
+            case 'scan-progress-100':
+                // Monitor scan progress during tutorial
+                if (this.xRayEffect) {
+                    this.monitorTutorialScanProgress()
+                }
+                break
+
+            case 'click-condition':
+                // Enable condition discovery in tutorial mode
+                this.enableTutorialConditionDiscovery()
+                break
+
+            case 'acknowledge':
+            case 'start-game':
+                // These are handled by tutorial button clicks
+                break
+
+            default:
+                console.warn('Unknown tutorial action:', action)
+        }
+    }
+
+    private startTutorialScanFeedback(area: string) {
+        // ENHANCEMENT FIRST: Show visual scan feedback during tutorial
+        console.log('🔍 Starting tutorial scan feedback for:', area)
+
+        // Get approximate position for the highlighted area
+        const positions: Record<string, [number, number, number]> = {
+            'head': [0, 1, 0],
+            'chest': [0, 0, 0],
+            'torso': [0, -0.5, 0]
+        }
+
+        const pos = positions[area] || [0, 0, 0]
+        const position = new THREE.Vector3(pos[0], pos[1], pos[2])
+
+        // Start scan feedback visualization
+        if (this.scanFeedbackSystem) {
+            this.scanFeedbackSystem.startScanning('tutorial-scan', position)
+        }
+    }
+
+    private monitorTutorialScanProgress() {
+        // ENHANCEMENT FIRST: Simulate scan progress for tutorial
+        let progress = 0
+        const interval = setInterval(() => {
+            progress += 2 // Increase by 2% per update
+
+            if (this.tutorial) {
+                this.tutorial.updateProgress(progress)
+            }
+
+            if (this.scanFeedbackSystem) {
+                this.scanFeedbackSystem.updateScanProgress('tutorial-scan', progress / 100)
+            }
+
+            if (progress >= 100) {
+                clearInterval(interval)
+                // Notify tutorial of completion
+                if (this.tutorial) {
+                    this.tutorial.actionPerformed('scan-progress-100', true)
+                }
+                if (this.scanFeedbackSystem) {
+                    this.scanFeedbackSystem.stopScanning('tutorial-scan')
+                }
+            }
+        }, 100) // Update every 100ms
+    }
+
+    private enableTutorialConditionDiscovery() {
+        // ENHANCEMENT FIRST: Allow discovering a tutorial condition
+        console.log('🎯 Tutorial condition discovery enabled')
+
+        // In tutorial mode, auto-discover first condition after a brief delay
+        setTimeout(() => {
+            if (this.xRayEffect) {
+                const conditions = this.xRayEffect.getVisibleConditions()
+                if (conditions.length > 0) {
+                    // Discover the first visible condition
+                    this.discoverCondition(conditions[0])
+
+                    // Notify tutorial
+                    if (this.tutorial) {
+                        this.tutorial.actionPerformed('click-condition', true)
+                    }
+                }
+            }
+        }, 1500)
     }
 
     private updatePanelForPhase(phase: string) {
