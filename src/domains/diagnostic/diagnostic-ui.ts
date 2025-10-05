@@ -2303,7 +2303,7 @@ export class DiagnosticUI {
         discoveryElement.className = 'discovery-opportunity';
         
         // Create the inner HTML structure
-        discoveryElement.innerHTML = \`
+        discoveryElement.innerHTML = `
             <div style="
                 position: fixed;
                 top: 30%;
@@ -2322,9 +2322,9 @@ export class DiagnosticUI {
                 backdrop-filter: blur(10px);
                 animation: fadeInOut 5s ease-in-out forwards;
             ">
-                \${message}
+                ${message}
             </div>
-        \`;
+        `;
         
         document.body.appendChild(discoveryElement);
         
