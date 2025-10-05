@@ -690,22 +690,35 @@ export class DiagnosticUI {
 
         // Start scan feedback visualization
         if (this.scanFeedbackSystem) {
-            this.scanFeedbackSystem.startScanning('tutorial-scan', position)
+            console.log('📊 ScanFeedbackSystem available:', !!this.scanFeedbackSystem)
+            try {
+                this.scanFeedbackSystem.startScanning('tutorial-scan', position)
+                console.log('✅ Scan feedback started')
+            } catch (error) {
+                console.error('❌ Scan feedback failed:', error)
+            }
+        } else {
+            console.warn('⚠️ ScanFeedbackSystem not available, skipping visual feedback.')
         }
 
         // ENHANCEMENT FIRST: Auto-complete this step after scan starts
+        console.log('⏱️ Setting up tutorial auto-progression...')
         setTimeout(() => {
+            console.log('🔔 Calling actionPerformed for scan-start')
             if (this.tutorial) {
                 this.tutorial.actionPerformed('scan-start', true)
+            } else {
+                console.warn('⚠️ Tutorial system not available')
             }
-        }, 2000) // Give 2 seconds to see the scan effect
+        }, 1500) // Reduced to 1.5 seconds for faster progression
     }
 
     private monitorTutorialScanProgress() {
         // ENHANCEMENT FIRST: Simulate scan progress for tutorial
+        console.log('🔄 Scanning completes automatically in tutorial mode')
         let progress = 0
         const interval = setInterval(() => {
-            progress += 2 // Increase by 2% per update
+            progress += 5 // Increase by 5% per update for faster completion
 
             if (this.tutorial) {
                 this.tutorial.updateProgress(progress)
@@ -717,6 +730,7 @@ export class DiagnosticUI {
 
             if (progress >= 100) {
                 clearInterval(interval)
+                console.log('✅ Scan progress complete')
                 // Notify tutorial of completion
                 if (this.tutorial) {
                     this.tutorial.actionPerformed('scan-progress-100', true)
@@ -725,7 +739,7 @@ export class DiagnosticUI {
                     this.scanFeedbackSystem.stopScanning('tutorial-scan')
                 }
             }
-        }, 100) // Update every 100ms
+        }, 50) // Update every 50ms for faster completion
     }
 
     private enableTutorialConditionDiscovery() {
@@ -737,16 +751,30 @@ export class DiagnosticUI {
             if (this.xRayEffect) {
                 const conditions = this.xRayEffect.getVisibleConditions()
                 if (conditions.length > 0) {
+                    console.log('🔍 Auto-discovering condition:', conditions[0])
                     // Discover the first visible condition
                     this.discoverCondition(conditions[0])
 
                     // Notify tutorial
                     if (this.tutorial) {
                         this.tutorial.actionPerformed('click-condition', true)
+                        console.log('✅ Condition discovery complete')
+                    }
+                } else {
+                    console.warn('⚠️ No visible conditions for tutorial discovery')
+                    // Force progression anyway
+                    if (this.tutorial) {
+                        this.tutorial.actionPerformed('click-condition', true)
                     }
                 }
+            } else {
+                console.warn('⚠️ XRayEffect not available for condition discovery')
+                // Force progression anyway
+                if (this.tutorial) {
+                    this.tutorial.actionPerformed('click-condition', true)
+                }
             }
-        }, 1500)
+        }, 1000) // Faster delay
     }
 
     private updatePanelForPhase(phase: string) {

@@ -174,8 +174,12 @@ export class InteractiveTutorial {
     private enableAudioSystems(): void {
         // CLEAN: Single responsibility - enable all audio systems
         if (this.audioManager) {
-            this.audioManager.startHospitalAmbience()
-            console.log('🎵 Audio systems enabled via user interaction')
+            try {
+                this.audioManager.startHospitalAmbience()
+                console.log('🎵 Audio systems enabled via user interaction')
+            } catch (error) {
+                console.warn('⚠️ AudioManager start failed:', error)
+            }
         } else {
             console.warn('⚠️ AudioManager not available')
         }
@@ -185,6 +189,7 @@ export class InteractiveTutorial {
         // Auto-detect mousemove for intro step (now step 1 after welcome)
         const mouseMoveHandler = () => {
             if (this.currentStep === 1) {
+                console.log('🖱️ Auto-completing mousemove step')
                 this.actionPerformed('mousemove', true)
                 window.removeEventListener('mousemove', mouseMoveHandler)
             }
@@ -195,12 +200,49 @@ export class InteractiveTutorial {
         const mouseDownHandler = () => {
             if (this.currentStep === 2) {
                 setTimeout(() => {
+                    console.log('📷 Auto-completing camera-move step')
                     this.actionPerformed('camera-move', true)
-                }, 2000) // Give user 2 seconds to rotate
+                }, 2500) // Give user 2.5 seconds to rotate
                 window.removeEventListener('mousedown', mouseDownHandler)
             }
         }
         window.addEventListener('mousedown', mouseDownHandler)
+
+        // Auto-progress through remaining tutorial steps
+        this.setupStepAutoProgression()
+    }
+
+    private setupStepAutoProgression(): void {
+        // Auto-progress through consultation and completion steps
+        const checkStepProgression = () => {
+            switch (this.currentStep) {
+                case 6: // consultation-intro step
+                    setTimeout(() => {
+                        if (this.currentStep === 6) {
+                            console.log('🎙️ Auto-acknowledging consultation feature')
+                            this.actionPerformed('acknowledge', true)
+                        }
+                    }, 2000)
+                    break
+                case 7: // complete step
+                    setTimeout(() => {
+                        if (this.currentStep === 7) {
+                            console.log('🏆 Auto-starting diagnostic session')
+                            this.actionPerformed('start-game', true)
+                        }
+                    }, 1500)
+                    break
+            }
+        }
+
+        // Check every second for step changes
+        const progressionInterval = setInterval(() => {
+            if (this.isActive) {
+                checkStepProgression()
+            } else {
+                clearInterval(progressionInterval)
+            }
+        }, 1000)
     }
 
     private createTutorialOverlay(): void {
@@ -379,7 +421,10 @@ export class InteractiveTutorial {
         const step = this.steps[this.currentStep]
 
         if (step.requiresAction === action && success) {
-            setTimeout(() => this.completeCurrentStep(), 1000)
+            console.log(`✅ Tutorial action performed: ${action} for step ${this.currentStep}`)
+            setTimeout(() => this.completeCurrentStep(), 500) // Faster completion
+        } else {
+            console.log(`⚠️ Tutorial action not performed: ${action} (current step requires ${step?.requiresAction})`)
         }
     }
 
