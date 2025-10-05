@@ -1094,16 +1094,22 @@ export class DiagnosticUI {
             const totalPoints = Math.floor((basePoints + timeBonus) * streakMultiplier)
 
             // Play discovery sound based on severity
-            switch (condition.severity) {
-                case 'low':
-                    this.audioManager.playSound(SoundType.LOW_SEVERITY)
-                    break
-                case 'medium':
-                    this.audioManager.playSound(SoundType.MEDIUM_SEVERITY)
-                    break
-                case 'high':
-                    this.audioManager.playSound(SoundType.HIGH_SEVERITY)
-                    break
+            if (this.audioManager && this.audioManager.playSound) {
+                try {
+                    switch (condition.severity) {
+                        case 'low':
+                            this.audioManager.playSound(SoundType.LOW_SEVERITY)
+                            break
+                        case 'medium':
+                            this.audioManager.playSound(SoundType.MEDIUM_SEVERITY)
+                            break
+                        case 'high':
+                            this.audioManager.playSound(SoundType.HIGH_SEVERITY)
+                            break
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Discovery sound failed:', error)
+                }
             }
 
             // Award points with enhanced feedback

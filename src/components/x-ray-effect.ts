@@ -466,13 +466,13 @@ export default class XRayEffect {
           try {
             switch (condition.severity) {
               case 'low':
-                this.audioManager.playSound(SoundType.LOW_SEVERITY);
+                this.audioManager.playSound(SoundTypeType.LOW_SEVERITY);
                 break;
               case 'medium':
-                this.audioManager.playSound(SoundType.MEDIUM_SEVERITY);
+                this.audioManager.playSound(SoundTypeType.MEDIUM_SEVERITY);
                 break;
               case 'high':
-                this.audioManager.playSound(SoundType.HIGH_SEVERITY);
+                this.audioManager.playSound(SoundTypeType.HIGH_SEVERITY);
                 break;
             }
           } catch (error) {
