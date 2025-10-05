@@ -1203,25 +1203,101 @@ export class DiagnosticUI {
 
     private showWelcomeScreen() {
         this.createOnboardingOverlay()
+        
+        // PERFORMANT: Start ambient audio immediately for immersion
+        if (this.audioManager && typeof this.audioManager.startHospitalAmbience === 'function') {
+            this.audioManager.startHospitalAmbience()
+        }
+        
         if (this.onboardingContainer) {
             this.onboardingContainer.innerHTML = `
-                <div style="background: linear-gradient(135deg, rgba(0,20,40,0.95) 0%, rgba(0,40,80,0.95) 100%); border: 2px solid #00ff88; border-radius: 16px; padding: 2rem; max-width: 600px; text-align: center;">
-                    <h1 style="color: #00ff88; font-size: 2.5rem; margin-bottom: 1rem; text-shadow: 0 0 20px rgba(0,255,136,0.5);">🏥 X-RAI Medical Simulator</h1>
-                    <div style="background: rgba(0,255,136,0.1); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
-                        <h2 style="color: #00ff88; margin-bottom: 1rem;">📋 Patient Briefing</h2>
-                        <p style="font-size: 1.1rem; margin-bottom: 1rem; line-height: 1.5;">
-                            <strong>Emergency Department - 14:30</strong><br>You are the attending physician on duty. A new patient has arrived with concerning symptoms.
-                        </p>
-                        <p style="color: #ffaa00; font-weight: bold;">🚨 Your diagnostic skills are needed immediately</p>
+                <div style="background: linear-gradient(135deg, rgba(0,20,40,0.95) 0%, rgba(0,40,80,0.95) 100%); border: 2px solid #00ff88; border-radius: 16px; padding: 2rem; max-width: 600px; text-align: center; position: relative; overflow: hidden;">
+                    <!-- ENHANCEMENT: Animated scanning lines -->
+                    <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, #00ff88, transparent); animation: scan 3s infinite;"></div>
+                    
+                    <h1 id="title" style="color: #00ff88; font-size: 2.5rem; margin-bottom: 1rem; text-shadow: 0 0 20px rgba(0,255,136,0.5);">🏥 X-RAI MEDICAL SIMULATOR</h1>
+                    <div id="protocol" style="color: #ffaa00; font-size: 0.9rem; margin-bottom: 1.5rem; letter-spacing: 2px; opacity: 0;">EMERGENCY DIAGNOSTIC PROTOCOL ACTIVATED</div>
+                    
+                    <div style="background: rgba(0,255,136,0.1); padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0; border: 1px solid rgba(0,255,136,0.3);">
+                        <h2 style="color: #00ff88; margin-bottom: 1rem;">📋 PATIENT BRIEFING - PRIORITY: URGENT</h2>
+                        <div id="briefing-content" style="opacity: 0;">
+                            <p style="font-size: 0.95rem; margin-bottom: 0.5rem; color: #ccc;">
+                                <strong>Location:</strong> Emergency Department Bay 3<br>
+                                <strong>Time:</strong> 14:30 EST | <strong>Attending:</strong> Dr. ${this.getUserName()}
+                            </p>
+                            <div style="margin: 1rem 0; padding: 1rem; background: rgba(255,170,0,0.1); border-radius: 8px; border-left: 4px solid #ffaa00;">
+                                <p style="font-size: 1rem; line-height: 1.5; margin-bottom: 0.5rem;">
+                                    ⚠️ <strong>INCOMING PATIENT ALERT</strong><br>
+                                    Patient presents with acute symptoms requiring immediate diagnostic assessment.
+                                </p>
+                            </div>
+                            <p id="emergency-alert" style="color: #ff4444; font-weight: bold; font-size: 1.1rem; animation: pulse 2s infinite; opacity: 0;">
+                                🚨 DIAGNOSTIC INTERVENTION REQUIRED
+                            </p>
+                        </div>
                     </div>
-                    <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                        <button class="onboarding-btn secondary" onclick="window.diagnosticUI?.transitionToPhase('exploration')">Skip Tutorial</button>
-                        <button class="onboarding-btn primary" onclick="window.diagnosticUI?.transitionToPhase('tutorial')">Start Tutorial</button>
+                    
+                    <div id="action-buttons" style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; opacity: 0;">
+                        <button class="onboarding-btn secondary" onclick="window.diagnosticUI?.transitionToPhase('exploration')" onmouseenter="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,255,136,0.4)';" onmouseleave="this.style.transform=''; this.style.boxShadow='';">Skip to Diagnosis</button>
+                        <button class="onboarding-btn primary" onclick="window.diagnosticUI?.transitionToPhase('tutorial')" onmouseenter="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,255,136,0.6)';" onmouseleave="this.style.transform=''; this.style.boxShadow='';">Begin Training Protocol</button>
                     </div>
                 </div>
             `
+            
+            // ENHANCEMENT FIRST: Add CSS animations to existing style system
+            this.addWelcomeAnimations()
+            
+            // PERFORMANT: Staggered animation sequence
+            this.playWelcomeSequence()
+            
             this.showOnboarding()
         }
+    }
+
+    // MODULAR: Separate animation logic
+    private addWelcomeAnimations() {
+        if (!document.querySelector('#welcome-animations')) {
+            const style = document.createElement('style')
+            style.id = 'welcome-animations'
+            style.textContent = `
+                @keyframes scan { 0% { left: -100%; } 100% { left: 100%; } }
+                @keyframes pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+                @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+            `
+            document.head.appendChild(style)
+        }
+    }
+
+    // CLEAN: Separate sequence logic with clear timing
+    private playWelcomeSequence() {
+        setTimeout(() => {
+            const protocol = document.querySelector('#protocol') as HTMLElement
+            if (protocol) protocol.style.cssText += 'opacity: 1; animation: fadeInUp 0.8s ease;'
+        }, 500)
+
+        setTimeout(() => {
+            const briefing = document.querySelector('#briefing-content') as HTMLElement
+            if (briefing) briefing.style.cssText += 'opacity: 1; animation: fadeInUp 0.8s ease;'
+        }, 1200)
+
+        setTimeout(() => {
+            const alert = document.querySelector('#emergency-alert') as HTMLElement
+            if (alert) alert.style.opacity = '1'
+            // ENHANCEMENT: Play alert sound
+            if (this.audioManager && typeof this.audioManager.playSound === 'function') {
+                this.audioManager.playSound('medical_beep' as any)
+            }
+        }, 2000)
+
+        setTimeout(() => {
+            const buttons = document.querySelector('#action-buttons') as HTMLElement
+            if (buttons) buttons.style.cssText += 'opacity: 1; animation: fadeInUp 0.8s ease;'
+        }, 2800)
+    }
+
+    // DRY: Single source for user name
+    private getUserName(): string {
+        return 'Resident'
     }
 
     private showTutorialScreen() {
