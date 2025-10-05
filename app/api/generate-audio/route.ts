@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const { prompt, duration, type } = await request.json();
-    
+
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
@@ -52,11 +52,11 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error('ElevenLabs API error:', errorData);
-      
+
       // Check for copyrighted material error and use suggestion
       if (errorData.detail?.status === 'bad_prompt' && errorData.detail?.data?.prompt_suggestion) {
         console.log('🔄 Using suggested prompt:', errorData.detail.data.prompt_suggestion);
-        
+
         // Retry with suggested prompt
         const retryResponse = await fetch('https://api.elevenlabs.io/v1/music/compose', {
           method: 'POST',
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
             music_length_ms: duration,
           })
         });
-        
+
         if (retryResponse.ok) {
           const audioBuffer = await retryResponse.arrayBuffer();
           console.log('✅ Generated audio with suggested prompt');
@@ -81,13 +81,13 @@ export async function POST(request: NextRequest) {
           });
         }
       }
-      
+
       throw new Error(`ElevenLabs API error: ${response.status} ${response.statusText}`);
     }
 
     const audioBuffer = await response.arrayBuffer();
     console.log(`✅ Generated ${type} audio: ${audioBuffer.byteLength} bytes`);
-    
+
     return new NextResponse(audioBuffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
@@ -97,8 +97,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Audio generation error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return NextResponse.json(
-      { error: 'Failed to generate audio', details: error.message },
+      { error: 'Failed to generate audio', details: errorMessage },
       { status: 500 }
     );
   }
