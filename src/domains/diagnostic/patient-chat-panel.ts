@@ -60,7 +60,7 @@ export class PatientChatPanel {
         this.panel.innerHTML = `
             <div class="panel-header" style="padding: ${spacing.base}; border-bottom: ${borders.width.thin} solid ${colors.border.accent}; display: flex; justify-content: space-between; align-items: center; background: ${colors.background.accentGlow}; cursor: pointer;">
                 <div>
-                    <div style="color: ${colors.accent.base}; font-size: ${typography.fontSize.lg}; font-weight: ${typography.fontWeight.bold}; text-shadow: ${effects.textShadow.accent};">👤 Patient Data</div>
+                    <div style="color: ${colors.accent.base}; font-size: ${typography.fontSize.lg}; font-weight: ${typography.fontWeight.bold}; text-shadow: ${effects.textShadow.accent};">👤 Patient Data & Case Generation</div>
                     <div style="color: ${colors.neutral.light}; font-size: ${typography.fontSize.xs}; opacity: 0.8;">AI-Generated Case</div>
                 </div>
                 <button id="minimize-btn" style="background: none; border: none; color: ${colors.accent.base}; font-size: ${typography.fontSize.xl}; cursor: pointer; padding: ${spacing.sm}; border-radius: ${borders.radius.full}; transition: all ${animation.duration.fast} ${animation.easing.smooth};">
@@ -72,6 +72,12 @@ export class PatientChatPanel {
                 <!-- Patient Info Section -->
                 <div id="patient-info" style="padding: ${spacing.base}; border-bottom: ${borders.width.thin} solid ${colors.border.accent}; background: ${colors.background.primaryGlow};">
                     ${this.renderPatientInfo(patientCase)}
+                </div>
+
+                <!-- Case Generation Details -->
+                <div id="case-generation-details" style="padding: ${spacing.base}; border-bottom: ${borders.width.thin} solid ${colors.border.accent}; background: ${colors.background.accentGlow}; display: none;">
+                    <div style="color: ${colors.accent.base}; font-size: ${typography.fontSize.base}; margin-bottom: ${spacing.sm}; text-shadow: ${effects.textShadow.accent};">🧠 AI Case Generation</div>
+                    <div id="case-generation-content" style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.light}; line-height: ${typography.lineHeight.relaxed};"></div>
                 </div>
 
                 <!-- Chat Messages -->
@@ -383,6 +389,41 @@ export class PatientChatPanel {
         const patientInfoContainer = this.panel?.querySelector('#patient-info') as HTMLElement
         if (patientInfoContainer) {
             patientInfoContainer.innerHTML = this.renderPatientInfo(patientCase)
+        }
+    }
+
+    showCaseGenerationDetails(details: any) {
+        const caseGenerationContainer = this.panel?.querySelector('#case-generation-details') as HTMLElement
+        const caseGenerationContent = this.panel?.querySelector('#case-generation-content') as HTMLElement
+        
+        if (caseGenerationContainer && caseGenerationContent) {
+            caseGenerationContent.innerHTML = `
+                <div style="margin-bottom: ${spacing.sm};">
+                    <div style="color: ${colors.accent.base}; font-weight: ${typography.fontWeight.bold}; margin-bottom: 4px;">Model:</div>
+                    <div>${details.model || 'N/A'}</div>
+                </div>
+                <div style="margin-bottom: ${spacing.sm};">
+                    <div style="color: ${colors.accent.base}; font-weight: ${typography.fontWeight.bold}; margin-bottom: 4px;">Complexity:</div>
+                    <div>${details.complexity || 'N/A'}</div>
+                </div>
+                <div>
+                    <div style="color: ${colors.accent.base}; font-weight: ${typography.fontWeight.bold}; margin-bottom: 4px;">Generation Time:</div>
+                    <div>${details.generationTime || 'N/A'}ms</div>
+                </div>
+            `;
+            caseGenerationContainer.style.display = 'block';
+        }
+    }
+
+    showAIAnalysis(analysis: any) {
+        // Add AI analysis as a system message
+        this.addMessage('system', `🧠 AI Analysis: ${analysis.summary || 'Analysis complete'}`);
+        
+        // If we have detailed findings, add them as well
+        if (analysis.findings && analysis.findings.length > 0) {
+            const findingsText = analysis.findings.map((finding: string, index: number) => 
+                `${index + 1}. ${finding}`).join('\n');
+            this.addMessage('system', `🔍 Key Findings:\n${findingsText}`);
         }
     }
 

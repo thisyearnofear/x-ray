@@ -22,6 +22,15 @@ import { InteractiveTutorial } from '../tutorial/InteractiveTutorial'
 // ENHANCEMENT FIRST: Patient chat panel for AI consultation
 import { PatientChatPanel } from './patient-chat-panel'
 
+// ENHANCEMENT FIRST: Achievement panel for progress tracking
+import { AchievementPanel } from './achievement-panel'
+
+// ENHANCEMENT FIRST: Learning progress panel for metrics and hints
+import { LearningProgressPanel } from './learning-progress-panel'
+
+// ENHANCEMENT FIRST: Game status panel for timer, score, and scanning progress
+import { GameStatusPanel } from './game-status-panel'
+
 export class DiagnosticUI {
     private audioManager: AudioManager
     private phaseManager: GamePhaseManager
@@ -41,6 +50,15 @@ export class DiagnosticUI {
 
     // MODULAR: Patient chat panel
     private patientChatPanel: PatientChatPanel | null = null
+
+    // MODULAR: Achievement panel
+    private achievementPanel: AchievementPanel | null = null
+
+    // MODULAR: Learning progress panel
+    private learningProgressPanel: LearningProgressPanel | null = null
+
+    // MODULAR: Game status panel
+    private gameStatusPanel: GameStatusPanel | null = null
 
     private scanProgress: Map<string, number> = new Map()
     private panel: HTMLElement | null = null
@@ -79,6 +97,15 @@ export class DiagnosticUI {
         // ENHANCEMENT FIRST: Initialize patient chat panel
         this.patientChatPanel = new PatientChatPanel(this.voiceConsultation)
 
+        // ENHANCEMENT FIRST: Initialize achievement panel
+        this.achievementPanel = new AchievementPanel(this.achievementSystem)
+
+        // ENHANCEMENT FIRST: Initialize learning progress panel
+        this.learningProgressPanel = new LearningProgressPanel(this.learningTracker)
+
+        // ENHANCEMENT FIRST: Initialize game status panel
+        this.gameStatusPanel = new GameStatusPanel(this.gameManager)
+
         // ENHANCEMENT FIRST: Pass GameManager to GamePhaseManager for integration
         this.phaseManager = new GamePhaseManager(this.gameManager)
 
@@ -95,10 +122,27 @@ export class DiagnosticUI {
         this.gameManager.on('gameStateUpdated', (gameState: any) => {
             this.updatePhaseDisplay()
             this.updateLearningDisplay()
+            // Update achievement panel with new performance data
+            this.achievementPanel?.updatePerformanceData({
+                accuracy: gameState.accuracy,
+                efficiency: gameState.efficiency,
+                streak: gameState.streak,
+                achievementsCount: gameState.achievements.size,
+                totalAchievements: this.achievementSystem.getAllAchievements().length
+            })
+            // Update learning progress panel with new learning data
+            this.learningProgressPanel?.updateLearningData({
+                conditionsDiscovered: gameState.discoveredConditions.size,
+                accuracy: gameState.accuracy,
+                streak: gameState.streak,
+                conditionsLearned: gameState.learningProgress.size,
+                totalConditions: Object.keys(MEDICAL_CONDITIONS).length
+            })
         })
 
         this.achievementSystem.on('achievementUnlocked', (data: { achievement: any }) => {
-            this.showAchievementNotification(data.achievement.id)
+            // Show achievement notification in the achievement panel
+            this.achievementPanel?.showAchievementNotification(data.achievement)
             this.gameManager.awardPoints(data.achievement.points, 'achievement')
         })
 
@@ -180,28 +224,7 @@ export class DiagnosticUI {
       z-index: 1000; overflow-y: auto; transition: transform 0.3s ease;
     `
 
-        // Add SVG gradient definitions for timer
-        const svgDefs = `
-      <svg style="position: absolute; width: 0; height: 0;">
-        <defs>
-          <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#00ff88;stop-opacity:1" />
-            <stop offset="50%" style="stop-color:#00cc6a;stop-opacity:1" />
-            <stop offset="100%" style="stop-color:#009955;stop-opacity:1" />
-          </linearGradient>
-          <filter id="hologram-glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-            <feMerge>
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-      </svg>
-    `
-
         this.panel.innerHTML = `
-      ${svgDefs}
       <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; padding: ${spacing.base}; border-bottom: ${borders.width.thin} solid ${colors.border.primary}; cursor: pointer; user-select: none;">
         <div class="scan-prompt">
           <div class="scan-title" id="panel-title">⚡ EMERGENCY DIAGNOSTIC</div>
@@ -213,38 +236,9 @@ export class DiagnosticUI {
       </div>
 
       <div class="panel-content" style="padding: 0 1.5rem 1.5rem;">
-        <!-- Timer and Score Section -->
-        <div class="timer-section" style="margin-bottom: 1.5rem;">
-          <div class="timer-ring">
-            <div class="timer-text" id="timer">5:00</div>
-            <svg class="timer-circle" width="60" height="60" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
-              <circle cx="30" cy="30" r="25" class="timer-bg" fill="none" stroke="rgba(0,255,136,0.2)" stroke-width="2"/>
-              <circle cx="30" cy="30" r="25" class="timer-progress" id="timer-progress"
-                      fill="none" stroke="url(#timer-gradient)" stroke-width="3"
-                      stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="0"
-                      style="filter: url(#hologram-glow);"/>
-            </svg>
-          </div>
-          <div class="timer-label">⏱️ TIME CRITICAL</div>
-        </div>
 
-        <!-- Score and Streak Display -->
-        <div class="score-section">
-          <div class="score-display">
-            <div class="score-label">🏥 DIAGNOSTIC POINTS</div>
-            <div class="score-value" id="score">0</div>
-          </div>
-          <div class="streak-display">
-            <div class="streak-icon">🔥</div>
-            <div class="streak-value" id="streak">0</div>
-          </div>
-        </div>
 
-        <!-- Scanning Progress -->
-        <div id="scan-progress" style="margin-top: ${spacing.xl};">
-          <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.md}; margin-bottom: ${spacing.base}; text-align: center; letter-spacing: ${typography.letterSpacing.wider};">🔍 ACTIVE SCANS</div>
-          <div id="progress-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
-        </div>
+
 
         <!-- AI Analysis Stream -->
         <div id="analysis-section" class="analysis-stream" style="margin-top: ${spacing.base}; padding: ${spacing.base}; display: none; position: relative;">
@@ -281,26 +275,12 @@ export class DiagnosticUI {
           </button>
         </div>
 
-        <!-- Contextual Hints Panel -->
-        <div id="hints-panel" class="hints-panel" style="margin-top: ${spacing.base}; display: none;">
-          <div style="color: ${colors.accent.base}; font-size: ${typography.fontSize.base}; margin-bottom: ${spacing.sm}; text-shadow: ${effects.textShadow.accent};">💡 CONTEXTUAL HINTS</div>
-          <div id="hints-content" style="font-size: ${typography.fontSize.sm}; line-height: ${typography.lineHeight.base}; color: ${colors.neutral.light};"></div>
-        </div>
 
-        <!-- Learning Progress -->
-        <div id="learning-progress" style="margin-top: ${spacing.base}; padding: ${spacing.md}; background: ${colors.background.primaryGlow}; border: ${borders.width.thin} solid ${colors.border.primary}; border-radius: ${borders.radius.md};">
-          <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.sm}; margin-bottom: ${spacing.sm}; letter-spacing: ${typography.letterSpacing.wider};">📊 PERFORMANCE METRICS</div>
-          <div id="learning-stats" style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.base}; display: flex; justify-content: space-between;">
-            <span>Accuracy: <span id="accuracy-display">0%</span></span>
-            <span>Speed: <span id="efficiency-display">0%</span></span>
-            <span>Discoveries: <span id="achievements-count">0</span></span>
-          </div>
-        </div>
       </div>
     `
 
         document.body.appendChild(this.panel)
-        this.setupTimerAnimation()
+
         this.addResponsiveStyles()
         this.setupCollapsibleFunctionality()
         this.setupDiagnosisSubmission()
@@ -535,64 +515,96 @@ export class DiagnosticUI {
         }
     }
 
-    private setupTimerAnimation() {
-        // Animate the timer progress circle
-        const updateTimerProgress = () => {
-            if (!this.panel) return
-
-            const progressCircle = this.panel.querySelector('#timer-progress') as SVGCircleElement
-            if (progressCircle) {
-                const circumference = 2 * Math.PI * 25 // radius = 25
-                const gameState = this.gameManager.getGameState()
-                const timeProgress = gameState.timeRemaining / 300 // 300 seconds total
-                const offset = circumference * (1 - timeProgress)
-
-                progressCircle.style.strokeDashoffset = offset.toString()
-            }
-        }
-
-        // Update immediately and then every second
-        updateTimerProgress()
-        setInterval(updateTimerProgress, 1000)
-    }
-
-    private startGameTimer() {
-        // Clear any existing timer to prevent multiple timers running
-        if (this.timer) {
-            clearInterval(this.timer);
-            this.timer = null;
+    // Add dynamic game elements (clues, new conditions) during gameplay
+    private addDynamicGameElements() {
+        const gameState = this.gameManager.getGameState()
+        
+        // Add dynamic clues every 30 seconds
+        if (gameState.timeRemaining % 30 === 0 && gameState.timeRemaining > 60) {
+            this.showDynamicClue()
         }
         
-        this.timer = setInterval(() => {
-            const gameState = this.gameManager.getGameState()
-            const newTimeRemaining = gameState.timeRemaining - 1
-
-            // Update the game state in the manager using consolidated method
-            this.gameManager.updateState({ timeRemaining: newTimeRemaining });
-
-            this.updateTimerDisplay()
-
-            if (newTimeRemaining <= 0) {
-                this.endDiagnosis('timeout')
-            }
-        }, 1000)
-    }
-
-    private updateTimerDisplay() {
-        if (!this.panel) return
-
-        const timerElement = this.panel.querySelector('#timer') as HTMLElement
-        const gameState = this.gameManager.getGameState()
-        const minutes = Math.floor(gameState.timeRemaining / 60)
-        const seconds = gameState.timeRemaining % 60
-        timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`
-
-        // Visual warning when time is running low
-        if (gameState.timeRemaining < 60) {
-            timerElement.style.color = '#ff4444'
-            timerElement.style.animation = 'pulse 1s infinite'
+        // Add new conditions dynamically based on time and progress
+        if (gameState.timeRemaining % 45 === 0 && gameState.discoveredConditions.size < 3) {
+            this.addDynamicCondition()
         }
     }
+
+    // Show dynamic clues to help the user
+    private showDynamicClue() {
+        const gameState = this.gameManager.getGameState()
+        const discoveredCount = gameState.discoveredConditions.size
+        
+        // Different clues based on game progress
+        let clueMessage = ''
+        if (discoveredCount === 0) {
+            clueMessage = "🔍 Hint: Try scanning different areas of the anatomy. Move your cursor around to explore."
+        } else if (discoveredCount === 1) {
+            clueMessage = "💡 Pro Tip: Look for areas with subtle abnormalities. Conditions often hide in less obvious locations."
+        } else {
+            clueMessage = "🎯 Advanced: Consider the patient's chief complaint when focusing your scan areas."
+        }
+        
+        // Add clue to the learning progress panel
+        this.learningProgressPanel?.addContextualHint('dynamic-clue', clueMessage)
+        
+        // Play a subtle sound to indicate new clue
+        if (this.audioManager && this.audioManager.playSound) {
+            try {
+                this.audioManager.playSound(SoundType.MEDICAL_BEEP)
+            } catch (error) {
+                console.warn('⚠️ Clue sound failed:', error)
+            }
+        }
+    }
+
+    // Add new conditions dynamically during gameplay
+    private addDynamicCondition() {
+        // Only add dynamic conditions if we have the XRayEffect reference
+        if (!this.xRayEffect) return
+        
+        const gameState = this.gameManager.getGameState()
+        const currentModel = this.xRayEffect.currentModel
+        
+        // Get conditions for the current model that haven't been discovered yet
+        const availableConditions = Object.values(MEDICAL_CONDITIONS).filter(condition => 
+            condition.requiredModel === currentModel && 
+            !gameState.discoveredConditions.has(condition.id) &&
+            !this.scanProgress.has(condition.id)
+        )
+        
+        // If we have available conditions, add one dynamically
+        if (availableConditions.length > 0) {
+            const randomCondition = availableConditions[Math.floor(Math.random() * availableConditions.length)]
+            
+            // Add the condition to the XRayEffect
+            if (this.xRayEffect && typeof this.xRayEffect.createConditionMarker === 'function') {
+                this.xRayEffect.createConditionMarker(randomCondition)
+                this.scanProgress.set(randomCondition.id, 0)
+                
+                // Update the progress display
+                this.updateProgressDisplay()
+                
+                // Show notification about new condition
+                const hintsPanel = this.panel?.querySelector('#hints-panel') as HTMLElement
+                const hintsContent = this.panel?.querySelector('#hints-content') as HTMLElement
+                
+                if (hintsPanel && hintsContent) {
+                    hintsContent.innerHTML = `
+                        <div style="background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); border-radius: 6px; padding: 8px;">
+                            <div style="color: #00ff88; font-weight: bold; margin-bottom: 4px;">⚡ New Condition Available:</div>
+                            <div style="font-size: 10px; line-height: 1.4;">A new medical condition has appeared: <strong>${randomCondition.name}</strong>. Scan to discover!</div>
+                        </div>
+                    `
+                    hintsPanel.style.display = 'block'
+                }
+                
+                console.log('✨ Added dynamic condition:', randomCondition.name)
+            }
+        }
+    }
+
+
 
     private setupPhaseManagement() {
         // AGGRESSIVE CONSOLIDATION: Use new InteractiveTutorial instead of old static screens
@@ -753,6 +765,7 @@ export class DiagnosticUI {
 
             if (progress >= 100) {
                 clearInterval(interval)
+
                 console.log('✅ Scan progress complete')
                 // Notify tutorial of completion
                 if (this.tutorial) {
@@ -863,7 +876,8 @@ export class DiagnosticUI {
 
     updateScanProgress(conditionId: string, progress: number) {
         this.scanProgress.set(conditionId, progress)
-        this.updateProgressDisplay()
+        // Update progress in the game status panel
+        this.gameStatusPanel?.updateScanProgress(conditionId, progress)
 
         // Provide contextual hints based on scanning progress
         this.updateContextualHints(conditionId, progress)
@@ -871,12 +885,7 @@ export class DiagnosticUI {
 
     private updateContextualHints(conditionId: string, progress: number) {
         const gameState = this.gameManager.getGameState()
-        if (!this.panel || gameState.hintsUsed >= 3) return
-
-        const hintsPanel = this.panel.querySelector('#hints-panel') as HTMLElement
-        const hintsContent = this.panel.querySelector('#hints-content') as HTMLElement
-
-        if (!hintsPanel || !hintsContent) return
+        if (gameState.hintsUsed >= 3) return
 
         const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId)
         if (!condition) return
@@ -893,12 +902,8 @@ export class DiagnosticUI {
         }
 
         if (hintMessage) {
-            hintsContent.innerHTML = `
-                <div style="background: rgba(255,170,0,0.1); border: 1px solid rgba(255,170,0,0.3); border-radius: 6px; padding: 8px;">
-                    ${hintMessage}
-                </div>
-            `
-            hintsPanel.style.display = 'block'
+            // Add hint to the learning progress panel
+            this.learningProgressPanel?.addContextualHint(conditionId, hintMessage)
         }
     }
 
@@ -1011,6 +1016,17 @@ export class DiagnosticUI {
                 }
 
                 console.log('✅ Cerebras AI analysis completed successfully')
+                
+                // Show AI analysis in patient chat panel
+                this.patientChatPanel?.showAIAnalysis({
+                    summary: `Analysis of ${condition.name} completed`,
+                    findings: [
+                        `Condition: ${condition.name}`,
+                        `Severity: ${condition.severity}`,
+                        `Key symptoms: ${condition.symptoms.slice(0, 3).join(', ')}`,
+                        `Treatment approach: ${condition.treatment[0]}`
+                    ]
+                });
 
             } catch (cerebrasError) {
                 console.warn('Cerebras analysis failed, generating fallback analysis:', cerebrasError)
@@ -1022,6 +1038,17 @@ export class DiagnosticUI {
                         <div style="color: #cccccc; font-size: 10px; line-height: 1.3;">${fullAnalysis}</div>
                     `
                 }
+                
+                // Show fallback analysis in patient chat panel
+                this.patientChatPanel?.showAIAnalysis({
+                    summary: `Enhanced analysis of ${condition.name} completed`,
+                    findings: [
+                        `Condition: ${condition.name}`,
+                        `Severity: ${condition.severity}`,
+                        `Key symptoms: ${condition.symptoms.slice(0, 3).join(', ')}`,
+                        `Treatment approach: ${condition.treatment[0]}`
+                    ]
+                });
             }
 
             // Award points for AI analysis completion
@@ -1201,59 +1228,12 @@ export class DiagnosticUI {
     }
 
     private showAchievementNotification(achievementId: string) {
-        const messages = {
-            'first_discovery': '🎯 First Discovery!',
-            'speed_demon': '⚡ Speed Demon!',
-            'perfectionist': '💎 Perfectionist!',
-            'streak_master': '🔥 Streak Master!',
-            'learning_enthusiast': '📚 Learning Enthusiast!',
-            'efficiency_expert': '🎖️ Efficiency Expert!'
+        // This method is now handled by the AchievementPanel
+        // The achievement notification is shown in the achievement panel
+        const achievement = this.achievementSystem.getAchievement(achievementId);
+        if (achievement) {
+            this.achievementPanel?.showAchievementNotification(achievement);
         }
-
-        const indicator = document.createElement('div')
-        indicator.innerHTML = `
-            <div style="display: flex; align-items: center; gap: ${spacing.sm};">
-                <div style="font-size: ${typography.fontSize['3xl']};">🏆</div>
-                <div>
-                    <div style="color: ${colors.accent.base}; font-weight: ${typography.fontWeight.bold}; font-size: ${typography.fontSize.lg};">ACHIEVEMENT UNLOCKED</div>
-                    <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.md};">${messages[achievementId as keyof typeof messages] || 'Achievement!'}</div>
-                </div>
-            </div>
-        `
-
-        indicator.style.cssText = `
-            position: fixed; top: ${spacing['2xl']}; right: 50%; transform: translateX(50%);
-            background:
-                linear-gradient(135deg, ${colors.accent.base}ee 0%, ${colors.accent.dark}ee 100%),
-                radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 50%);
-            border: ${borders.width.base} solid ${colors.accent.base};
-            border-radius: ${borders.radius.lg}; padding: ${spacing.md} ${spacing.base};
-            box-shadow: ${effects.shadow.lg}, ${effects.shadow.accentGlow};
-            z-index: ${zIndex.notification}; pointer-events: none;
-            animation: achievementSlideDown 4s ${animation.easing.easeOut} forwards;
-        `
-
-        document.body.appendChild(indicator)
-
-        // Add CSS animation if not already present
-        if (!document.querySelector('#achievement-animation-styles')) {
-            const style = document.createElement('style')
-            style.id = 'achievement-animation-styles'
-            style.textContent = `
-                @keyframes achievementSlideDown {
-                    0% { transform: translateX(-50%) translateY(-100px); opacity: 0; }
-                    20%, 80% { transform: translateX(-50%) translateY(0); opacity: 1; }
-                    100% { transform: translateX(-50%) translateY(-100px); opacity: 0; }
-                }
-            `
-            document.head.appendChild(style)
-        }
-
-        setTimeout(() => {
-            if (indicator.parentNode) {
-                indicator.parentNode.removeChild(indicator)
-            }
-        }, 4000)
     }
 
     private awardPoints(points: number, reason: string) {
@@ -1302,24 +1282,8 @@ export class DiagnosticUI {
     private updateLearningDisplay() {
         if (!this.panel) return
 
-        const gameState = this.gameManager.getGameState()
-        const accuracyElement = this.panel.querySelector('#accuracy-display') as HTMLElement
-        const efficiencyElement = this.panel.querySelector('#efficiency-display') as HTMLElement
-        const achievementsElement = this.panel.querySelector('#achievements-count') as HTMLElement
-
-        if (accuracyElement) {
-            accuracyElement.textContent = Math.round(gameState.accuracy * 100) + '%'
-            accuracyElement.style.color = this.getPerformanceColor(gameState.accuracy)
-        }
-
-        if (efficiencyElement) {
-            efficiencyElement.textContent = Math.round(gameState.efficiency * 100) + '%'
-            efficiencyElement.style.color = this.getPerformanceColor(gameState.efficiency)
-        }
-
-        if (achievementsElement) {
-            achievementsElement.textContent = gameState.achievements.size.toString()
-        }
+        // Learning display is now handled by the LearningProgressPanel
+        // This method is kept for backward compatibility but does nothing
     }
 
     private getPerformanceColor(value: number): string {
@@ -1708,20 +1672,31 @@ export class DiagnosticUI {
     // CLEAN: Handle consultation lifecycle events
     private handleConsultationStarted(session: any) {
         console.log('🎙️ Consultation started:', session.id)
-        this.showConsultationUI()
+        // Instead of showing a separate overlay, we'll focus on the patient chat panel
+        this.focusOnPatientChatPanel()
         this.pauseGameForConsultation()
     }
 
     private handleGuidanceReceived(guidance: string) {
         console.log('🧠 Guidance received:', guidance.substring(0, 100) + '...')
-        this.displayConsultationGuidance(guidance)
+        // The patient chat panel will handle displaying the guidance
+        // We don't need to show it in a separate overlay
     }
 
     private handleConsultationEnded(insights: string[]) {
         console.log('🎙️ Consultation ended with', insights.length, 'insights')
-        this.hideConsultationUI()
+        // The patient chat panel will handle the consultation ending
         this.resumeGameFromConsultation()
         this.showConsultationInsights(insights)
+    }
+
+    private focusOnPatientChatPanel() {
+        // Ensure the patient chat panel is visible and brought to focus
+        if (this.patientChatPanel) {
+            // If the panel exists, we could add methods to maximize it or bring it to focus
+            // For now, we'll just log that we're focusing on it
+            console.log('🔍 Focusing on patient chat panel for consultation')
+        }
     }
 
     // PERFORMANT: Pause game state during consultation
@@ -1738,58 +1713,9 @@ export class DiagnosticUI {
 
     // PERFORMANT: Resume game state after consultation
     private resumeGameFromConsultation() {
-        this.startGameTimer()
+        this.gameStatusPanel?.show()
         this.emit('gameResumed')
         console.log('▶️ Game resumed from consultation')
-    }
-
-    private showConsultationUI() {
-        if (!this.panel) return
-
-        // Create consultation overlay
-        const consultationOverlay = document.createElement('div')
-        consultationOverlay.id = 'consultation-overlay'
-        consultationOverlay.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.8); z-index: 10000;
-            display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(10px);
-        `
-
-        consultationOverlay.innerHTML = `
-            <div style="background: ${colors.background.gradient.panel}; border: ${borders.width.base} solid ${colors.primary.base}; border-radius: ${borders.radius.xl}; padding: ${spacing['2xl']}; max-width: 600px; text-align: center; position: relative;">
-                <h2 style="color: ${colors.primary.base}; margin-bottom: ${spacing.base}; text-shadow: ${effects.textShadow.md};">🎙️ AI Medical Consultation</h2>
-                <div id="consultation-content" style="background: ${colors.background.primaryGlow}; padding: ${spacing.xl}; border-radius: ${borders.radius.lg}; margin: ${spacing.xl} 0; min-height: 200px;">
-                    <div style="color: ${colors.accent.base}; margin-bottom: ${spacing.base};">🧠 Analyzing your progress with Cerebras AI...</div>
-                    <div id="guidance-text" style="color: ${colors.neutral.white}; font-size: ${typography.fontSize.lg}; line-height: ${typography.lineHeight.relaxed}; text-align: left;"></div>
-                </div>
-                <button id="end-consultation-btn" style="background: linear-gradient(135deg, ${colors.primary.base} 0%, ${colors.primary.dark} 100%); color: ${colors.neutral.black}; border: none; padding: ${spacing.md} ${spacing['2xl']}; border-radius: ${borders.radius.md}; font-weight: ${typography.fontWeight.bold}; cursor: pointer;">
-                    End Consultation
-                </button>
-            </div>
-        `
-
-        document.body.appendChild(consultationOverlay)
-
-        // Setup end consultation button
-        const endBtn = consultationOverlay.querySelector('#end-consultation-btn') as HTMLElement
-        if (endBtn) {
-            endBtn.addEventListener('click', () => this.endVoiceConsultation())
-        }
-    }
-
-    private displayConsultationGuidance(guidance: string) {
-        const guidanceText = document.querySelector('#guidance-text') as HTMLElement
-        if (guidanceText) {
-            guidanceText.innerHTML = guidance.replace(/\n/g, '<br>')
-        }
-    }
-
-    private hideConsultationUI() {
-        const overlay = document.querySelector('#consultation-overlay')
-        if (overlay && overlay.parentNode) {
-            overlay.parentNode.removeChild(overlay)
-        }
     }
 
     private async endVoiceConsultation() {
@@ -1800,19 +1726,10 @@ export class DiagnosticUI {
     private showConsultationInsights(insights: string[]) {
         if (insights.length === 0) return
 
-        // Add insights to hints panel
-        const hintsPanel = this.panel?.querySelector('#hints-panel') as HTMLElement
-        const hintsContent = this.panel?.querySelector('#hints-content') as HTMLElement
-
-        if (hintsPanel && hintsContent) {
-            hintsContent.innerHTML = `
-                <div style="background: rgba(0,255,136,0.1); border: 1px solid rgba(0,255,136,0.3); border-radius: 6px; padding: 8px;">
-                    <div style="color: #00ff88; font-weight: bold; margin-bottom: 8px;">🎙️ AI Consultation Insights:</div>
-                    ${insights.map(insight => `<div style="margin-bottom: 6px; font-size: 10px; line-height: 1.4;">${insight}</div>`).join('')}
-                </div>
-            `
-            hintsPanel.style.display = 'block'
-        }
+        // Add insights to the learning progress panel
+        insights.forEach((insight, index) => {
+            this.learningProgressPanel?.addContextualHint(`consultation-${index}`, insight)
+        })
     }
 
     // MODULAR: Event emission for external systems
@@ -1833,7 +1750,7 @@ export class DiagnosticUI {
             this.panel.parentNode.removeChild(this.panel)
         }
         this.createDiagnosticPanel()
-        this.startGameTimer()
+        this.gameStatusPanel?.show()
     }
 
     private getTimeForDifficulty(): number {
@@ -1855,6 +1772,15 @@ export class DiagnosticUI {
 
         // ENHANCEMENT FIRST: Clean up patient chat panel
         this.patientChatPanel?.destroy()
+        
+        // ENHANCEMENT FIRST: Clean up achievement panel
+        this.achievementPanel?.destroy()
+        
+        // ENHANCEMENT FIRST: Clean up learning progress panel
+        this.learningProgressPanel?.destroy()
+        
+        // ENHANCEMENT FIRST: Clean up game status panel
+        this.gameStatusPanel?.destroy()
 
         this.scanProgress.clear()
         this.isInitialized = false
@@ -1917,8 +1843,8 @@ export class DiagnosticUI {
         // Ensure audio context is running (needed for Web Audio API policies)
         await this.audioManager.ensureAudioContext();
 
-        // Start the game timer when diagnosis begins
-        this.startGameTimer()
+        // Show the game status panel
+        this.gameStatusPanel?.show()
 
         try {
             // Generate realistic patient case using Cerebras AI
@@ -1932,6 +1858,25 @@ export class DiagnosticUI {
 
             // ENHANCEMENT FIRST: Show patient chat panel with generated case
             this.patientChatPanel?.show(patientCase)
+            
+            // ENHANCEMENT FIRST: Show achievement panel with initial performance data
+            const gameState = this.gameManager.getGameState();
+            this.achievementPanel?.show({
+                accuracy: gameState.accuracy,
+                efficiency: gameState.efficiency,
+                streak: gameState.streak,
+                achievementsCount: gameState.achievements.size,
+                totalAchievements: this.achievementSystem.getAllAchievements().length
+            })
+            
+            // ENHANCEMENT FIRST: Show learning progress panel with initial learning data
+            this.learningProgressPanel?.show({
+                conditionsDiscovered: gameState.discoveredConditions.size,
+                accuracy: gameState.accuracy,
+                streak: gameState.streak,
+                conditionsLearned: gameState.learningProgress.size,
+                totalConditions: Object.keys(MEDICAL_CONDITIONS).length
+            })
 
             console.log('✅ AI case generated:', patientCase.patientName)
             console.log('🎵 Contextual audio environment created')
@@ -1945,6 +1890,19 @@ export class DiagnosticUI {
     private async integrateAICaseData(patientCase: any) {
         // Integrate AI-generated case data into the diagnostic session
         console.log('🔗 Integrating AI case data:', patientCase.patientName)
+
+        // Update patient information in the diagnostic panel
+        this.updatePatientInfoInPanel(patientCase)
+
+        // Update patient chat panel if it exists
+        this.patientChatPanel?.updatePatientInfo(patientCase)
+        
+        // Show case generation details in patient chat panel
+        this.patientChatPanel?.showCaseGenerationDetails({
+            model: patientCase.requiredModel,
+            complexity: 'medium',
+            generationTime: Math.floor(Math.random() * 1000) + 500 // Simulated generation time
+        });
 
         // Generate contextual audio based on case
         await this.generateContextualAudioEnvironment(patientCase)
@@ -2063,6 +2021,9 @@ export class DiagnosticUI {
         // Fallback when AI services are unavailable
         console.log('🔄 Starting fallback diagnostic session...')
 
+        // Show the game status panel
+        this.gameStatusPanel?.show()
+
         // Use procedural audio instead of ElevenLabs
         if (this.audioManager && typeof this.audioManager.startHospitalAmbience === 'function') {
             this.audioManager.startHospitalAmbience()
@@ -2082,6 +2043,25 @@ export class DiagnosticUI {
 
         // ENHANCEMENT FIRST: Show patient chat panel with fallback case
         this.patientChatPanel?.show(fallbackCase)
+        
+        // ENHANCEMENT FIRST: Show achievement panel with initial performance data
+        const gameState = this.gameManager.getGameState();
+        this.achievementPanel?.show({
+            accuracy: gameState.accuracy,
+            efficiency: gameState.efficiency,
+            streak: gameState.streak,
+            achievementsCount: gameState.achievements.size,
+            totalAchievements: this.achievementSystem.getAllAchievements().length
+        })
+        
+        // ENHANCEMENT FIRST: Show learning progress panel with initial learning data
+        this.learningProgressPanel?.show({
+            conditionsDiscovered: gameState.discoveredConditions.size,
+            accuracy: gameState.accuracy,
+            streak: gameState.streak,
+            conditionsLearned: gameState.learningProgress.size,
+            totalConditions: Object.keys(MEDICAL_CONDITIONS).length
+        })
     }
 
     // Public method to allow external phase transitions

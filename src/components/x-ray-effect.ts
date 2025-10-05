@@ -375,10 +375,13 @@ export default class XRayEffect {
   }
 
   toggleConditions() {
-    // CLEAN: Force markers visible without bloat
+    // Toggle visibility of all medical markers
     this.medicalMarkers.forEach((marker) => {
-      marker.getMarkerGroup().visible = true
+      const markerGroup = marker.getMarkerGroup();
+      markerGroup.visible = !markerGroup.visible;
     })
+    
+    console.log('Toggled conditions visibility');
   }
 
   // MODULAR: Clean interaction handlers with consistent UX

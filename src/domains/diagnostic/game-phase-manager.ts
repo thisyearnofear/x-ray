@@ -41,7 +41,6 @@ export class GamePhaseManager {
 
     if (!this.isValidTransition(this.currentPhase, newPhase)) {
       console.warn(`Invalid transition from ${this.currentPhase} to ${newPhase}`)
-      console.log(`Valid transitions from ${this.currentPhase}:`, this.validTransitions[this.currentPhase as keyof typeof this.validTransitions])
       return false
     }
 

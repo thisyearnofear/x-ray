@@ -175,35 +175,39 @@ export class InteractiveTutorial {
     private enableAudioSystems(): void {
         // CLEAN: Single responsibility - enable all audio systems
         console.log('🎵 Audio should be enabled now from tutorial')
-        if (this.audioManager) {
-            try {
-                // Ensure AudioContext is resumed
-                if (this.audioManager.getAudioListener) {
-                    const listener = this.audioManager.getAudioListener()
-                    if (listener && listener.context && listener.context.state === 'suspended') {
-                        listener.context.resume().then(() => {
-                            console.log('🎵 AudioContext resumed')
-                        })
-                    }
-                }
-
-                this.audioManager.startHospitalAmbience()
-                console.log('🎵 Audio systems enabled via user interaction')
-            } catch (error) {
-                console.warn('⚠️ AudioManager start failed:', error)
-                // Try fallback audio start
+        
+        // Add a small delay to ensure audio manager is fully initialized
+        setTimeout(() => {
+            if (this.audioManager) {
                 try {
-                    if (this.audioManager.playSound) {
-                        this.audioManager.playSound('hospital_ambience', true)
-                        console.log('🎵 Fallback audio started')
+                    // Ensure AudioContext is resumed
+                    if (this.audioManager.getAudioListener) {
+                        const listener = this.audioManager.getAudioListener()
+                        if (listener && listener.context && listener.context.state === 'suspended') {
+                            listener.context.resume().then(() => {
+                                console.log('🎵 AudioContext resumed')
+                            })
+                        }
                     }
-                } catch (fallbackError) {
-                    console.warn('⚠️ Fallback audio failed:', fallbackError)
+
+                    this.audioManager.startHospitalAmbience()
+                    console.log('🎵 Audio systems enabled via user interaction')
+                } catch (error) {
+                    console.warn('⚠️ AudioManager start failed:', error)
+                    // Try fallback audio start
+                    try {
+                        if (this.audioManager.playSound) {
+                            this.audioManager.playSound('hospital_ambience', true)
+                            console.log('🎵 Fallback audio started')
+                        }
+                    } catch (fallbackError) {
+                        console.warn('⚠️ Fallback audio failed:', fallbackError)
+                    }
                 }
+            } else {
+                console.warn('⚠️ AudioManager not available')
             }
-        } else {
-            console.warn('⚠️ AudioManager not available')
-        }
+        }, 100) // Small delay to ensure proper initialization
     }
 
     private setupAutoProgression(): void {
@@ -249,7 +253,7 @@ export class InteractiveTutorial {
                             this.actionPerformed('scan-demo', true)
                         }
                         this.autoProgressTimeouts.delete(stepKey)
-                    }, 2500) // Increased to 2.5 seconds for better demo experience
+                    }, 4000) // Increased to 4 seconds for better demo experience
                     this.autoProgressTimeouts.add(stepKey)
                     break
                 case 4: // scanning-progress step
@@ -259,7 +263,7 @@ export class InteractiveTutorial {
                             this.actionPerformed('scan-progress-100', true)
                         }
                         this.autoProgressTimeouts.delete(stepKey)
-                    }, 3000) // Increased to 3 seconds
+                    }, 5000) // Increased to 5 seconds
                     this.autoProgressTimeouts.add(stepKey)
                     break
                 case 5: // discovery step
@@ -269,7 +273,7 @@ export class InteractiveTutorial {
                             this.actionPerformed('click-condition', true)
                         }
                         this.autoProgressTimeouts.delete(stepKey)
-                    }, 2000) // Increased to 2 seconds
+                    }, 3500) // Increased to 3.5 seconds
                     this.autoProgressTimeouts.add(stepKey)
                     break
                 case 6: // consultation-intro step
@@ -279,7 +283,7 @@ export class InteractiveTutorial {
                             this.actionPerformed('acknowledge', true)
                         }
                         this.autoProgressTimeouts.delete(stepKey)
-                    }, 3000) // Increased to 3 seconds
+                    }, 4500) // Increased to 4.5 seconds
                     this.autoProgressTimeouts.add(stepKey)
                     break
                 case 7: // complete step
@@ -289,7 +293,7 @@ export class InteractiveTutorial {
                             this.actionPerformed('start-game', true)
                         }
                         this.autoProgressTimeouts.delete(stepKey)
-                    }, 2500) // Increased to 2.5 seconds
+                    }, 4000) // Increased to 4 seconds
                     this.autoProgressTimeouts.add(stepKey)
                     break
             }
