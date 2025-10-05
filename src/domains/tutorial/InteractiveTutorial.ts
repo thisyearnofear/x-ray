@@ -71,14 +71,14 @@ export class InteractiveTutorial {
         {
             id: 'scanning-intro',
             title: '📡 Scanning Mechanics',
-            instruction: 'Hover over different body parts to scan for conditions. Watch the progress bar!',
+            instruction: 'Watch as the system demonstrates scanning mechanics automatically.',
             highlightArea: 'head',
-            requiresAction: 'scan-start',
+            requiresAction: 'scan-demo',
             showProgressBar: true,
             feedback: {
-                incomplete: 'Position your cursor over the highlighted area',
-                progress: 'Scanning in progress... hold steady!',
-                complete: '✅ Scan initiated successfully!'
+                incomplete: 'Initializing scan demonstration...',
+                progress: 'Scanning in progress...',
+                complete: '✅ Scan demonstration complete!'
             }
         },
         {
@@ -173,12 +173,32 @@ export class InteractiveTutorial {
 
     private enableAudioSystems(): void {
         // CLEAN: Single responsibility - enable all audio systems
+        console.log('🎵 Audio should be enabled now from tutorial')
         if (this.audioManager) {
             try {
+                // Ensure AudioContext is resumed
+                if (this.audioManager.getAudioListener) {
+                    const listener = this.audioManager.getAudioListener()
+                    if (listener && listener.context && listener.context.state === 'suspended') {
+                        listener.context.resume().then(() => {
+                            console.log('🎵 AudioContext resumed')
+                        })
+                    }
+                }
+
                 this.audioManager.startHospitalAmbience()
                 console.log('🎵 Audio systems enabled via user interaction')
             } catch (error) {
                 console.warn('⚠️ AudioManager start failed:', error)
+                // Try fallback audio start
+                try {
+                    if (this.audioManager.playSound) {
+                        this.audioManager.playSound('hospital_ambience', true)
+                        console.log('🎵 Fallback audio started')
+                    }
+                } catch (fallbackError) {
+                    console.warn('⚠️ Fallback audio failed:', fallbackError)
+                }
             }
         } else {
             console.warn('⚠️ AudioManager not available')
@@ -213,9 +233,33 @@ export class InteractiveTutorial {
     }
 
     private setupStepAutoProgression(): void {
-        // Auto-progress through consultation and completion steps
+        // Auto-progress through all tutorial steps for demo mode
         const checkStepProgression = () => {
             switch (this.currentStep) {
+                case 3: // scanning-intro step
+                    setTimeout(() => {
+                        if (this.currentStep === 3) {
+                            console.log('🔍 Scanning demo in tutorial mode - auto-progressing')
+                            this.actionPerformed('scan-demo', true)
+                        }
+                    }, 1000) // Auto-progress after 1 second
+                    break
+                case 4: // scanning-progress step
+                    setTimeout(() => {
+                        if (this.currentStep === 4) {
+                            console.log('⏱️ Scan progress step - auto-progressing')
+                            this.actionPerformed('scan-progress-100', true)
+                        }
+                    }, 1500)
+                    break
+                case 5: // discovery step
+                    setTimeout(() => {
+                        if (this.currentStep === 5) {
+                            console.log('🎯 Discovery step - auto-progressing')
+                            this.actionPerformed('click-condition', true)
+                        }
+                    }, 1000)
+                    break
                 case 6: // consultation-intro step
                     setTimeout(() => {
                         if (this.currentStep === 6) {
@@ -235,14 +279,14 @@ export class InteractiveTutorial {
             }
         }
 
-        // Check every second for step changes
+        // Check every 500ms for step changes
         const progressionInterval = setInterval(() => {
             if (this.isActive) {
                 checkStepProgression()
             } else {
                 clearInterval(progressionInterval)
             }
-        }, 1000)
+        }, 500)
     }
 
     private createTutorialOverlay(): void {
@@ -348,9 +392,26 @@ export class InteractiveTutorial {
         const continueBtn = panel.querySelector('#tutorial-continue-btn')
         if (continueBtn) {
             continueBtn.addEventListener('click', () => {
-                // ENHANCEMENT FIRST: Enable audio on first user interaction
+                // ENHANCEMENT FIRST: Enable audio immediately on first user interaction
                 if (step.requiresAction === 'start-experience') {
+                    console.log('🎵 Starting audio immediately on user interaction')
                     this.enableAudioSystems()
+                    // Try immediate audio playback
+                    if (this.audioManager && this.audioManager.playSound) {
+                        try {
+                            this.audioManager.playSound('hospital_ambience', true)
+                            console.log('🎵 Hospital ambience started immediately')
+                        } catch (e) {
+                            console.warn('⚠️ Immediate audio failed, trying fallback:', e)
+                            // Try other sounds
+                            try {
+                                this.audioManager.playSound('background_music', true)
+                                console.log('🎵 Background music started as fallback')
+                            } catch (e2) {
+                                console.warn('⚠️ All audio attempts failed:', e2)
+                            }
+                        }
+                    }
                 }
                 this.completeCurrentStep()
             })
