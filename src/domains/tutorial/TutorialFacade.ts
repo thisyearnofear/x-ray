@@ -44,10 +44,17 @@ export class TutorialFacade {
     this.isActive = true
     this.stepService.reset()
     
+    // Enable audio systems on tutorial start
+    if (this.config.audioManager) {
+      this.config.audioManager.ensureAudioContext?.()
+    }
+    
     const overlayElement = this.overlay!.create()
     document.body.appendChild(overlayElement)
     
     this.showCurrentStep()
+    this.playTutorialAudio('welcome')
+  }
   }
 
   nextStep(): void {
@@ -121,6 +128,27 @@ export class TutorialFacade {
 
   getCurrentStepId(): string | null {
     return this.stepService.getCurrentStep()?.id || null
+  }
+
+  // ENHANCEMENT FIRST: Audio integration for immersive experience
+  private playTutorialAudio(type: string): void {
+    if (this.config.audioManager) {
+      try {
+        // Map tutorial events to audio cues
+        const audioMap: Record<string, string> = {
+          'welcome': 'tutorial_start',
+          'step_complete': 'tutorial_progress',
+          'tutorial_complete': 'tutorial_success'
+        }
+        
+        const soundType = audioMap[type]
+        if (soundType && typeof this.config.audioManager.playSound === 'function') {
+          this.config.audioManager.playSound(soundType as any)
+        }
+      } catch (error) {
+        console.warn('Tutorial audio warning:', error)
+      }
+    }
   }
 
   destroy(): void {

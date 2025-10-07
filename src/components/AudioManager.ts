@@ -26,6 +26,11 @@ export enum SoundType {
   // AI-related audio feedback
   AI_PROCESSING = 'ai_processing',
   CEREBRAS_INFERENCE = 'cerebras_inference',
+  
+  // ENHANCEMENT: Add feedback sounds to existing enum
+  TUTORIAL_START = 'tutorial_start',
+  TUTORIAL_PROGRESS = 'tutorial_progress', 
+  TUTORIAL_SUCCESS = 'tutorial_success'
 }
 
 export class AudioManager {
@@ -291,6 +296,36 @@ export class AudioManager {
         this.playSound(SoundType.MEDICAL_BEEP);
         break;
     }
+  }
+
+  // ENHANCEMENT: Add simple feedback method to existing AudioManager
+  public showFeedback(message: string, type: 'success' | 'warning' | 'info' | 'error' = 'info'): void {
+    // Play appropriate sound
+    const soundMap = {
+      success: SoundType.CONDITION_FOUND,
+      warning: SoundType.MEDIUM_SEVERITY,
+      error: SoundType.HIGH_SEVERITY,
+      info: SoundType.MEDICAL_BEEP
+    }
+    this.playSound(soundMap[type])
+
+    // Simple toast notification
+    const toast = document.createElement('div')
+    toast.style.cssText = `
+      position: fixed; top: 20px; right: 20px; z-index: 10000;
+      background: ${type === 'success' ? '#00d4ff' : type === 'error' ? '#ff4444' : '#6c5ce7'};
+      color: white; padding: 12px 20px; border-radius: 8px;
+      font-family: system-ui; font-size: 14px; font-weight: 500;
+      transform: translateX(100%); transition: transform 0.3s ease;
+    `
+    toast.textContent = message
+    document.body.appendChild(toast)
+    
+    requestAnimationFrame(() => toast.style.transform = 'translateX(0)')
+    setTimeout(() => {
+      toast.style.transform = 'translateX(100%)'
+      setTimeout(() => toast.remove(), 300)
+    }, 3000)
   }
 
   // ENHANCEMENT FIRST: Dynamic audio generation for contextual medical cases

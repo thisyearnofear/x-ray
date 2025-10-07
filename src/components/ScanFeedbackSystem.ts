@@ -18,6 +18,10 @@ interface ScanRegion {
     lastUpdate: number
     mesh?: THREE.Mesh
     glowMaterial?: THREE.ShaderMaterial
+    // ENHANCEMENT: Add marker properties to existing interface
+    severity?: 'low' | 'medium' | 'high'
+    discovered?: boolean
+    position?: THREE.Vector3
 }
 
 export class ScanFeedbackSystem {
@@ -78,6 +82,31 @@ export class ScanFeedbackSystem {
             this.scanRegions.set(regionId, region)
             this.createGlowEffect(region, position)
             this.createParticleSystem(regionId, position)
+        }
+    }
+
+    // ENHANCEMENT: Add marker functionality to existing system
+    createMarker(id: string, position: THREE.Vector3, severity: 'low' | 'medium' | 'high' = 'medium'): void {
+        const region: ScanRegion = {
+            id,
+            progress: 0,
+            lastUpdate: Date.now(),
+            severity,
+            discovered: false,
+            position: position.clone()
+        }
+        
+        this.scanRegions.set(id, region)
+        this.createGlowEffect(region, position)
+    }
+
+    // ENHANCEMENT: Update marker state
+    updateMarker(id: string, discovered: boolean): void {
+        const region = this.scanRegions.get(id)
+        if (region) {
+            region.discovered = discovered
+            region.progress = discovered ? 1.0 : region.progress
+            this.updateGlowIntensity(region)
         }
     }
 

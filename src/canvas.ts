@@ -63,6 +63,7 @@ export default class Canvas {
     this.createXRayEffect()
     this.createLights()
     this.createScanFeedbackSystem()
+    this.setupKeyboardShortcuts() // ENHANCEMENT: Minimal keyboard support
     this.createMobileComponents()
     this.render()
   }
@@ -240,6 +241,27 @@ export default class Canvas {
     // ENHANCEMENT FIRST: Initialize visual scan feedback
     this.scanFeedbackSystem = new ScanFeedbackSystem(this.scene)
     console.log('✨ ScanFeedbackSystem initialized')
+  }
+
+  // ENHANCEMENT FIRST: Minimal keyboard shortcuts using existing systems
+  setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+      if (e.target instanceof HTMLInputElement) return
+      
+      switch (e.key.toLowerCase()) {
+        case 'c':
+          this.xRayEffect?.toggleConditionMarkers()
+          this.audioManager?.showFeedback('🔍 Toggled condition markers')
+          break
+        case 'e':
+          this.xRayEffect?.triggerExpansion()
+          this.audioManager?.showFeedback('🔍 Expanded X-ray view')
+          break
+        case 'h':
+          this.audioManager?.showFeedback('💡 Focus on density variations', 'info')
+          break
+      }
+    })
   }
 
   render() {

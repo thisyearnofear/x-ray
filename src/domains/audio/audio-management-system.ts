@@ -38,6 +38,24 @@ export class AudioManagementSystem {
                     if (this.audioManager.getAudioListener) {
                         const listener = this.audioManager.getAudioListener()
                         if (listener && listener.context && listener.context.state === 'suspended') {
+                            listener.context.resume()
+                        }
+                    }
+                    
+                    // Start ambient medical sounds
+                    this.startAmbientSounds()
+                } catch (error) {
+                    console.warn('Audio initialization warning:', error)
+                }
+            }
+        }, 100)
+    }
+
+    private startAmbientSounds(): void {
+        if (!this.isAmbiencePlaying) {
+            this.playSound('ambient_medical')
+            this.isAmbiencePlaying = true
+        }
                             listener.context.resume().then(() => {
                                 console.log('🎵 AudioContext resumed')
                             })

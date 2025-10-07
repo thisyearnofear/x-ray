@@ -81,6 +81,39 @@ export class GameManager {
         callbacks.forEach(callback => callback(data))
     }
 
+    // ENHANCED: Timer system with urgency feedback
+    public startTimer(): void {
+        const timerInterval = setInterval(() => {
+            this.gameState.timeRemaining -= 1
+            
+            // Emit timer events for UI updates
+            this.emit('timer_update', {
+                timeRemaining: this.gameState.timeRemaining,
+                urgency: this.getTimerUrgency()
+            })
+            
+            // Critical time warnings
+            if (this.gameState.timeRemaining === 60) {
+                this.emit('timer_warning', { message: '⚠️ 1 minute remaining!' })
+            } else if (this.gameState.timeRemaining === 30) {
+                this.emit('timer_critical', { message: '🚨 30 seconds left!' })
+            }
+            
+            if (this.gameState.timeRemaining <= 0) {
+                clearInterval(timerInterval)
+                this.emit('timer_expired', { finalScore: this.gameState.score })
+            }
+        }, 1000)
+    }
+
+    private getTimerUrgency(): 'normal' | 'warning' | 'critical' {
+        if (this.gameState.timeRemaining <= 30) return 'critical'
+        if (this.gameState.timeRemaining <= 60) return 'warning'
+        return 'normal'
+    }
+        callbacks.forEach(callback => callback(data))
+    }
+
     // MODULAR: Sophisticated scoring system
     public awardPoints(points: number, reason: string, metadata?: any) {
         const timeBonus = this.calculateTimeBonus()
