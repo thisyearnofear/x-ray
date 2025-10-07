@@ -111,6 +111,9 @@ export class VoiceConsultationManager {
     const existingUI = document.getElementById('consultation-ui')
     if (existingUI) existingUI.remove()
 
+    // Get context from current session to access patient data
+    const patientData = this.currentSession?.context?.patientCase || {};
+    
     const consultationDiv = document.createElement('div')
     consultationDiv.id = 'consultation-ui'
     consultationDiv.innerHTML = `
@@ -131,8 +134,12 @@ export class VoiceConsultationManager {
         color: white;
         font-family: 'Segoe UI', sans-serif;
       ">
-        <div style="text-align: center; margin-bottom: 1.5rem;">
-          <h3 style="margin: 0; color: #00d4ff; font-size: 1.4rem;">🎙️ Clinical Consultation</h3>
+        <div style="text-align: center; margin-bottom: 1rem;">
+          <h3 style="margin: 0; color: #00d4ff; font-size: 1.4rem;">👩‍⚕️ Clinical Consultation</h3>
+          <div style="font-size: 0.9rem; opacity: 0.8; margin-top: 0.3rem;">
+            Patient: <span style="font-weight: bold;">${patientData.patientName || 'Unknown'}</span>, 
+            Age: <span style="font-weight: bold;">${patientData.age || 'N/A'}</span>
+          </div>
         </div>
         
         ${loading ? `

@@ -200,8 +200,21 @@ export class DiagnosticUIManager {
 
   updatePatientInfo(patientCase: any): void {
     const nameElement = document.getElementById('patient-name')
+    const ageElement = document.getElementById('patient-age')
+    const genderElement = document.getElementById('patient-gender')
+    const complaintElement = document.getElementById('patient-complaint')
+    
     if (nameElement) {
       nameElement.textContent = patientCase?.patientName || 'Anonymous Patient'
+    }
+    if (ageElement) {
+      ageElement.textContent = patientCase?.age || '-'
+    }
+    if (genderElement) {
+      genderElement.textContent = patientCase?.gender || '-'
+    }
+    if (complaintElement) {
+      complaintElement.textContent = patientCase?.chiefComplaint || '-'
     }
   }
 

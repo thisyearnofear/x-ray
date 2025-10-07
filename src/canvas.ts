@@ -380,22 +380,32 @@ export default class Canvas {
       if (patientCase) {
         this.gameManager?.updateState({ patientCase })
         
-        // Update the diagnostic UI with patient information
-        this.diagnosticUI?.updatePatientInfo({
-          patientName: patientCase.patientName,
-          age: patientCase.age,
-          gender: patientCase.gender
-        })
+        // Update the diagnostic UI with full patient information
+        this.diagnosticUI?.updatePatientInfo(patientCase)
         
         console.log(`🏥 Patient case generated: ${patientCase.patientName}, Age: ${patientCase.age}, Chief Complaint: ${patientCase.chiefComplaint}`)
         
-        // Provide audio feedback about the patient
-        this.audioManager?.showFeedback(`New patient: ${patientCase.patientName}, age ${patientCase.age}. Chief complaint: ${patientCase.chiefComplaint}`, 'info')
+        // Provide immersive audio feedback about the patient
+        this.audioManager?.showFeedback(`New patient: ${patientCase.patientName}, age ${patientCase.age}, ${patientCase.gender}. Chief complaint: ${patientCase.chiefComplaint}`, 'info')
+        
+        // Play medical notification sound
+        this.audioManager?.playSound(SoundType.MEDICAL_BEEP);
+        
+        // Add immersive "patient loading" sequence
+        setTimeout(() => {
+          this.audioManager?.showFeedback(`Vital signs stable: BP ${patientCase.vitalSigns.bloodPressure}, HR ${patientCase.vitalSigns.heartRate}`, 'info');
+          this.audioManager?.playSound(SoundType.HEARTBEAT_MONITOR);
+        }, 2000);
       }
     } catch (error) {
       console.error('Failed to generate patient case:', error)
       // Fallback to basic patient info if generation fails
-      const fallbackPatient = { patientName: 'Test Patient', age: 42, gender: 'Unknown' }
+      const fallbackPatient = { 
+        patientName: 'Test Patient', 
+        age: 42, 
+        gender: 'Unknown',
+        chiefComplaint: 'Diagnostic evaluation needed'
+      }
       this.gameManager?.updateState({ patientCase: fallbackPatient })
       this.diagnosticUI?.updatePatientInfo(fallbackPatient)
       this.audioManager?.showFeedback('🏥 New patient: Test Patient. Ready for diagnostic evaluation.', 'info')
