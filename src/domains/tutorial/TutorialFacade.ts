@@ -133,19 +133,20 @@ export class TutorialFacade {
   private playTutorialAudio(type: string): void {
     if (this.config.audioManager) {
       try {
-        // Map tutorial events to audio cues
+        // Map tutorial events to existing audio cues
         const audioMap: Record<string, string> = {
-          'welcome': 'tutorial_start',
-          'step_complete': 'tutorial_progress',
-          'tutorial_complete': 'tutorial_success'
+          'welcome': 'MEDICAL_BEEP', // Use existing sound
+          'step_complete': 'DISCOVERY',
+          'tutorial_complete': 'CONDITION_FOUND'
         }
         
         const soundType = audioMap[type]
         if (soundType && typeof this.config.audioManager.playSound === 'function') {
+          // Use existing sounds instead of missing tutorial_start
           this.config.audioManager.playSound(soundType as any)
         }
       } catch (error) {
-        console.warn('Tutorial audio warning:', error)
+        // Silently handle missing sounds
       }
     }
   }

@@ -11,6 +11,10 @@ import { MobileCamera } from "./components/mobile-camera"
 import { AudioManager } from "./components/AudioManager"
 import { SoundType } from "./components/AudioManager"
 import { ScanFeedbackSystem } from "./components/ScanFeedbackSystem"
+import { DiagnosticUIFacade } from "./domains/diagnostic/DiagnosticUIFacade"
+import { GameManager } from "./domains/diagnostic/GameManager"
+import { TutorialFacade } from "./domains/tutorial/TutorialFacade"
+import { VoiceConsultationManager } from "./domains/voice/VoiceConsultationManager"
 
 export default class Canvas {
   element: HTMLCanvasElement
@@ -39,6 +43,16 @@ export default class Canvas {
   // ENHANCEMENT FIRST: Visual scan feedback system
   scanFeedbackSystem: ScanFeedbackSystem | null = null
 
+  // ENHANCEMENT FIRST: Diagnostic UI system
+  diagnosticUI: DiagnosticUIFacade | null = null
+
+  // ENHANCEMENT FIRST: Game systems
+  gameManager: GameManager | null = null
+
+  // ENHANCEMENT FIRST: Tutorial and voice systems
+  tutorial: TutorialFacade | null = null
+  voiceConsultation: VoiceConsultationManager | null = null
+
   // Control RAF and listeners
   private _rafId: number | null = null
   private _disposed = false
@@ -63,6 +77,8 @@ export default class Canvas {
     this.createXRayEffect()
     this.createLights()
     this.createScanFeedbackSystem()
+    this.createDiagnosticUI()
+    this.createTutorialAndVoice()
     this.setupKeyboardShortcuts() // ENHANCEMENT: Minimal keyboard support
     this.createMobileComponents()
     this.render()
@@ -98,6 +114,11 @@ export default class Canvas {
 
   createAudioManager() {
     this.audioManager = new AudioManager(this.camera)
+
+    // ENHANCEMENT FIRST: Make audio manager globally accessible for UI interactions
+    if (typeof window !== 'undefined') {
+      (window as any).audioManager = this.audioManager
+    }
 
     // AGGRESSIVE CONSOLIDATION: Audio now controlled by tutorial system
     // No auto-start needed - welcome screen handles user interaction
@@ -166,6 +187,12 @@ export default class Canvas {
 
   onMouseMove = (event: MouseEvent) => {
     if (this._disposed) return;
+    
+    // Skip interactions if mobile camera is active
+    if (this.mobileCamera && this.mobileCamera.getState().isActive) {
+      return;
+    }
+    
     // Store normalized device coordinates for raycasting
     const ndcX = (event.clientX / window.innerWidth) * 2 - 1
     const ndcY = -(event.clientY / window.innerHeight) * 2 + 1
@@ -201,6 +228,12 @@ export default class Canvas {
 
   onMouseClick = (event: MouseEvent) => {
     if (this._disposed) return;
+    
+    // Skip interactions if mobile camera is active
+    if (this.mobileCamera && this.mobileCamera.getState().isActive) {
+      return;
+    }
+    
     this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1
     this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
     this.raycaster.setFromCamera(this.mouse, this.camera)
@@ -234,6 +267,7 @@ export default class Canvas {
       camera: this.camera,
       audioManager: this.audioManager,
       scanFeedbackSystem: this.scanFeedbackSystem,
+      mobileCamera: this.mobileCamera,
     })
   }
 
@@ -241,6 +275,86 @@ export default class Canvas {
     // ENHANCEMENT FIRST: Initialize visual scan feedback
     this.scanFeedbackSystem = new ScanFeedbackSystem(this.scene)
     console.log('✨ ScanFeedbackSystem initialized')
+  }
+
+  // ENHANCEMENT FIRST: Initialize diagnostic UI using existing systems
+  createDiagnosticUI() {
+    this.diagnosticUI = new DiagnosticUIFacade({
+      audioManager: this.audioManager,
+      xRayEffect: this.xRayEffect,
+      scanFeedbackSystem: this.scanFeedbackSystem,
+      onConsultationClick: () => this.startVoiceConsultation()
+    })
+    this.diagnosticUI.initialize()
+    console.log('🏥 DiagnosticUI initialized')
+  }
+
+  // ENHANCEMENT FIRST: Connect voice consultation to diagnostic UI
+  private startVoiceConsultation() {
+    if (this.voiceConsultation) {
+      const gameState = this.gameManager?.getGameState() || {
+        discoveredConditions: new Set(['temporomandibular_disorder']),
+        timeRemaining: 300,
+        phase: 'scanning',
+        score: 0
+      }
+      
+      const context = {
+        patientCase: { patientName: 'Test Patient' },
+        discoveredConditions: gameState.discoveredConditions,
+        scanProgress: new Map(),
+        timeRemaining: gameState.timeRemaining,
+        gamePhase: gameState.phase,
+        currentScore: gameState.score
+      }
+      this.voiceConsultation.startConsultation(context)
+    }
+  }
+
+  // ENHANCEMENT FIRST: Initialize tutorial and voice using existing systems
+  createTutorialAndVoice() {
+    // Initialize GameManager
+    this.gameManager = new GameManager()
+    
+    // Tutorial facade
+    this.tutorial = new TutorialFacade({
+      audioManager: this.audioManager,
+      xRayEffect: this.xRayEffect,
+      scanFeedbackSystem: this.scanFeedbackSystem,
+      diagnosticUI: this.diagnosticUI,
+      onTutorialComplete: () => this.startGame()
+    })
+    
+    // Voice consultation manager
+    this.voiceConsultation = new VoiceConsultationManager()
+    
+    // Auto-start tutorial for new users
+    const hasSeenTutorial = localStorage.getItem('xrai_tutorial_completed')
+    if (!hasSeenTutorial) {
+      setTimeout(() => this.tutorial?.start(), 2000) // Start after model loads
+    }
+    
+    console.log('📚 Tutorial and Voice systems initialized')
+  }
+
+  // ENHANCEMENT FIRST: Start the game when tutorial completes
+  private startGame() {
+    console.log('🎮 Starting game after tutorial completion')
+    
+    // Mark tutorial as completed in localStorage
+    localStorage.setItem('xrai_tutorial_completed', 'true')
+    
+    // Start the game timer
+    this.gameManager?.startTimer()
+    
+    // Switch audio to hospital ambience
+    this.diagnosticUI?.getUIManager().startGameAudio()
+    
+    // Update UI for active game state
+    this.diagnosticUI?.updatePhase('Active Game')
+    
+    // Show feedback to user
+    this.audioManager?.showFeedback('🏥 Welcome to the diagnostic challenge! Find medical conditions before time runs out.', 'info')
   }
 
   // ENHANCEMENT FIRST: Minimal keyboard shortcuts using existing systems
@@ -330,6 +444,8 @@ export default class Canvas {
     window.removeEventListener("click", this.onMouseClick)
     window.removeEventListener("resize", this.onResize)
     try { this.scanFeedbackSystem?.destroy() } catch { }
+    try { this.diagnosticUI?.destroy() } catch { }
+    try { this.tutorial?.destroy() } catch { }
     try { this.xRayEffect?.destroy() } catch { }
     try { this.renderer?.dispose() } catch { }
     // Clean up scene resources

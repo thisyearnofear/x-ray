@@ -88,7 +88,7 @@ export class XRayControls {
       <div class="control-section">
         <button class="toggle-btn" id="conditions-toggle">
           <span class="btn-icon">🔍</span>
-          <span class="btn-text">SCAN CONDITIONS</span>
+          <span class="btn-text">REVEAL CONDITIONS</span>
         </button>
       </div>
     `
@@ -172,7 +172,7 @@ export class XRayControls {
       toggleBtn.querySelector('.btn-text')!.textContent = 'HIDE CONDITIONS'
     } else {
       toggleBtn.classList.remove('active')
-      toggleBtn.querySelector('.btn-text')!.textContent = 'SCAN CONDITIONS'
+      toggleBtn.querySelector('.btn-text')!.textContent = 'REVEAL CONDITIONS'
     }
     
     this.callbacks.onToggleConditions?.()

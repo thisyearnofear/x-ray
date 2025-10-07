@@ -34,6 +34,7 @@ interface Props {
   camera: THREE.PerspectiveCamera
   audioManager: AudioManagerType
   scanFeedbackSystem?: any
+  mobileCamera?: any
 }
 
 export default class XRayEffect {
@@ -49,7 +50,7 @@ export default class XRayEffect {
   skeleton: Skeleton
   medicalMarkers: Map<string, MedicalMarker> = new Map()
   // Track whether medical markers are currently visible
-  private areConditionsVisible: boolean = true
+  private areConditionsVisible: boolean = false
   diagnosticUI: DiagnosticUIFacade
   instructionsPanel: InstructionsPanel
   mouse: {
@@ -72,13 +73,26 @@ export default class XRayEffect {
   // ENHANCEMENT FIRST: Reference to scan feedback system from canvas
   scanFeedbackSystem: any;
 
+  // Reference to mobile camera to prevent interactions when camera is active
+  mobileCamera: any;
+
   // INTEGRATION: Progressive discovery and model switching
   currentModel: 'head' | 'torso' | 'fullbody' = 'head'
   scanProgress: Map<string, number> = new Map() // Track scanning progress per condition
   discoveredConditions: Set<string> = new Set() // Track discovered conditions
   visibleAnatomy: string[] = ['head', 'neck', 'cervical_spine', 'jaw', 'face'] // Current visible anatomy
-
-  constructor({ scene, composer, renderer, camera, audioManager, scanFeedbackSystem }: Props) {
+  
+  // ENHANCEMENT: Visual scanning feedback system
+  scanRings: Map<string, THREE.Mesh> = new Map(); // Scanning rings around markers
+  progressRings: Map<string, THREE.Mesh> = new Map(); // Progress rings for each marker
+  activeScans: Set<string> = new Set(); // Track markers currently being scanned
+  
+  // ENHANCEMENT: Hint and guidance system
+  lastActivityTime: number = Date.now();
+  hintTimeout: number = 10000; // 10 seconds
+  lastHintShown: string | null = null;
+  
+  constructor({ scene, composer, renderer, camera, audioManager, scanFeedbackSystem, mobileCamera }: Props) {
     this.scene = scene
     this.composer = composer
     this.renderer = renderer
@@ -86,6 +100,7 @@ export default class XRayEffect {
     this.audioManager = audioManager;
     this.audioManagementSystem = new AudioManagementSystem(audioManager);
     this.scanFeedbackSystem = scanFeedbackSystem;
+    this.mobileCamera = mobileCamera;
     this.visualFeedbackSystem = new VisualFeedbackSystem(this.scene);
     this.mouse = {
       current: { x: 0, y: 0 },
@@ -154,6 +169,9 @@ export default class XRayEffect {
       const distance = markerPos.distanceTo(mousePos3D)
 
       if (distance < scanRadius) {
+        // Mark this as an activity to reset hint timer
+        this.lastActivityTime = Date.now();
+        
         // Increase scan progress
         const currentProgress = this.scanProgress.get(conditionId) || 0
         const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId)
@@ -162,23 +180,81 @@ export default class XRayEffect {
         const newProgress = Math.min(currentProgress + deltaTime, requiredTime)
         this.scanProgress.set(conditionId, newProgress)
 
+        // Create or update scanning VFX
+        if (!this.scanRings.has(conditionId)) {
+          this.createScanningVFX(conditionId, markerPos);
+        }
+        
+        // Create or update progress ring if it doesn't exist
+        if (!this.progressRings.has(conditionId)) {
+          this.createProgressRing(conditionId, markerPos);
+        }
+        
+        // Update progress ring based on current progress
+        this.updateProgressRing(conditionId, newProgress / requiredTime)
+
         // Update marker visibility based on progress
         this.updateMarkerVisibility(medicalMarker, newProgress / requiredTime)
 
         // Update diagnostic UI progress
         this.diagnosticUI.updateScanProgress(conditionId, newProgress / requiredTime)
 
+        // Provide audio feedback during scanning
+        const progressRatio = newProgress / requiredTime;
+        if (condition && progressRatio > 0.9 && progressRatio < 0.95) { // Almost discovered
+          this.audioManager?.showFeedback(`Almost there! Keep scanning ${condition.name}!`, 'success');
+        } else if (condition && progressRatio > 0.5 && progressRatio < 0.55) { // Halfway
+          this.audioManager?.showFeedback(`Halfway to discovering ${condition.name}. Keep going!`, 'info');
+        }
+
         // Check if condition is fully discovered
         if (newProgress >= requiredTime && !this.discoveredConditions.has(conditionId)) {
           this.discoverCondition(conditionId)
         }
+        
+        // Add to active scans set
+        this.activeScans.add(conditionId);
+      } else {
+        // If not currently scanning this marker and progress is not at max, update visibility based on global state
+        const currentProgress = this.scanProgress.get(conditionId) || 0
+        const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId)
+        const requiredTime = condition?.scanTimeRequired || 3
+        
+        if (currentProgress < requiredTime) {
+          // Only update visibility based on global toggle when not being actively scanned
+          markerGroup.visible = this.areConditionsVisible
+        }
+        
+        // Remove scanning VFX if not actively scanning
+        if (this.activeScans.has(conditionId)) {
+          this.removeScanningVFX(conditionId);
+          this.activeScans.delete(conditionId);
+        }
       }
     })
+    
+    // Check for hints after processing all markers
+    this.checkForHints();
+    
+    // Show directional guidance for new users
+    if (this.discoveredConditions.size < 3 && Date.now() - this.lastActivityTime > 8000) {
+      this.showDirectionalGuidance();
+    }
+    
+    // Update game objective UI
+    this.updateGameObjectiveUI();
   }
 
   // INTEGRATION: Progressive marker revelation
   updateMarkerVisibility(medicalMarker: MedicalMarker, progress: number) {
     medicalMarker.updateDiscoveryProgress(progress);
+    
+    // Make sure marker is visible during active scanning regardless of global toggle
+    const markerGroup = medicalMarker.getMarkerGroup();
+    if (progress > 0) {
+      // If marker is being scanned (progress > 0), ensure it's visible
+      markerGroup.visible = true;
+    }
   }
 
   setupPostprocessing() {
@@ -216,6 +292,11 @@ export default class XRayEffect {
   }
 
   onPressKey(event: KeyboardEvent) {
+    // Skip keyboard interactions if mobile camera is active
+    if (this.mobileCamera && this.mobileCamera.getState && this.mobileCamera.getState().isActive) {
+      return;
+    }
+    
     if (event.key === "c" || event.key === "C") {
       this.toggleConditions()
     } else if (event.key === "e" || event.key === "E") {
@@ -368,7 +449,8 @@ export default class XRayEffect {
     const markerGroup = medicalMarker.getMarkerGroup();
 
     // CLEAN: Ensure markers respect current visibility state and are properly positioned
-    markerGroup.visible = this.areConditionsVisible;
+    // Initially markers should be invisible unless discovered
+    markerGroup.visible = this.discoveredConditions.has(condition.id);
     this.scene.add(markerGroup);
     this.medicalMarkers.set(condition.id, medicalMarker);
 
@@ -387,18 +469,33 @@ export default class XRayEffect {
   }
 
   toggleConditions() {
+    // Skip toggle if mobile camera is active
+    if (this.mobileCamera && this.mobileCamera.getState && this.mobileCamera.getState().isActive) {
+      return;
+    }
+    
     // Toggle visibility of all medical markers based on current state
     const newState = !this.areConditionsVisible;
     
-    this.medicalMarkers.forEach((marker) => {
+    this.medicalMarkers.forEach((marker, conditionId) => {
       const markerGroup = marker.getMarkerGroup();
-      markerGroup.visible = newState;
+      
+      // Discovered markers should always be visible
+      if (this.discoveredConditions.has(conditionId)) {
+        markerGroup.visible = true;
+      } else {
+        // For undiscovered markers, use the global toggle state
+        markerGroup.visible = newState;
+      }
     })
     
     // Update our internal state
     this.areConditionsVisible = newState;
     
     console.log(`Toggled conditions visibility - Now showing: ${newState}, Total markers: ${this.medicalMarkers.size}`);
+    
+    // Mark as activity to prevent hint from showing immediately
+    this.lastActivityTime = Date.now();
   }
 
   // MODULAR: Clean interaction handlers with consistent UX
@@ -425,12 +522,23 @@ export default class XRayEffect {
         if (medicalIntersect.object === markerGroup ||
           markerGroup.children.includes(medicalIntersect.object as THREE.Object3D)) {
           medicalMarker.showAROverlay();
+          
+          // Play proximity sound when hovering near a condition
+          this.audioManagementSystem.playSound(SoundTypeType.HOVER);
+          
+          // Provide audio hint about the condition if it hasn't been discovered yet
+          if (!this.discoveredConditions.has(conditionId)) {
+            const condition = MEDICAL_CONDITIONS.find(c => c.id === conditionId);
+            if (condition && Date.now() - this.lastActivityTime > 5000) { // Only speak if no recent activity
+              // Only play audio hint occasionally to avoid spam
+              if (Math.random() > 0.7) { // 30% chance to avoid audio spam
+                this.audioManager?.showFeedback(`Near ${condition.name}. Hold to scan.`, 'info');
+              }
+            }
+          }
           break;
         }
       }
-
-      // Also provide audio feedback for hover to maintain consistency
-      this.audioManagementSystem.playSound(SoundTypeType.HOVER);
     }
 
     document.body.style.cursor = medicalIntersect ? 'pointer' : 'default'
@@ -474,6 +582,10 @@ export default class XRayEffect {
     if (medicalMarker) {
       medicalMarker.markAsDiscovered();
 
+      // Ensure discovered marker is always visible
+      const markerGroup = medicalMarker.getMarkerGroup();
+      markerGroup.visible = true;
+
       // Get condition details for both audio and visual feedback
       const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId);
       if (condition) {
@@ -486,6 +598,16 @@ export default class XRayEffect {
           condition.severity,
           condition.name
         );
+      }
+      
+      // Remove scanning VFX for this condition
+      this.removeScanningVFX(conditionId);
+      this.activeScans.delete(conditionId);
+      
+      // Get condition details for the discovery announcement
+      const conditionDetails = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId);
+      if (conditionDetails) {
+        this.audioManager?.showFeedback(`${conditionDetails.name} discovered!`, 'success');
       }
     }
 
@@ -559,6 +681,162 @@ export default class XRayEffect {
     this.audioManagementSystem.playSound(SoundTypeType.CONDITION_FOUND);
   }
 
+  // ENHANCEMENT: Visual scanning feedback systems
+  createScanningVFX(conditionId: string, position: THREE.Vector3): THREE.Mesh {
+    // Create a torus ring that indicates active scanning
+    const geometry = new THREE.TorusGeometry(0.08, 0.015, 16, 64);
+    const material = new THREE.MeshBasicMaterial({ 
+      color: 0x00ffff, 
+      transparent: true, 
+      opacity: 0.7,
+      side: THREE.DoubleSide
+    });
+    
+    const ring = new THREE.Mesh(geometry, material);
+    ring.position.copy(position);
+    ring.rotation.x = Math.PI / 2; // Face the camera orientation
+    
+    // Add pulsing animation
+    if (typeof window !== 'undefined' && (window as any).gsap) {
+      const gsap = (window as any).gsap;
+      gsap.to(ring.material, {
+        opacity: 0.3,
+        duration: 1,
+        repeat: -1,
+        yoyo: true,
+        ease: "power2.inOut"
+      });
+    }
+    
+    this.scene.add(ring);
+    this.scanRings.set(conditionId, ring);
+    return ring;
+  }
+
+  // ENHANCEMENT: Progress ring visualization
+  createProgressRing(conditionId: string, position: THREE.Vector3): THREE.Mesh {
+    const geometry = new THREE.RingGeometry(0.05, 0.07, 32);
+    const material = new THREE.MeshBasicMaterial({
+      color: 0x00ff00,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.6
+    });
+    
+    const ring = new THREE.Mesh(geometry, material);
+    ring.position.copy(position);
+    ring.rotation.x = Math.PI / 2; // Face camera
+    
+    this.scene.add(ring);
+    this.progressRings.set(conditionId, ring);
+    return ring;
+  }
+
+  updateProgressRing(conditionId: string, progress: number): void {
+    const ring = this.progressRings.get(conditionId);
+    if (ring) {
+      // Update the ring to show progress as a partial circle
+      const material = ring.material as THREE.MeshBasicMaterial;
+      
+      // Change color based on progress
+      if (progress < 0.33) {
+        material.color.setHex(0xffff00); // Yellow for low progress
+      } else if (progress < 0.66) {
+        material.color.setHex(0xffaa00); // Orange for medium progress
+      } else {
+        material.color.setHex(0x00ff00); // Green for high progress
+      }
+      
+      material.opacity = 0.6;
+    }
+  }
+
+  removeScanningVFX(conditionId: string): void {
+    const scanRing = this.scanRings.get(conditionId);
+    const progressRing = this.progressRings.get(conditionId);
+    
+    if (scanRing) {
+      if (scanRing.parent) scanRing.parent.remove(scanRing);
+      this.scanRings.delete(conditionId);
+    }
+    
+    if (progressRing) {
+      if (progressRing.parent) progressRing.parent.remove(progressRing);
+      this.progressRings.delete(conditionId);
+    }
+  }
+
+  // ENHANCEMENT: In-game tutorial hint system
+  showTutorialHint(message: string): void {
+    if (this.lastHintShown === message) return;
+    
+    this.lastHintShown = message;
+    
+    // Show visual hint in UI
+    this.audioManager?.showFeedback(message, 'info');
+    
+    console.log('Tutorial hint:', message);
+  }
+
+  checkForHints(): void {
+    const timeSinceLastActivity = Date.now() - this.lastActivityTime;
+    
+    // Show hint after 10 seconds of inactivity
+    if (timeSinceLastActivity > this.hintTimeout) {
+      if (this.discoveredConditions.size === 0) {
+        this.showTutorialHint('Press [C] to reveal condition markers, then move mouse near them to scan');
+      } else if (this.discoveredConditions.size < 3) {
+        this.showTutorialHint('Keep scanning! Move mouse near pulsing markers to discover conditions');
+      }
+    }
+  }
+
+  // ENHANCEMENT: Update game objective in UI
+  updateGameObjectiveUI(): void {
+    const totalConditions = this.getVisibleConditions().length;
+    const discoveredCount = this.discoveredConditions.size;
+    
+    // Update diagnostic UI with objective
+    if (this.diagnosticUI) {
+      this.diagnosticUI.updateButtonCount('objective', `${discoveredCount}/${totalConditions} found`);
+      this.diagnosticUI.updatePhase(`Diagnose: ${discoveredCount}/${totalConditions}`);
+    }
+  }
+
+  // ENHANCEMENT: Add directional guidance to next undiscovered marker
+  showDirectionalGuidance(): void {
+    const undiscoveredMarkers = Array.from(this.medicalMarkers.entries())
+      .filter(([id]) => !this.discoveredConditions.has(id));
+    
+    if (undiscoveredMarkers.length > 0 && this.discoveredConditions.size < 3) {
+      const [conditionId, medicalMarker] = undiscoveredMarkers[0];
+      const position = medicalMarker.getMarkerGroup().position;
+      
+      // Create a subtle arrow pointing towards the closest undiscovered marker
+      const direction = new THREE.Vector3();
+      direction.subVectors(position, this.camera.position).normalize();
+      
+      // Create temporary guidance arrow
+      const arrowHelper = new THREE.ArrowHelper(
+        direction,
+        this.camera.position.clone().add(new THREE.Vector3(0, 0.5, 0)), // slightly above camera
+        3, // length
+        0x00ffff,
+        0.3, // head length
+        0.15  // head width
+      );
+      
+      this.scene.add(arrowHelper);
+      
+      // Remove arrow after 5 seconds
+      setTimeout(() => {
+        if (arrowHelper.parent) arrowHelper.parent.remove(arrowHelper);
+      }, 5000);
+      
+      this.showTutorialHint('Move toward the arrow to find a condition!');
+    }
+  }
+  
   // INTEGRATION: Get conditions visible in current model (for diagnostic UI filtering)
   getVisibleConditions(): string[] {
     return Object.values(MEDICAL_CONDITIONS)
@@ -583,5 +861,16 @@ export default class XRayEffect {
     window.removeEventListener("keydown", this.keyHandler)
     this.instructionsPanel?.destroy()
     this.diagnosticUI?.destroy()
+    
+    // Clean up scanning VFX
+    this.scanRings.forEach(ring => {
+      if (ring.parent) ring.parent.remove(ring);
+    });
+    this.scanRings.clear();
+    
+    this.progressRings.forEach(ring => {
+      if (ring.parent) ring.parent.remove(ring);
+    });
+    this.progressRings.clear();
   }
 }
