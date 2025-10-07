@@ -121,7 +121,7 @@ export class AIPanel {
           <div class="insight-placeholder" id="insight-placeholder" style="
             text-align: center; 
             padding: ${spacing.xl}; 
-            color: ${colors.neutral.medium}; 
+            color: ${colors.neutral.base}; 
             font-style: italic;
           ">
             <div style="font-size: ${typography.fontSize.lg}; margin-bottom: ${spacing.sm};">💡</div>
@@ -263,7 +263,7 @@ export class AIPanel {
         <div class="insight-placeholder" id="insight-placeholder" style="
           text-align: center; 
           padding: ${spacing.xl}; 
-          color: ${colors.neutral.medium}; 
+          color: ${colors.neutral.base}; 
           font-style: italic;
         ">
           <div style="font-size: ${typography.fontSize.lg}; margin-bottom: ${spacing.sm};">💡</div>
@@ -310,7 +310,7 @@ export class AIPanel {
             letter-spacing: ${typography.letterSpacing.wider};
           ">${insight.type}</div>
           <div style="
-            color: ${colors.neutral.medium};
+            color: ${colors.neutral.base};
             font-size: ${typography.fontSize.xs};
           ">${new Date(insight.timestamp).toLocaleTimeString()}</div>
         </div>
@@ -485,12 +485,12 @@ export class AIPanel {
 
       .panel-subtitle {
         font-size: ${typography.fontSize.xs};
-        color: ${colors.neutral.medium};
+        color: ${colors.neutral.base};
         margin-top: ${spacing.xs};
       }
 
       .expand-toggle:hover {
-        background: ${colors.background.secondaryGlow} !important;
+        background: ${colors.background.accentGlow} !important;
         transform: scale(1.1);
       }
 
