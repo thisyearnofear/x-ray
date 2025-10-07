@@ -317,7 +317,7 @@ export class AIPanel {
         <div style="
           color: ${colors.neutral.light};
           font-size: ${typography.fontSize.sm};
-          line-height: ${typography.lineHeight.normal};
+          line-height: ${typography.lineHeight.base};
         ">${insight.content}</div>
         <div style="
           position: absolute;
