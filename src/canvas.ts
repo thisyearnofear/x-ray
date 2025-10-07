@@ -13,6 +13,7 @@ import { SoundType } from "./components/AudioManager"
 import { ScanFeedbackSystem } from "./components/ScanFeedbackSystem"
 import { DiagnosticUIFacade } from "./domains/diagnostic/DiagnosticUIFacade"
 import { GameManager } from "./domains/diagnostic/GameManager"
+import { MedicalWorkflowManager } from "./domains/diagnostic/MedicalWorkflowManager"
 import { TutorialFacade } from "./domains/tutorial/TutorialFacade"
 import { VoiceConsultationManager } from "./domains/voice/VoiceConsultationManager"
 
@@ -48,6 +49,7 @@ export default class Canvas {
 
   // ENHANCEMENT FIRST: Game systems
   gameManager: GameManager | null = null
+  medicalWorkflow: MedicalWorkflowManager | null = null
 
   // ENHANCEMENT FIRST: Tutorial and voice systems
   tutorial: TutorialFacade | null = null
@@ -296,11 +298,15 @@ export default class Canvas {
         discoveredConditions: new Set(['temporomandibular_disorder']),
         timeRemaining: 300,
         phase: 'scanning',
-        score: 0
+        score: 0,
+        patientCase: { patientName: 'Test Patient' }
       }
       
+      // Use real patient case data if available, otherwise fall back to test
+      const patientCase = gameState.patientCase || { patientName: 'Test Patient' };
+      
       const context = {
-        patientCase: { patientName: 'Test Patient' },
+        patientCase: patientCase,
         discoveredConditions: gameState.discoveredConditions,
         scanProgress: new Map(),
         timeRemaining: gameState.timeRemaining,
@@ -315,6 +321,9 @@ export default class Canvas {
   createTutorialAndVoice() {
     // Initialize GameManager
     this.gameManager = new GameManager()
+    
+    // Initialize MedicalWorkflowManager (for patient case generation)
+    this.medicalWorkflow = new MedicalWorkflowManager(null) // Pass cerebras service if available
     
     // Tutorial facade
     this.tutorial = new TutorialFacade({
@@ -344,6 +353,9 @@ export default class Canvas {
     // Mark tutorial as completed in localStorage
     localStorage.setItem('xrai_tutorial_completed', 'true')
     
+    // Generate a realistic patient case
+    this.generateAndIntroducePatientCase()
+    
     // Start the game timer
     this.gameManager?.startTimer()
     
@@ -355,6 +367,39 @@ export default class Canvas {
     
     // Show feedback to user
     this.audioManager?.showFeedback('🏥 Welcome to the diagnostic challenge! Find medical conditions before time runs out.', 'info')
+  }
+  
+  // ENHANCEMENT: Generate and introduce a realistic patient case
+  private async generateAndIntroducePatientCase() {
+    try {
+      // Generate a realistic patient case based on current model
+      const currentModel = this.xRayEffect?.currentModel || 'head'
+      const patientCase = await this.medicalWorkflow?.generatePatientCase(currentModel)
+      
+      // Update the game manager with the patient case
+      if (patientCase) {
+        this.gameManager?.updateState({ patientCase })
+        
+        // Update the diagnostic UI with patient information
+        this.diagnosticUI?.updatePatientInfo({
+          patientName: patientCase.patientName,
+          age: patientCase.age,
+          gender: patientCase.gender
+        })
+        
+        console.log(`🏥 Patient case generated: ${patientCase.patientName}, Age: ${patientCase.age}, Chief Complaint: ${patientCase.chiefComplaint}`)
+        
+        // Provide audio feedback about the patient
+        this.audioManager?.showFeedback(`New patient: ${patientCase.patientName}, age ${patientCase.age}. Chief complaint: ${patientCase.chiefComplaint}`, 'info')
+      }
+    } catch (error) {
+      console.error('Failed to generate patient case:', error)
+      // Fallback to basic patient info if generation fails
+      const fallbackPatient = { patientName: 'Test Patient', age: 42, gender: 'Unknown' }
+      this.gameManager?.updateState({ patientCase: fallbackPatient })
+      this.diagnosticUI?.updatePatientInfo(fallbackPatient)
+      this.audioManager?.showFeedback('🏥 New patient: Test Patient. Ready for diagnostic evaluation.', 'info')
+    }
   }
 
   // ENHANCEMENT FIRST: Minimal keyboard shortcuts using existing systems

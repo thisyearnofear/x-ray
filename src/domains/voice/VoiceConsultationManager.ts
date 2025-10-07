@@ -132,7 +132,7 @@ export class VoiceConsultationManager {
         font-family: 'Segoe UI', sans-serif;
       ">
         <div style="text-align: center; margin-bottom: 1.5rem;">
-          <h3 style="margin: 0; color: #00d4ff; font-size: 1.4rem;">🎙️ AI Medical Consultation</h3>
+          <h3 style="margin: 0; color: #00d4ff; font-size: 1.4rem;">🎙️ Clinical Consultation</h3>
         </div>
         
         ${loading ? `

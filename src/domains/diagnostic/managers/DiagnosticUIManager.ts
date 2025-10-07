@@ -82,7 +82,7 @@ export class DiagnosticUIManager {
             cursor: pointer;
             font-size: 0.9rem;
             margin-bottom: 0.5rem;
-          ">🎙️ Consult AI</button>
+          ">👩‍⚕️ Consult Nurse</button>
           
           <button id="audio-btn" style="
             background: linear-gradient(45deg, #ff6b6b, #ee5a52);
