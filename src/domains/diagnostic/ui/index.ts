@@ -8,6 +8,7 @@
 // MODULAR: UI Sections
 export { DiagnosticPanel } from './DiagnosticPanel'
 export { PatientInfoSection } from './PatientInfoSection'
+export { AIPanel } from './AIPanel'
 export { ScanProgressSection } from './ScanProgressSection'
 export type { ScanProgressData } from './ScanProgressSection'
 export { ActionButtonsSection } from './ActionButtonsSection'

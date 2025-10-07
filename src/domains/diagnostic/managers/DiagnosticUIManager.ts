@@ -3,9 +3,13 @@
  * MODULAR: Orchestrates all UI sections
  * DRY: Single source of truth for UI state
  * CLEAN: Clear separation between UI and business logic
+ * ENHANCED: Improved patient data presentation and dedicated AI panel
  */
 
 import { SoundType } from '../../../components/AudioManager'
+import { PatientInfoSection, type PatientInfo } from '../ui/PatientInfoSection'
+import { AIPanel, type AIInsight } from '../ui/AIPanel'
+import { colors, spacing, typography, borders, effects, zIndex } from '../../../styles/design-tokens'
 
 export interface DiagnosticUIConfig {
   onSolveClick?: () => void
@@ -19,7 +23,14 @@ export class DiagnosticUIManager {
   private config: DiagnosticUIConfig
   private isInitialized: boolean = false
   private uiElement: HTMLElement | null = null
+  private patientInfoSection: PatientInfoSection | null = null
+  private aiPanel: AIPanel | null = null
   private audioEnabled: boolean = false // Track audio state
+  
+  // Public getter to access the AI panel for voice integration
+  public getAIPanel(): AIPanel | null {
+    return this.aiPanel
+  }
 
   constructor(config: DiagnosticUIConfig = {}) {
     this.config = config
@@ -29,76 +40,96 @@ export class DiagnosticUIManager {
     if (this.isInitialized) return
     
     this.createUI()
+    this.createAIPanel()
     this.isInitialized = true
-    console.log('DiagnosticUIManager initialized')
+    console.log('🏥 DiagnosticUIManager initialized')
   }
 
-  // ENHANCEMENT FIRST: Create minimal diagnostic panel
   private createUI(): void {
+    // Create the main diagnostic panel with improved layout using design tokens
     this.uiElement = document.createElement('div')
     this.uiElement.id = 'diagnostic-panel'
+    this.uiElement.style.cssText = `
+      position: fixed;
+      top: ${spacing.lg};
+      left: ${spacing.lg};
+      width: 320px;
+      background: ${colors.background.gradient.panel};
+      border: ${borders.width.base} solid ${colors.border.info};
+      border-radius: ${borders.radius.xl};
+      padding: ${spacing.md};
+      color: ${colors.neutral.light};
+      font-family: ${typography.fontFamily.primary};
+      z-index: ${zIndex.panel};
+      box-shadow: ${effects.shadow.lg}, ${effects.shadow.primaryGlow};
+      backdrop-filter: ${effects.blur.lg};
+      ${effects.inset.medium}
+    `
+    
     this.uiElement.innerHTML = `
       <div style="
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        width: 300px;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        border: 2px solid #00d4ff;
-        border-radius: 15px;
-        padding: 1.5rem;
-        color: white;
-        font-family: 'Segoe UI', sans-serif;
-        z-index: 1000;
-        box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
-        backdrop-filter: blur(10px);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: ${spacing.md};
+        padding-bottom: ${spacing.sm};
+        border-bottom: ${borders.width.thin} solid ${colors.border.info};
       ">
-        <h3 style="margin: 0 0 1rem 0; color: #00d4ff; font-size: 1.2rem;">🏥 Medical Diagnostic Panel</h3>
-        
-        <div style="margin-bottom: 1rem;">
-          <div style="font-size: 0.9rem; opacity: 0.8;">Patient: <span id="patient-name">Loading...</span></div>
-          <div style="font-size: 0.9rem; opacity: 0.8;">Phase: <span id="current-phase">Scanning</span></div>
+        <h3 style="margin: 0; color: ${colors.info.base}; font-size: ${typography.fontSize.lg}; font-weight: ${typography.fontWeight.bold};">🏥 Diagnosis Controls</h3>
+        <div style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.base};">
+          Status: <span id="current-phase">Loading...</span>
         </div>
+      </div>
+      
+      <div id="patient-info-container" style="margin-bottom: ${spacing.md};">
+        Loading patient information...
+      </div>
+      
+      <div style="margin-bottom: ${spacing.md};">
+        <button id="conditions-btn" style="
+          background: linear-gradient(135deg, ${colors.info.base} 0%, ${colors.info.dark} 100%);
+          color: ${colors.neutral.black};
+          border: ${borders.width.base} solid ${colors.border.info};
+          padding: ${spacing.sm} ${spacing.md};
+          border-radius: ${borders.radius.full};
+          cursor: pointer;
+          font-size: ${typography.fontSize.sm};
+          margin-right: ${spacing.sm};
+          margin-bottom: ${spacing.sm};
+          display: inline-flex;
+          align-items: center;
+          gap: ${spacing.xs};
+          font-weight: ${typography.fontWeight.medium};
+          transition: all 0.3s ease;
+          ${effects.inset.medium}
+        "><span>🔍</span> Toggle Conditions</button>
         
-        <div style="margin-bottom: 1rem;">
-          <button id="conditions-btn" style="
-            background: linear-gradient(45deg, #00d4ff, #0099cc);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            margin-right: 0.5rem;
-            margin-bottom: 0.5rem;
-          ">🔍 Toggle Conditions [C]</button>
-          
-          <button id="consultation-btn" style="
-            background: linear-gradient(45deg, #6c5ce7, #5a4fcf);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-          ">👩‍⚕️ Consult Nurse</button>
-          
-          <button id="audio-btn" style="
-            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-          ">🎵 Audio: <span id="audio-status">Off</span></button>
-        </div>
-        
-        <div style="font-size: 0.8rem; opacity: 0.6;">
-          Press [C] for conditions, [E] to expand, [H] for hints
-        </div>
+        <button id="audio-btn" style="
+          background: linear-gradient(135deg, ${colors.error.base} 0%, ${colors.error.dark} 100%);
+          color: ${colors.neutral.black};
+          border: ${borders.width.base} solid ${colors.border.error};
+          padding: ${spacing.sm} ${spacing.md};
+          border-radius: ${borders.radius.full};
+          cursor: pointer;
+          font-size: ${typography.fontSize.sm};
+          margin-bottom: ${spacing.sm};
+          display: inline-flex;
+          align-items: center;
+          gap: ${spacing.xs};
+          font-weight: ${typography.fontWeight.medium};
+          transition: all 0.3s ease;
+          ${effects.inset.medium}
+        "><span>🎵</span> Audio: <span id="audio-status">Off</span></button>
+      </div>
+      
+      <div style="
+        font-size: ${typography.fontSize.xs};
+        color: ${colors.neutral.base};
+        text-align: center;
+        padding-top: ${spacing.sm};
+        border-top: ${borders.width.thin} solid ${colors.border.neutral};
+      ">
+        Use [C] to toggle conditions<br>AI insights in separate panel →
       </div>
     `
     
@@ -106,9 +137,38 @@ export class DiagnosticUIManager {
     this.setupEventListeners()
   }
 
+  // Create dedicated AI panel
+  private createAIPanel(): void {
+    this.aiPanel = new AIPanel({
+      title: 'AI Consultation Panel',
+      position: 'right'
+    })
+    
+    const aiPanelElement = this.aiPanel.create()
+    document.body.appendChild(aiPanelElement)
+  }
+
+  // Add insights to the AI panel
+  public addAIInsight(insight: AIInsight): void {
+    if (this.aiPanel) {
+      this.aiPanel.addInsight(insight)
+    }
+  }
+
+  public updateAIInsights(insights: AIInsight[]): void {
+    if (this.aiPanel) {
+      this.aiPanel.updateInsights(insights)
+    }
+  }
+
+  public clearAIInsights(): void {
+    if (this.aiPanel) {
+      this.aiPanel.clearInsights()
+    }
+  }
+
   private setupEventListeners(): void {
     const conditionsBtn = document.getElementById('conditions-btn')
-    const consultationBtn = document.getElementById('consultation-btn')
     const audioBtn = document.getElementById('audio-btn')
     
     conditionsBtn?.addEventListener('click', () => {
@@ -116,12 +176,6 @@ export class DiagnosticUIManager {
       this.enableAudio()
       // Trigger conditions toggle
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'c' }))
-    })
-    
-    consultationBtn?.addEventListener('click', () => {
-      // Enable audio on first interaction  
-      this.enableAudio()
-      this.config.onConsultationClick?.()
     })
 
     audioBtn?.addEventListener('click', () => {
@@ -199,22 +253,34 @@ export class DiagnosticUIManager {
   }
 
   updatePatientInfo(patientCase: any): void {
-    const nameElement = document.getElementById('patient-name')
-    const ageElement = document.getElementById('patient-age')
-    const genderElement = document.getElementById('patient-gender')
-    const complaintElement = document.getElementById('patient-complaint')
-    
-    if (nameElement) {
-      nameElement.textContent = patientCase?.patientName || 'Anonymous Patient'
+    const patientInfoContainer = document.getElementById('patient-info-container')
+    if (!patientInfoContainer) return
+
+    // Convert the patient case to the PatientInfo format
+    const patientInfo: PatientInfo = {
+      patientName: patientCase?.patientName || 'Anonymous Patient',
+      age: patientCase?.age || 0,
+      gender: patientCase?.gender || 'Unknown',
+      chiefComplaint: patientCase?.chiefComplaint || 'No chief complaint available',
+      conditionName: patientCase?.conditionName,
+      conditionDescription: patientCase?.conditionDescription,
+      conditionLocation: patientCase?.conditionLocation,
+      historyOfPresentIllness: patientCase?.historyOfPresentIllness,
+      vitalSigns: patientCase?.vitalSigns,
+      pastMedicalHistory: patientCase?.pastMedicalHistory,
+      medications: patientCase?.medications,
+      diagnosis: patientCase?.diagnosis,
+      estimatedStudyTime: patientCase?.estimatedStudyTime
     }
-    if (ageElement) {
-      ageElement.textContent = patientCase?.age || '-'
-    }
-    if (genderElement) {
-      genderElement.textContent = patientCase?.gender || '-'
-    }
-    if (complaintElement) {
-      complaintElement.textContent = patientCase?.chiefComplaint || '-'
+
+    // Create or update the patient info section
+    if (!this.patientInfoSection) {
+      this.patientInfoSection = new PatientInfoSection()
+      const patientElement = this.patientInfoSection.create(patientInfo)
+      patientInfoContainer.innerHTML = ''
+      patientInfoContainer.appendChild(patientElement)
+    } else {
+      this.patientInfoSection.update(patientInfo)
     }
   }
 
@@ -231,8 +297,8 @@ export class DiagnosticUIManager {
   }
 
   showConsultationButton(): void {
-    const btn = document.getElementById('consultation-btn')
-    if (btn) btn.style.display = 'inline-block'
+    // The consultation button has been removed from the main panel to reduce clutter
+    // Consultation is now handled through the dedicated AI panel
   }
 
   showDiagnosisSubmission(): void {
@@ -258,6 +324,14 @@ export class DiagnosticUIManager {
   destroy(): void {
     if (this.uiElement && this.uiElement.parentNode) {
       this.uiElement.parentNode.removeChild(this.uiElement)
+    }
+    if (this.patientInfoSection) {
+      this.patientInfoSection.destroy()
+      this.patientInfoSection = null
+    }
+    if (this.aiPanel) {
+      this.aiPanel.destroy()
+      this.aiPanel = null
     }
     this.uiElement = null
     this.isInitialized = false

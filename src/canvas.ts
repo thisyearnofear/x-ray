@@ -334,8 +334,16 @@ export default class Canvas {
       onTutorialComplete: () => this.startGame()
     })
     
-    // Voice consultation manager
-    this.voiceConsultation = new VoiceConsultationManager()
+    // Voice consultation manager - pass the diagnostic UI manager for AI integration
+    this.voiceConsultation = new VoiceConsultationManager(this.diagnosticUI?.getUIManager())
+    
+    // Register with the AI panel after diagnostic UI is initialized
+    if (this.diagnosticUI) {
+      const aiPanel = this.diagnosticUI.getUIManager()?.getAIPanel()
+      if (aiPanel) {
+        this.voiceConsultation.registerWithAIpanel(aiPanel)
+      }
+    }
     
     // Auto-start tutorial for new users
     const hasSeenTutorial = localStorage.getItem('xrai_tutorial_completed')

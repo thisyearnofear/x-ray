@@ -1,5 +1,9 @@
 // MODULAR: Voice consultation system following domain-driven design
 // ENHANCEMENT FIRST: Extends existing AudioManager and DiagnosticUI systems
+// AGGRESSIVE CONSOLIDATION: Centralized in AI panel with voice integration
+// ENHANCED: Now integrates with dedicated AI panel with voice controls
+
+import { AIPanel } from '../diagnostic/ui/AIPanel'
 
 export interface ConsultationContext {
   patientCase: any
@@ -18,19 +22,161 @@ export interface ConsultationSession {
   isActive: boolean
 }
 
+export interface VoiceRecognition {
+  start: () => void
+  stop: () => void
+  isListening: () => boolean
+  onresult: (event: any) => void
+  onerror: (event: any) => void
+}
+
 export class VoiceConsultationManager {
   private currentSession: ConsultationSession | null = null
   private callbacks: Map<string, Function[]> = new Map()
   private isVoiceSupported: boolean = false
+  private diagnosticUIManager: any = null // Reference to interact with the UI
+  private aiPanel: AIPanel | null = null // Direct reference to AI panel
+  private recognition: any = null // Speech recognition instance
+  private onResultCallback: ((text: string) => void) | null = null
+  private onErrorCallback: ((error: any) => void) | null = null
 
-  constructor() {
+  constructor(diagnosticUIManager?: any, aiPanel?: AIPanel) {
     this.checkVoiceSupport()
+    this.diagnosticUIManager = diagnosticUIManager
+    this.aiPanel = aiPanel
+    this.setupSpeechRecognition()
   }
 
   // PERFORMANT: Check voice capabilities before loading heavy dependencies
   private checkVoiceSupport(): void {
     this.isVoiceSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window
     console.log('🎙️ Voice support detected:', this.isVoiceSupported)
+  }
+
+  // Setup the speech recognition instance
+  private setupSpeechRecognition(): void {
+    if (!this.isVoiceSupported) {
+      console.warn('Voice recognition not supported in this browser')
+      return
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    this.recognition = new SpeechRecognition()
+    this.recognition.continuous = false
+    this.recognition.interimResults = false
+    this.recognition.lang = 'en-US'
+
+    this.recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript
+      this.handleVoiceResult(transcript)
+    }
+
+    this.recognition.onerror = (event: any) => {
+      this.handleVoiceError(event.error)
+    }
+  }
+
+  // Register with the AI panel for voice functionality
+  public registerWithAIpanel(aiPanel: AIPanel): void {
+    this.aiPanel = aiPanel
+
+    // Create voice callbacks for the AI panel
+    const voiceCallbacks = {
+      startListening: () => {
+        if (this.recognition) {
+          this.recognition.start()
+        }
+      },
+      stopListening: () => {
+        if (this.recognition) {
+          this.recognition.stop()
+        }
+      },
+      isListening: () => {
+        return this.recognition ? this.recognition.isListening : false
+      },
+      onResult: (callback: (text: string) => void) => {
+        this.onResultCallback = callback
+      },
+      onError: (callback: (error: any) => void) => {
+        this.onErrorCallback = callback
+      }
+    }
+
+    aiPanel.registerVoiceCallbacks(voiceCallbacks)
+  }
+
+  private handleVoiceResult(transcript: string): void {
+    console.log('🎤 Voice result:', transcript)
+    
+    // Add to AI panel as a voice insight
+    if (this.aiPanel) {
+      this.aiPanel.addInsight({
+        id: `voice_${Date.now()}`,
+        timestamp: Date.now(),
+        content: `You said: "${transcript}"`,
+        type: 'voice',
+        confidence: 0.9
+      })
+    }
+
+    // Trigger internal callback if registered
+    if (this.onResultCallback) {
+      this.onResultCallback(transcript)
+    }
+
+    // Process the command if it's relevant to the diagnostic task
+    this.processVoiceCommand(transcript)
+  }
+
+  private handleVoiceError(error: any): void {
+    console.error('🎤 Voice error:', error)
+    
+    // Add error to AI panel
+    if (this.aiPanel) {
+      this.aiPanel.addInsight({
+        id: `error_${Date.now()}`,
+        timestamp: Date.now(),
+        content: `Voice recognition error: ${error}`,
+        type: 'urgent',
+        confidence: 0.5
+      })
+    }
+
+    // Trigger internal callback if registered
+    if (this.onErrorCallback) {
+      this.onErrorCallback(error)
+    }
+  }
+
+  // Process voice commands to generate relevant insights
+  private processVoiceCommand(transcript: string): void {
+    const lowerTranscript = transcript.toLowerCase()
+    
+    // If the user is asking for help or diagnostic advice
+    if (lowerTranscript.includes('help') || 
+        lowerTranscript.includes('advice') || 
+        lowerTranscript.includes('suggest') || 
+        lowerTranscript.includes('what should i')) {
+      
+      // Generate relevant diagnostic insights based on current context
+      if (this.currentSession) {
+        // Generate insights based on the current context
+        this.generateContextualInsights(this.currentSession.context).then(insights => {
+          insights.forEach((insight, index) => {
+            if (this.aiPanel) {
+              this.aiPanel.addInsight({
+                id: `contextual_${Date.now()}_${index}`,
+                timestamp: Date.now(),
+                content: insight,
+                type: this.getInsightType(insight),
+                confidence: 0.8
+              })
+            }
+          })
+        })
+      }
+    }
   }
 
   // MODULAR: Event-driven communication with existing systems
@@ -46,7 +192,7 @@ export class VoiceConsultationManager {
     callbacks.forEach(callback => callback(data))
   }
 
-  // ENHANCEMENT FIRST: Integrate with existing game state
+  // ENHANCED: Integrate with dedicated AI panel
   public async startConsultation(context: ConsultationContext): Promise<boolean> {
     if (this.currentSession?.isActive) {
       console.warn('🎙️ Consultation already active')
@@ -62,16 +208,53 @@ export class VoiceConsultationManager {
       isActive: true
     }
 
-    // Show consultation UI with loading state
-    this.showConsultationUI(true)
-    
     try {
+      // Show loading state in the AI panel
+      if (this.aiPanel) {
+        this.aiPanel.addInsight({
+          id: `loading_${Date.now()}`,
+          timestamp: Date.now(),
+          content: 'Analyzing patient data...',
+          type: 'diagnostic',
+          confidence: 0.5
+        })
+      }
+
       // Generate AI insights based on current context
       const insights = await this.generateInsights(context)
       this.currentSession.insights = insights
       
-      // Update UI with insights
-      this.showConsultationUI(false, insights)
+      // Update the AI panel with insights
+      if (this.aiPanel) {
+        // Clear the loading indicator
+        // Note: In a real implementation, we'd want to keep the loading indicator
+        // until we have all results, but for now we'll just add the new insights
+        
+        // Add new insights to the AI panel
+        insights.forEach((insight, index) => {
+          this.aiPanel!.addInsight({
+            id: `insight_${Date.now()}_${index}`,
+            timestamp: Date.now(),
+            content: insight,
+            type: this.getInsightType(insight),
+            confidence: 0.8
+          })
+        })
+      } else if (this.diagnosticUIManager) {
+        // Fallback to diagnostic UI manager
+        insights.forEach((insight, index) => {
+          this.diagnosticUIManager.addAIInsight({
+            id: `insight_${Date.now()}_${index}`,
+            timestamp: Date.now(),
+            content: insight,
+            type: this.getInsightType(insight),
+            confidence: 0.8
+          })
+        })
+      } else {
+        // Fallback to the old modal UI if no diagnostic UI manager is available
+        this.showConsultationModal(insights)
+      }
       
       this.emit('consultation_started', this.currentSession)
       return true
@@ -79,6 +262,47 @@ export class VoiceConsultationManager {
       console.error('🎙️ Consultation failed:', error)
       this.endConsultation()
       return false
+    }
+  }
+
+  // Generate contextual insights based on current game state
+  private async generateContextualInsights(context: ConsultationContext): Promise<string[]> {
+    const insights: string[] = []
+    
+    // Add insights based on discovered conditions
+    if (context.discoveredConditions && context.discoveredConditions.size > 0) {
+      const conditionsCount = context.discoveredConditions.size
+      insights.push(`You've discovered ${conditionsCount} condition${conditionsCount > 1 ? 's' : ''}. Consider how these findings relate to each other.`)
+    }
+    
+    // Add time-sensitive insight
+    if (context.timeRemaining) {
+      const minutes = Math.floor(context.timeRemaining / 60)
+      const seconds = context.timeRemaining % 60
+      insights.push(`Time remaining: ${minutes}m ${seconds}s. Consider focusing on high-yield areas.`)
+    }
+    
+    // Add educational insight based on patient case
+    if (context.patientCase) {
+      const chiefComplaint = context.patientCase.chiefComplaint || 'the symptoms'
+      insights.push(`The patient's chief complaint is "${chiefComplaint}". How do your findings correlate?`)
+    }
+    
+    return insights
+  }
+
+  // Determine the type of insight based on its content
+  private getInsightType(insight: string): 'diagnostic' | 'procedural' | 'educational' | 'urgent' | 'voice' {
+    if (insight.toLowerCase().includes('urgent') || insight.toLowerCase().includes('critical') || insight.toLowerCase().includes('immediately')) {
+      return 'urgent'
+    } else if (insight.toLowerCase().includes('diagnos') || insight.toLowerCase().includes('condition')) {
+      return 'diagnostic'
+    } else if (insight.toLowerCase().includes('learn') || insight.toLowerCase().includes('tip') || insight.toLowerCase().includes('remember')) {
+      return 'educational'
+    } else if (insight.toLowerCase().includes('you said') || insight.toLowerCase().includes('voice')) {
+      return 'voice'
+    } else {
+      return 'procedural'
     }
   }
 
@@ -106,8 +330,8 @@ export class VoiceConsultationManager {
     return areas[Math.floor(Math.random() * areas.length)]
   }
 
-  // ENHANCED: Better consultation UI
-  private showConsultationUI(loading: boolean, insights?: string[]): void {
+  // Fallback to showing a modal if the diagnostic UI manager is not available
+  private showConsultationModal(insights: string[]): void {
     const existingUI = document.getElementById('consultation-ui')
     if (existingUI) existingUI.remove()
 
@@ -142,58 +366,36 @@ export class VoiceConsultationManager {
           </div>
         </div>
         
-        ${loading ? `
-          <div style="text-align: center; padding: 2rem;">
+        <div style="margin-bottom: 1.5rem;">
+          ${insights.map(insight => `
             <div style="
-              width: 40px;
-              height: 40px;
-              border: 3px solid #00d4ff;
-              border-top: 3px solid transparent;
-              border-radius: 50%;
-              animation: spin 1s linear infinite;
-              margin: 0 auto 1rem;
-            "></div>
-            <p>Analyzing patient data...</p>
-          </div>
-        ` : `
-          <div style="margin-bottom: 1.5rem;">
-            ${insights?.map(insight => `
-              <div style="
-                background: rgba(0, 212, 255, 0.1);
-                border-left: 3px solid #00d4ff;
-                padding: 0.8rem;
-                margin-bottom: 0.8rem;
-                border-radius: 5px;
-                font-size: 0.9rem;
-                line-height: 1.4;
-              ">${insight}</div>
-            `).join('') || ''}
-          </div>
-          
-          <div style="text-align: center;">
-            <button onclick="document.getElementById('consultation-ui').remove()" style="
-              background: linear-gradient(45deg, #00d4ff, #0099cc);
-              color: white;
-              border: none;
-              padding: 0.8rem 2rem;
-              border-radius: 25px;
-              cursor: pointer;
-              font-size: 1rem;
-              font-weight: bold;
-              transition: all 0.3s ease;
-            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-              Continue Diagnosis
-            </button>
-          </div>
-        `}
+              background: rgba(0, 212, 255, 0.1);
+              border-left: 3px solid #00d4ff;
+              padding: 0.8rem;
+              margin-bottom: 0.8rem;
+              border-radius: 5px;
+              font-size: 0.9rem;
+              line-height: 1.4;
+            ">${insight}</div>
+          `).join('') || ''}
+        </div>
+        
+        <div style="text-align: center;">
+          <button onclick="document.getElementById('consultation-ui').remove()" style="
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            color: white;
+            border: none;
+            padding: 0.8rem 2rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+          " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            Continue Diagnosis
+          </button>
+        </div>
       </div>
-      
-      <style>
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      </style>
     `
 
     document.body.appendChild(consultationDiv)
@@ -205,6 +407,11 @@ export class VoiceConsultationManager {
       this.currentSession.isActive = false
       this.emit('consultation_ended', this.currentSession)
       this.currentSession = null
+    }
+
+    // Stop voice recognition if active
+    if (this.recognition && this.recognition.isListening) {
+      this.recognition.stop()
     }
 
     // Remove UI
