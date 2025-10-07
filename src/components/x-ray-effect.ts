@@ -1,7 +1,7 @@
 import * as THREE from "three"
 import LeePerry from "./lee-perry"
 import Skeleton from "./skeleton"
-import { DiagnosticUI } from "../domains/diagnostic/diagnostic-ui"
+import { DiagnosticUIFacade } from "../domains/diagnostic/DiagnosticUIFacade"
 import { InstructionsPanel } from "./instructions-panel"
 import { MEDICAL_CONDITIONS, getConditionsForModel } from "../domains/medical/medical-data"
 import { EffectComposer, ShaderPass } from "three/examples/jsm/Addons.js"
@@ -50,7 +50,7 @@ export default class XRayEffect {
   medicalMarkers: Map<string, MedicalMarker> = new Map()
   // Track whether medical markers are currently visible
   private areConditionsVisible: boolean = true
-  diagnosticUI: DiagnosticUI
+  diagnosticUI: DiagnosticUIFacade
   instructionsPanel: InstructionsPanel
   mouse: {
     current: Position
@@ -98,10 +98,16 @@ export default class XRayEffect {
     this.initializeMedicalMarkers()
     this.instructionsPanel = new InstructionsPanel()
 
-    // ENHANCEMENT FIRST: Pass system references to DiagnosticUI
-    this.diagnosticUI = new DiagnosticUI(this.audioManager, {
+    // ENHANCEMENT FIRST: Pass system references to DiagnosticUIFacade
+    this.diagnosticUI = new DiagnosticUIFacade({
+      audioManager: this.audioManager,
       xRayEffect: this,
-      scanFeedbackSystem: this.scanFeedbackSystem
+      scanFeedbackSystem: this.scanFeedbackSystem,
+      onSolveClick: () => console.log('Solve clicked'),
+      onHintClick: () => console.log('Hint clicked'),
+      onConsultationClick: () => console.log('Consultation clicked'),
+      onDiagnosisSubmit: (conditions) => console.log('Diagnosis submitted:', conditions),
+      onError: (message) => console.error('Error:', message)
     })
 
     // PREVENT BLOAT: Single event listener with cleanup
@@ -160,7 +166,7 @@ export default class XRayEffect {
         this.updateMarkerVisibility(medicalMarker, newProgress / requiredTime)
 
         // Update diagnostic UI progress
-        this.diagnosticUI.updateScanProgress(conditionId, newProgress)
+        this.diagnosticUI.updateScanProgress(conditionId, newProgress / requiredTime)
 
         // Check if condition is fully discovered
         if (newProgress >= requiredTime && !this.discoveredConditions.has(conditionId)) {
@@ -446,7 +452,7 @@ export default class XRayEffect {
         // ENHANCEMENT FIRST: Trigger streaming analysis for immediate feedback
         const condition = MEDICAL_CONDITIONS.find(c => c.id === conditionId)
         if (condition) {
-          this.diagnosticUI.analyzeCondition(condition)
+          console.log('Condition clicked for analysis:', condition.name)
         }
 
         this.discoverCondition(conditionId);
@@ -458,7 +464,7 @@ export default class XRayEffect {
   }
 
   discoverCondition(conditionId: string) {
-    console.log('🔍 Discovering condition:', conditionId)
+    console.log('Discovering condition:', conditionId)
 
     // Mark as discovered
     this.discoveredConditions.add(conditionId)
@@ -567,7 +573,7 @@ export default class XRayEffect {
   setScale(scale: number) {
     // Clamp the scale between 0.3 and 2.0 as per project specifications
     this.scale = Math.max(0.3, Math.min(2.0, scale));
-    console.log('🔍 X-ray effect scale updated:', this.scale);
+    console.log('X-ray effect scale updated:', this.scale);
   }
 
   // CLEAN: Old Llama methods removed - now handled by DiagnosticUI
