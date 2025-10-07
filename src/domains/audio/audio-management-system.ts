@@ -53,33 +53,9 @@ export class AudioManagementSystem {
 
     private startAmbientSounds(): void {
         if (!this.isAmbiencePlaying) {
-            this.playSound('ambient_medical')
+            this.playSound(SoundType.HOSPITAL_AMBIENCE, true)
             this.isAmbiencePlaying = true
         }
-                            listener.context.resume().then(() => {
-                                console.log('🎵 AudioContext resumed')
-                            })
-                        }
-                    }
-
-                    this.startHospitalAmbience()
-                    console.log('🎵 Audio systems enabled via user interaction')
-                } catch (error) {
-                    console.warn('⚠️ AudioManager start failed:', error)
-                    // Try fallback audio start
-                    try {
-                        if (this.audioManager.playSound) {
-                            this.audioManager.playSound(SoundType.HOSPITAL_AMBIENCE, true)
-                            console.log('🎵 Fallback audio started')
-                        }
-                    } catch (fallbackError) {
-                        console.warn('⚠️ Fallback audio failed:', fallbackError)
-                    }
-                }
-            } else {
-                console.warn('⚠️ AudioManager not available')
-            }
-        }, 100) // Small delay to ensure proper initialization
     }
 
     // Start hospital ambience

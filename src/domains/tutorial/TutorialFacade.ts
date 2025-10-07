@@ -55,7 +55,6 @@ export class TutorialFacade {
     this.showCurrentStep()
     this.playTutorialAudio('welcome')
   }
-  }
 
   nextStep(): void {
     const currentStep = this.stepService.getCurrentStep()

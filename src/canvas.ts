@@ -250,11 +250,12 @@ export default class Canvas {
       
       switch (e.key.toLowerCase()) {
         case 'c':
-          this.xRayEffect?.toggleConditionMarkers()
+          this.xRayEffect?.toggleConditions()
           this.audioManager?.showFeedback('🔍 Toggled condition markers')
           break
         case 'e':
-          this.xRayEffect?.triggerExpansion()
+          // Use existing expansion logic from XRayEffect
+          this.xRayEffect?.onPressKey(e)
           this.audioManager?.showFeedback('🔍 Expanded X-ray view')
           break
         case 'h':

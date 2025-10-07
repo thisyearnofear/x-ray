@@ -111,8 +111,6 @@ export class GameManager {
         if (this.gameState.timeRemaining <= 60) return 'warning'
         return 'normal'
     }
-        callbacks.forEach(callback => callback(data))
-    }
 
     // MODULAR: Sophisticated scoring system
     public awardPoints(points: number, reason: string, metadata?: any) {
