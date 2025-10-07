@@ -43,7 +43,7 @@ export class VoiceConsultationManager {
   constructor(diagnosticUIManager?: any, aiPanel?: AIPanel) {
     this.checkVoiceSupport()
     this.diagnosticUIManager = diagnosticUIManager
-    this.aiPanel = aiPanel
+    this.aiPanel = aiPanel || null
     this.setupSpeechRecognition()
   }
 

@@ -473,7 +473,7 @@ export class AIPanel {
     style.id = 'ai-panel-styles'
     style.textContent = `
       .ai-panel {
-        font-family: ${typography.fontFamily.sans};
+        font-family: ${typography.fontFamily.primary};
       }
 
       .panel-title {
