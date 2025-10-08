@@ -114,7 +114,7 @@ export class VoiceConsultationManager {
       this.aiPanel.addInsight({
         id: `voice_${Date.now()}`,
         timestamp: Date.now(),
-        content: `You said: "${transcript}"`,
+        content: `🎙️ You said: "${transcript}"`,
         type: 'voice',
         confidence: 0.9
       })
@@ -123,6 +123,41 @@ export class VoiceConsultationManager {
     // Trigger internal callback if registered
     if (this.onResultCallback) {
       this.onResultCallback(transcript)
+    }
+
+    // If no active consultation session exists, create a default one
+    if (!this.currentSession) {
+      console.log('🎙️ No active consultation session, creating default session')
+      
+      // Create a default consultation context
+      const defaultContext: ConsultationContext = {
+        patientCase: { patientName: 'Test Patient', chiefComplaint: 'Diagnostic evaluation needed' },
+        discoveredConditions: new Set(),
+        scanProgress: new Map(),
+        timeRemaining: 300,
+        gamePhase: 'scanning',
+        currentScore: 0
+      }
+      
+      // Create a minimal consultation session
+      this.currentSession = {
+        id: `consultation_${Date.now()}`,
+        startTime: Date.now(),
+        context: defaultContext,
+        insights: [],
+        isActive: true
+      }
+      
+      // Add notification that session was created
+      if (this.aiPanel) {
+        this.aiPanel.addInsight({
+          id: `session_created_${Date.now()}`,
+          timestamp: Date.now(),
+          content: '👩‍⚕️ Nurse Amy online: Consultation session activated!',
+          type: 'voice',
+          confidence: 0.9
+        })
+      }
     }
 
     // Process the command if it's relevant to the diagnostic task
@@ -153,8 +188,67 @@ export class VoiceConsultationManager {
   private processVoiceCommand(transcript: string): void {
     const lowerTranscript = transcript.toLowerCase()
     
+    // If the user is greeting, identifying, or asking who/what this is
+    if (lowerTranscript.includes('hello') || 
+        lowerTranscript.includes('hi') ||
+        lowerTranscript.includes('hey') ||
+        lowerTranscript.includes('who is') ||
+        lowerTranscript.includes('what are you') ||
+        lowerTranscript.includes('who are you') ||
+        lowerTranscript.includes('what do you want') ||
+        lowerTranscript.includes('identify yourself')) {
+      
+      // Provide identification and introduction
+      if (this.aiPanel) {
+        this.aiPanel.addInsight({
+          id: `intro_${Date.now()}`,
+          timestamp: Date.now(),
+          content: "👩‍⚕️ Hello there! I'm Nurse Amy, your virtual clinical assistant. I'm here to guide you through this diagnostic case and provide expert medical insights. I can suggest scanning approaches, explain findings, and help with differential diagnosis. How can I assist you today?",
+          type: 'voice',
+          confidence: 0.9
+        })
+      }
+      
+      // Generate relevant diagnostic insights based on current context
+      if (this.currentSession) {
+        // Generate insights based on the current context
+        this.generateContextualInsights(this.currentSession.context).then(insights => {
+          insights.forEach((insight, index) => {
+            if (this.aiPanel) {
+              this.aiPanel.addInsight({
+                id: `contextual_${Date.now()}_${index}`,
+                timestamp: Date.now(),
+                content: insight,
+                type: this.getInsightType(insight),
+                confidence: 0.8
+              })
+            }
+          })
+        })
+      } else {
+        // Provide general diagnostic tips when no active session
+        const generalTips = [
+          "📋 General tip: Systematically scan anatomical regions for pathology",
+          "💡 Pro tip: Look for asymmetry, irregular densities, or unexpected findings",
+          "🎯 Focus recommendation: Start with the center of the image and work outward",
+          "🔍 Diagnostic pearl: Correlate radiological findings with clinical symptoms"
+        ];
+        
+        generalTips.forEach((tip, index) => {
+          if (this.aiPanel) {
+            this.aiPanel.addInsight({
+              id: `general_${Date.now()}_${index}`,
+              timestamp: Date.now(),
+              content: `👩‍⚕️ Nurse Amy says: ${tip}`,
+              type: 'educational',
+              confidence: 0.7
+            })
+          }
+        })
+      }
+    }
     // If the user is asking for help or diagnostic advice
-    if (lowerTranscript.includes('help') || 
+    else if (lowerTranscript.includes('help') || 
         lowerTranscript.includes('advice') || 
         lowerTranscript.includes('suggest') || 
         lowerTranscript.includes('what should i')) {
@@ -174,6 +268,58 @@ export class VoiceConsultationManager {
               })
             }
           })
+        })
+      } else {
+        // Provide general diagnostic guidance when no active session
+        const generalGuidance = [
+          "📋 Diagnostic approach: Systematically evaluate anatomical regions - bones, soft tissues, and organ contours",
+          "💡 Scanning tip: Look for asymmetry, abnormal densities, or unexpected opacities",
+          "🎯 Focus suggestion: Start with the center of the image and work outward in a spiral pattern",
+          "🔍 Clinical correlation: Consider how radiological findings relate to the patient's chief complaint",
+          "🔔 Reminder: Toggle condition markers with [C] to visualize pathology locations"
+        ];
+        
+        generalGuidance.forEach((guidance, index) => {
+          if (this.aiPanel) {
+            this.aiPanel.addInsight({
+              id: `general_guidance_${Date.now()}_${index}`,
+              timestamp: Date.now(),
+              content: `👩‍⚕️ Nurse Amy guidance: ${guidance}`,
+              type: 'educational',
+              confidence: 0.7
+            })
+          }
+        })
+      }
+    }
+    // For any other unrecognized commands, provide a helpful response
+    else {
+      if (this.aiPanel) {
+        this.aiPanel.addInsight({
+          id: `unknown_${Date.now()}`,
+          timestamp: Date.now(),
+          content: "🤔 I'm not sure I understood that, Nurse Amy here. Try asking for 'help' or 'advice' for diagnostic guidance, or say 'hello' to chat with me! You can also try 'what should I look for?' or 'suggest a scanning approach'.",
+          type: 'voice',
+          confidence: 0.7
+        })
+      }
+      
+      // Provide some general tips even for unrecognized commands
+      const tips = [
+        "📋 Diagnostic tip: Toggle condition markers with [C] to visualize pathology locations",
+        "💡 Efficiency tip: Focus on high-yield anatomical regions first",
+        "🎯 Navigation tip: Move your mouse systematically across the image to scan",
+        "🔍 Analysis tip: Look for asymmetry, abnormal densities, or unexpected findings"
+      ];
+      
+      const randomTip = tips[Math.floor(Math.random() * tips.length)];
+      if (this.aiPanel) {
+        this.aiPanel.addInsight({
+          id: `tip_${Date.now()}`,
+          timestamp: Date.now(),
+          content: `👩‍⚕️ Nurse Amy tip: ${randomTip}`,
+          type: 'educational',
+          confidence: 0.6
         })
       }
     }
@@ -277,21 +423,24 @@ export class VoiceConsultationManager {
     // Add insights based on discovered conditions
     if (context.discoveredConditions && context.discoveredConditions.size > 0) {
       const conditionsCount = context.discoveredConditions.size
-      insights.push(`You've discovered ${conditionsCount} condition${conditionsCount > 1 ? 's' : ''}. Consider how these findings relate to each other.`)
+      insights.push(`👩‍⚕️ Nurse Amy observation: You've discovered ${conditionsCount} condition${conditionsCount > 1 ? 's' : ''}. Consider how these findings might relate to each other.`)
     }
     
     // Add time-sensitive insight
     if (context.timeRemaining) {
       const minutes = Math.floor(context.timeRemaining / 60)
       const seconds = context.timeRemaining % 60
-      insights.push(`Time remaining: ${minutes}m ${seconds}s. Consider focusing on high-yield areas.`)
+      insights.push(`⏰ Time alert: ${minutes}m ${seconds}s remaining. Focus on high-yield anatomical areas.`)
     }
     
     // Add educational insight based on patient case
     if (context.patientCase) {
       const chiefComplaint = context.patientCase.chiefComplaint || 'the symptoms'
-      insights.push(`The patient's chief complaint is "${chiefComplaint}". How do your findings correlate?`)
+      insights.push(`📋 Clinical correlation: The patient's chief complaint is \"${chiefComplaint}\". How do your radiological findings correlate?`)
     }
+    
+    // Add a general diagnostic tip
+    insights.push("💡 Pro tip: Systematically evaluate bone structures, soft tissues, and organ contours in your field of view.")
     
     return insights
   }
@@ -314,16 +463,16 @@ export class VoiceConsultationManager {
   // CLEAN: Generate contextual medical insights
   private async generateInsights(context: ConsultationContext): Promise<string[]> {
     const insights = [
-      `Based on ${context.discoveredConditions.size} discovered conditions, consider differential diagnosis`,
-      `Current scan progress suggests focusing on ${this.getRecommendedScanArea(context)}`,
-      `Time remaining: ${Math.floor(context.timeRemaining / 60)}m ${context.timeRemaining % 60}s - prioritize high-yield findings`
+      `👩‍⚕️ Nurse Amy here: Based on ${context.discoveredConditions.size} discovered conditions, let's consider the differential diagnosis`,
+      `📋 Current scan progress suggests focusing on ${this.getRecommendedScanArea(context)}`,
+      `⏰ Time remaining: ${Math.floor(context.timeRemaining / 60)}m ${context.timeRemaining % 60}s - let's prioritize high-yield findings`
     ]
 
     // Add context-specific insights
     if (context.discoveredConditions.size === 0) {
-      insights.push('💡 Start with systematic scanning - check common pathology locations first')
+      insights.push('💡 Pro tip from Nurse Amy: Start with systematic scanning - check common pathology locations first')
     } else if (context.discoveredConditions.size >= 3) {
-      insights.push('🎯 Good progress! Consider submitting diagnosis or continue for completeness')
+      insights.push('🎯 Excellent work! Consider submitting your diagnosis or continue scanning for completeness')
     }
 
     return insights
