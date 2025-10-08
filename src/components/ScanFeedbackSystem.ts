@@ -114,16 +114,20 @@ export class ScanFeedbackSystem {
     updateScanProgress(regionId: string, progress: number): void {
         const region = this.scanRegions.get(regionId)
         if (region) {
-            region.progress = Math.min(progress, 1.0)
-            region.lastUpdate = Date.now()
+            // PREVENT BLOAT: Only update visuals if progress changed significantly
+            const progressThreshold = 0.02; // Only update if progress changed by 2%
+            if (Math.abs(region.progress - progress) >= progressThreshold) {
+                region.progress = Math.min(progress, 1.0)
+                region.lastUpdate = Date.now()
 
-            // Update visual intensity based on progress
-            this.updateGlowIntensity(region)
-            this.updateParticleIntensity(regionId, progress)
+                // Update visual intensity based on progress
+                this.updateGlowIntensity(region)
+                this.updateParticleIntensity(regionId, progress)
 
-            // Trigger discovery effect at 100%
-            if (progress >= 1.0) {
-                this.triggerDiscoveryEffect(regionId)
+                // Trigger discovery effect at 100%
+                if (progress >= 1.0) {
+                    this.triggerDiscoveryEffect(regionId)
+                }
             }
         }
     }

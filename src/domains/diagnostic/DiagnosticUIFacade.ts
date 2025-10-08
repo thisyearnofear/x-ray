@@ -64,7 +64,7 @@ export class DiagnosticUIFacade {
 
   updateScanProgress(conditionId: string, progress: number): void {
     // CLEAN: Delegate to UI manager for scan progress updates
-    console.log('Updating scan progress:', conditionId, progress)
+    // console.log('Updating scan progress:', conditionId, progress) // DEBUG: Remove excessive logging
     // The UI manager should handle this through its own interface
   }
 
@@ -74,7 +74,7 @@ export class DiagnosticUIFacade {
 
   discoverCondition(conditionId: string): void {
     // CLEAN: Delegate to external systems for business logic
-    console.log('✅ Condition discovered:', conditionId)
+    // console.log('✅ Condition discovered:', conditionId) // DEBUG: Remove excessive logging
     // Business logic should be handled by GameManager, not UI
   }
 

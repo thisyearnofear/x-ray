@@ -91,6 +91,8 @@ export default class XRayEffect {
   lastActivityTime: number = Date.now();
   hintTimeout: number = 10000; // 10 seconds
   lastHintShown: string | null = null;
+  lastHintTime: number = 0; // Track when last hint was shown
+  lastHintCheckTime: number = 0; // Track when last hint check was performed
   
   constructor({ scene, composer, renderer, camera, audioManager, scanFeedbackSystem, mobileCamera }: Props) {
     this.scene = scene
@@ -233,8 +235,11 @@ export default class XRayEffect {
       }
     })
     
-    // Check for hints after processing all markers
-    this.checkForHints();
+    // Check for hints after processing all markers - PREVENT BLOAT: Only check periodically
+    if (Date.now() - this.lastHintCheckTime > 2000) { // Only check every 2 seconds
+      this.lastHintCheckTime = Date.now();
+      this.checkForHints();
+    }
     
     // Show directional guidance for new users
     if (this.discoveredConditions.size < 3 && Date.now() - this.lastActivityTime > 8000) {
@@ -766,11 +771,24 @@ export default class XRayEffect {
     }
   }
 
-  // ENHANCEMENT: In-game tutorial hint system
+  // ENHANCEMENT: In-game tutorial hint system - PREVENT BLOAT: Throttled to prevent excessive repetition
   showTutorialHint(message: string): void {
-    if (this.lastHintShown === message) return;
+    // PREVENT BLOAT: Only show hint if different from last one and enough time has passed
+    const minTimeBetweenSameHints = 10000; // 10 seconds minimum between same hints
+    const now = Date.now();
+    
+    if (this.lastHintShown === message && (now - this.lastHintTime) < minTimeBetweenSameHints) {
+      return; // Don't show the same hint too frequently
+    }
+    
+    // Also prevent any hint if we've shown one recently
+    const minTimeBetweenAnyHints = 5000; // 5 seconds minimum between any hints
+    if ((now - this.lastHintTime) < minTimeBetweenAnyHints) {
+      return; // Don't show any hint too frequently
+    }
     
     this.lastHintShown = message;
+    this.lastHintTime = now;
     
     // Show visual hint in UI
     this.audioManager?.showFeedback(message, 'info');
@@ -781,11 +799,11 @@ export default class XRayEffect {
   checkForHints(): void {
     const timeSinceLastActivity = Date.now() - this.lastActivityTime;
     
-    // Show hint after 10 seconds of inactivity
-    if (timeSinceLastActivity > this.hintTimeout) {
+    // Show hint after 15 seconds of inactivity (increased from 10)
+    if (timeSinceLastActivity > this.hintTimeout + 5000) {
       if (this.discoveredConditions.size === 0) {
         this.showTutorialHint('Press [C] to reveal condition markers, then move mouse near them to scan');
-      } else if (this.discoveredConditions.size < 3) {
+      } else if (this.discoveredConditions.size < 2) { // Reduced from 3
         this.showTutorialHint('Keep scanning! Move mouse near pulsing markers to discover conditions');
       }
     }

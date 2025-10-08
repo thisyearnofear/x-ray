@@ -61,7 +61,7 @@ export class PatientInfoSection {
 
     return `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: ${spacing.sm};">
-        <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.sm}; letter-spacing: ${typography.letterSpacing.wider};">
+        <div style="color: ${colors.primary.base}; font-size: ${typography.fontSize.sm}; letter-spacing: ${typography.letterSpacing.wider}; background: ${colors.background.primaryGlow}; padding: ${spacing.xs} ${spacing.sm}; border-radius: ${borders.radius.full};">
           🏥 PATIENT DATA
         </div>
         <div style="color: ${colors.neutral.base}; font-size: ${typography.fontSize.xs};">
@@ -73,7 +73,7 @@ export class PatientInfoSection {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: ${spacing.sm}; margin-bottom: ${spacing.sm};">
           <div style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.white};">
             <strong style="display: block; color: ${colors.neutral.base}; font-weight: ${typography.fontWeight.normal}; font-size: ${typography.fontSize.xs}; text-transform: uppercase; letter-spacing: ${typography.letterSpacing.wider};">Name</strong>
-            <span style="display: block; margin-top: ${spacing.xs};">${patientInfo.patientName}</span>
+            <span style="display: block; margin-top: ${spacing.xs}; font-weight: ${typography.fontWeight.bold}; font-size: ${typography.fontSize.md};">${patientInfo.patientName}</span>
           </div>
           <div style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.white};">
             <strong style="display: block; color: ${colors.neutral.base}; font-weight: ${typography.fontWeight.normal}; font-size: ${typography.fontSize.xs}; text-transform: uppercase; letter-spacing: ${typography.letterSpacing.wider};">Age | Gender</strong>
@@ -83,7 +83,7 @@ export class PatientInfoSection {
 
         <div style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.white}; margin-bottom: ${spacing.sm};">
           <strong style="display: block; color: ${colors.neutral.base}; font-weight: ${typography.fontWeight.normal}; font-size: ${typography.fontSize.xs}; text-transform: uppercase; letter-spacing: ${typography.letterSpacing.wider};">Chief Complaint</strong>
-          <span style="display: block; margin-top: ${spacing.xs}; color: ${colors.accent.base};">${patientInfo.chiefComplaint}</span>
+          <span style="display: block; margin-top: ${spacing.xs}; color: ${colors.accent.base}; font-weight: ${typography.fontWeight.bold};">${patientInfo.chiefComplaint}</span>
         </div>
       </div>
 

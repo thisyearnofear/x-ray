@@ -41,6 +41,7 @@ export class AIPanel {
   private voiceContainer: HTMLElement | null = null
   private isVoiceActive: boolean = false
   private voiceCallbacks: VoiceCallback | null = null
+  private voiceSilenceTimer: NodeJS.Timeout | null = null // Timer for automatic voice timeout
   private onVoiceResultCallbacks: Array<(text: string) => void> = []
   private onVoiceErrorCallbacks: Array<(error: any) => void> = []
 
@@ -128,6 +129,20 @@ export class AIPanel {
             <div>No insights yet. Consult the AI for diagnostic guidance.</div>
           </div>
         </div>
+        
+        <!-- Footer with keyboard shortcuts -->
+        <div style="
+          margin-top: ${spacing.md};
+          padding-top: ${spacing.md};
+          border-top: ${borders.width.thin} solid ${colors.border.primary};
+          font-size: ${typography.fontSize.xs};
+          color: ${colors.neutral.base};
+          text-align: center;
+        ">
+          <div style="margin-bottom: ${spacing.xs};">⌨️ Keyboard Shortcuts</div>
+          <div>[V] Voice Consultation • [C] Toggle Conditions</div>
+          <div>[E] Expand View • [H] Focus Hints</div>
+        </div>
       </div>
     `
 
@@ -196,11 +211,56 @@ export class AIPanel {
       this.isVoiceActive = false
       voiceToggleBtn.textContent = '🎤 Activate'
       voiceToggleBtn.style.background = colors.accent.base
+      
+      // Add visual feedback that voice has stopped
+      this.addInsight({
+        id: `voice_end_${Date.now()}`,
+        timestamp: Date.now(),
+        content: '🎙️ Voice consultation ended',
+        type: 'voice',
+        confidence: 0.7
+      })
+      
+      // Clear any existing silence timers
+      if (this.voiceSilenceTimer) {
+        clearTimeout(this.voiceSilenceTimer)
+        this.voiceSilenceTimer = null
+      }
     } else {
       this.voiceCallbacks.startListening()
       this.isVoiceActive = true
       voiceToggleBtn.textContent = '🔴 Listening...'
       voiceToggleBtn.style.background = colors.error.base
+      
+      // Add visual feedback that voice has started
+      this.addInsight({
+        id: `voice_start_${Date.now()}`,
+        timestamp: Date.now(),
+        content: '🎙️ Voice consultation activated - speak now!',
+        type: 'voice',
+        confidence: 0.9
+      })
+      
+      // Set up automatic stopping after 10 seconds of silence
+      this.voiceSilenceTimer = setTimeout(() => {
+        if (this.isVoiceActive) {
+          this.voiceCallbacks?.stopListening()
+          this.isVoiceActive = false
+          if (voiceToggleBtn) {
+            voiceToggleBtn.textContent = '🎤 Activate'
+            voiceToggleBtn.style.background = colors.accent.base
+          }
+          
+          // Add timeout insight to AI panel
+          this.addInsight({
+            id: `timeout_${Date.now()}`,
+            timestamp: Date.now(),
+            content: '🎙️ Voice session timed out after 10 seconds of silence',
+            type: 'voice',
+            confidence: 0.7
+          })
+        }
+      }, 10000) // 10 seconds timeout
     }
   }
 
@@ -209,13 +269,38 @@ export class AIPanel {
     this.addInsight({
       id: `voice_${Date.now()}`,
       timestamp: Date.now(),
-      content: `You said: "${text}"`,
+      content: `🎙️ You said: "${text}"`,
       type: 'voice',
       confidence: 0.9
     })
 
     // Trigger any registered callbacks
     this.onVoiceResultCallbacks.forEach(callback => callback(text))
+    
+    // Automatically stop listening after processing the voice input
+    if (this.voiceCallbacks && this.voiceCallbacks.isListening()) {
+      // Brief pause to allow for natural conversation flow
+      setTimeout(() => {
+        if (this.voiceCallbacks && this.voiceCallbacks.isListening()) {
+          this.voiceCallbacks.stopListening()
+          this.isVoiceActive = false
+          const voiceToggleBtn = this.panel?.querySelector('#voice-toggle-btn') as HTMLElement
+          if (voiceToggleBtn) {
+            voiceToggleBtn.textContent = '🎤 Activate'
+            voiceToggleBtn.style.background = colors.accent.base
+            
+            // Add confirmation that voice session ended
+            this.addInsight({
+              id: `voice_confirmation_${Date.now()}`,
+              timestamp: Date.now(),
+              content: '🎙️ Voice session ended - processing your input...',
+              type: 'voice',
+              confidence: 0.8
+            })
+          }
+        }
+      }, 1000)
+    }
   }
 
   private handleVoiceError(error: any): void {
@@ -406,6 +491,13 @@ export class AIPanel {
     if (this.panel && this.panel.parentNode) {
       this.panel.parentNode.removeChild(this.panel)
     }
+    
+    // Clean up voice silence timer
+    if (this.voiceSilenceTimer) {
+      clearTimeout(this.voiceSilenceTimer)
+      this.voiceSilenceTimer = null
+    }
+    
     this.panel = null
     this.insightContainer = null
     this.voiceContainer = null
@@ -443,7 +535,7 @@ export class AIPanel {
       case 'top':
         return 'top: 2rem; left: 2rem; right: 2rem; width: auto; max-width: 500px;'
       default:
-        return 'top: 2rem; right: 2rem;'
+        return 'bottom: 2rem; right: 2rem;'
     }
   }
 

@@ -129,7 +129,14 @@ export class DiagnosticUIManager {
         padding-top: ${spacing.sm};
         border-top: ${borders.width.thin} solid ${colors.border.neutral};
       ">
-        Use [C] to toggle conditions<br>AI insights in separate panel →
+        <div style="margin-bottom: ${spacing.xs};">Use [C] to toggle conditions • [V] for voice consultation</div>
+        <div>AI insights in separate panel →</div>
+        <div id="voice-status-indicator" style="
+          margin-top: ${spacing.xs};
+          color: ${colors.accent.base};
+          font-weight: ${typography.fontWeight.bold};
+          display: none;
+        ">🎙️ Voice consultation active</div>
       </div>
     `
     
@@ -141,17 +148,26 @@ export class DiagnosticUIManager {
   private createAIPanel(): void {
     this.aiPanel = new AIPanel({
       title: 'AI Consultation Panel',
-      position: 'right'
+      position: 'bottom' // Move to bottom to avoid blocking X-ray panel
     })
     
     const aiPanelElement = this.aiPanel.create()
     document.body.appendChild(aiPanelElement)
   }
 
-  // Add insights to the AI panel
-  public addAIInsight(insight: AIInsight): void {
-    if (this.aiPanel) {
-      this.aiPanel.addInsight(insight)
+  // Show voice consultation active indicator
+  public showVoiceActiveIndicator(): void {
+    const indicator = document.getElementById('voice-status-indicator')
+    if (indicator) {
+      indicator.style.display = 'block'
+    }
+  }
+
+  // Hide voice consultation active indicator
+  public hideVoiceActiveIndicator(): void {
+    const indicator = document.getElementById('voice-status-indicator')
+    if (indicator) {
+      indicator.style.display = 'none'
     }
   }
 
@@ -164,6 +180,13 @@ export class DiagnosticUIManager {
   public clearAIInsights(): void {
     if (this.aiPanel) {
       this.aiPanel.clearInsights()
+    }
+  }
+
+  // Add a single insight to the AI panel
+  public addAIInsight(insight: AIInsight): void {
+    if (this.aiPanel) {
+      this.aiPanel.addInsight(insight)
     }
   }
 

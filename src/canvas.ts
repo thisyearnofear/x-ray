@@ -438,6 +438,11 @@ export default class Canvas {
         case 'h':
           this.audioManager?.showFeedback('💡 Focus on density variations', 'info')
           break
+        case 'v':
+          // ENHANCEMENT FIRST: Trigger voice consultation
+          this.startVoiceConsultation()
+          this.audioManager?.showFeedback('🎙️ Voice consultation activated')
+          break
       }
     })
   }

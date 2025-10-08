@@ -67,6 +67,13 @@ export class MedicalWorkflowManager {
             // Generate case using Cerebras AI
             const caseData = await this.cerebrasService.generateMedicalCase(anatomicalModel, difficulty)
 
+            // ENHANCEMENT FIRST: Reduce condition count based on difficulty for better UX
+            let conditions = caseData.conditions || [];
+            const maxConditions = this.getMaxConditionsForDifficulty(difficulty);
+            if (conditions.length > maxConditions) {
+                conditions = conditions.slice(0, maxConditions);
+            }
+
             this.currentCase = {
                 id: `case_${Date.now()}`,
                 patientName: caseData.patientName || `Patient ${Math.floor(Math.random() * 1000)}`,
@@ -78,15 +85,15 @@ export class MedicalWorkflowManager {
                 medications: await this.generateCurrentMedications(),
                 allergies: await this.generateAllergies(),
                 vitalSigns: this.generateVitalSigns(anatomicalModel),
-                symptoms: await this.generateSymptoms(anatomicalModel),
+                symptoms: await this.generateSymptoms(anatomicalModel, conditions.length),
                 physicalExamFindings: await this.generatePhysicalExamFindings(anatomicalModel),
                 diagnosticHypothesis: [],
                 differentialDiagnosis: [],
                 requiredModel: anatomicalModel,
-                conditions: caseData.conditions || [],
+                conditions: conditions,
                 difficulty: difficulty as 'easy' | 'medium' | 'hard',
                 aiGenerated: true,
-                estimatedStudyTime: caseData.timeLimit || 300
+                estimatedStudyTime: caseData.timeLimit || this.getBaseStudyTimeForDifficulty(difficulty)
             }
 
             // Generate differential diagnosis using AI
@@ -101,6 +108,32 @@ export class MedicalWorkflowManager {
         } catch (error) {
             console.warn('AI case generation failed, using fallback:', error)
             return this.generateFallbackCase(anatomicalModel, difficulty)
+        }
+    }
+
+    // ENHANCEMENT FIRST: Define condition count limits based on difficulty
+    private getMaxConditionsForDifficulty(difficulty: string): number {
+        switch (difficulty) {
+            case 'easy':
+                return 2;  // Start with 2 conditions for new users
+            case 'hard':
+                return 4;  // Up to 4 conditions for advanced users
+            case 'medium':
+            default:
+                return 3;  // Default 3 conditions for balanced experience
+        }
+    }
+
+    // ENHANCEMENT FIRST: Adjust study time based on difficulty
+    private getBaseStudyTimeForDifficulty(difficulty: string): number {
+        switch (difficulty) {
+            case 'easy':
+                return 360; // 6 minutes for easier cases
+            case 'hard':
+                return 240; // 4 minutes for harder cases
+            case 'medium':
+            default:
+                return 300; // 5 minutes for medium cases
         }
     }
 
@@ -179,20 +212,20 @@ export class MedicalWorkflowManager {
         return baseVitals
     }
 
-    private async generateSymptoms(anatomicalModel: string): Promise<string[]> {
+    private async generateSymptoms(anatomicalModel: string, conditionCount: number = 3): Promise<string[]> {
         try {
             const response = await fetch('/api/medical-analysis', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    condition: `Generate 4-6 realistic symptoms for a patient with ${anatomicalModel}-related pathology. Make them clinically accurate and specific.`
+                    condition: `Generate ${conditionCount * 2}-${conditionCount * 3} realistic symptoms for a patient with ${anatomicalModel}-related pathology. Make them clinically accurate and specific.`
                 })
             })
 
             if (response.ok) {
                 const data = await response.json()
                 const content = data.choices?.[0]?.message?.content || ''
-                return content.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0).slice(0, 6)
+                return content.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0).slice(0, conditionCount * 3)
             }
         } catch (error) {
             console.warn('Failed to generate symptoms:', error)

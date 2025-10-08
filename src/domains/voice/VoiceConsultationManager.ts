@@ -214,10 +214,15 @@ export class VoiceConsultationManager {
         this.aiPanel.addInsight({
           id: `loading_${Date.now()}`,
           timestamp: Date.now(),
-          content: 'Analyzing patient data...',
-          type: 'diagnostic',
+          content: '🎙️ Voice consultation activated - Analyzing patient data...',
+          type: 'voice', // Mark as voice type for better visual distinction
           confidence: 0.5
         })
+      }
+      
+      // Show voice active indicator in main diagnostic panel
+      if (this.diagnosticUIManager) {
+        this.diagnosticUIManager.showVoiceActiveIndicator()
       }
 
       // Generate AI insights based on current context
@@ -412,6 +417,11 @@ export class VoiceConsultationManager {
     // Stop voice recognition if active
     if (this.recognition && this.recognition.isListening) {
       this.recognition.stop()
+    }
+    
+    // Hide voice active indicator in main diagnostic panel
+    if (this.diagnosticUIManager) {
+      this.diagnosticUIManager.hideVoiceActiveIndicator()
     }
 
     // Remove UI
