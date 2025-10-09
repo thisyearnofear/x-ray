@@ -66,8 +66,8 @@ export class AIPanel {
     this.panel.innerHTML = `
       <div class="panel-header" style="${this.getHeaderStyles()}">
         <div class="panel-title-section">
-          <div class="panel-title" id="ai-panel-title">🤖 AI Consultation</div>
-          <div class="panel-subtitle" id="ai-panel-subtitle">Powered by Medical AI</div>
+          <div class="panel-title" id="ai-panel-title">👩‍⚕️ Nurse Amy</div>
+          <div class="panel-subtitle" id="ai-panel-subtitle">Virtual Clinical Assistant</div>
         </div>
         <div class="expand-toggle" id="expand-toggle" style="
           font-size: ${typography.fontSize.lg}; 

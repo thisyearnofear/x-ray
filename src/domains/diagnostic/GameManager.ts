@@ -1,3 +1,7 @@
+import { MedicalServiceFacade } from '../medical/MedicalServiceFacade';
+import { MedicalCase } from '../medical/types';
+import { AchievementSystem } from './AchievementSystem';
+
 // MODULAR: Game state management and progression system
 export interface GameState {
     score: number
@@ -12,7 +16,7 @@ export interface GameState {
     learningProgress: Map<string, number>
     achievements: Set<string>
     difficulty: 'easy' | 'medium' | 'hard'
-    patientCase: any
+    patientCase: MedicalCase | null
     specialization: MedicalSpecialization
     unlockedTechniques: Set<string>
 }
@@ -26,19 +30,44 @@ export interface MedicalSpecialization {
     unlockedTechniques: string[]
 }
 
+export interface GameManagerConfig {
+    diagnosticUIManager?: any; // DiagnosticUIManager type
+}
+
 export class GameManager {
     private gameState: GameState
     private callbacks: Map<string, Function[]> = new Map()
     private dynamicElementsInterval: number | null = null
     private dynamicTimer: number = 0
+    private medicalService: MedicalServiceFacade;
+    private achievementSystem: AchievementSystem;
+    public diagnosticUIManager: any; // DiagnosticUIManager reference (public to allow updates)
 
-    constructor() {
+    constructor(config?: GameManagerConfig) {
+        this.medicalService = new MedicalServiceFacade();
+        this.achievementSystem = new AchievementSystem();
+        this.achievementSystem.on('achievementUnlocked', (data) => {
+            // Show achievement notification when an achievement is unlocked
+            this.emit('achievementUnlocked', data);
+            // If we have a UI manager, show the notification
+            if (this.diagnosticUIManager) {
+                this.diagnosticUIManager.showAchievementNotification(data.achievement);
+            }
+        });
         this.gameState = this.initializeGameState()
         this.startDynamicElementsSystem()
+        
+        // Initialize spaced repetition system with previous data
+        this.loadPreviousSessionData();
+        
+        // Store UI manager reference if provided
+        if (config?.diagnosticUIManager) {
+            this.diagnosticUIManager = config.diagnosticUIManager;
+        }
     }
 
     private initializeGameState(): GameState {
-        return {
+        const initialState: GameState = {
             score: 0,
             streak: 0,
             timeRemaining: 300,
@@ -54,6 +83,17 @@ export class GameManager {
             patientCase: null,
             specialization: this.getDefaultSpecialization(),
             unlockedTechniques: new Set(['basic_scan'])
+        };
+        this.loadCase('case-x487', initialState);
+        return initialState;
+    }
+
+    public loadCase(caseId: string, gameState: GameState | null = null): void {
+        const caseData = this.medicalService.getCase(caseId);
+        if (caseData) {
+            const stateToUpdate = gameState || this.gameState;
+            stateToUpdate.patientCase = caseData;
+            this.emit('gameStateUpdated', stateToUpdate);
         }
     }
 
@@ -274,24 +314,384 @@ export class GameManager {
     }
 
     public updatePhase(newPhase: 'scanning' | 'analyzing' | 'solved') {
+        const oldPhase = this.gameState.phase;
         this.gameState.phase = newPhase;
+        
+        // If phase changed to 'solved' (game completed), record session completion and high score
+        if (oldPhase !== 'solved' && newPhase === 'solved') {
+            this.recordSessionCompletion();
+            this.recordHighScore();
+        }
+        
         this.emit('gameStateUpdated', this.gameState);
     }
 
     // AGGRESSIVE CONSOLIDATION: Single updateState method for all state changes
     public updateState(updates: Partial<GameState>) {
+        const oldPhase = this.gameState.phase;
         this.gameState = { ...this.gameState, ...updates };
+        
+        // If phase changed to 'solved' (game completed), record session completion
+        if (oldPhase !== 'solved' && this.gameState.phase === 'solved') {
+            this.recordSessionCompletion();
+            this.recordHighScore(); // Also record high score
+        }
+        
         this.emit('gameStateUpdated', this.gameState);
     }
+    
+    // ENHANCED: Adaptive difficulty based on performance
+    public evaluatePerformance(): void {
+        // Calculate various performance metrics
+        const efficiency = this.gameState.efficiency;
+        const accuracy = this.gameState.accuracy;
+        const discoveryRate = this.gameState.discoveredConditions.size / 
+                             (this.gameState.timeRemaining > 0 ? this.gameState.timeRemaining : 1);
+        const currentScore = this.gameState.score;
+        
+        // Create performance profile
+        const performanceMetrics = {
+            efficiency,
+            accuracy,
+            discoveryRate,
+            currentScore,
+            discoveredConditions: this.gameState.discoveredConditions.size,
+            timeRemaining: this.gameState.timeRemaining,
+            hintsUsed: this.gameState.hintsUsed,
+            learningProgress: this.gameState.learningProgress
+        };
+        
+        // Adjust difficulty based on performance
+        this.adaptDifficulty(performanceMetrics);
+    }
+    
+    // ENHANCED: Advanced difficulty adaptation algorithm
+    private adaptDifficulty(metrics: any): void {
+        // Calculate performance score (0-1 scale)
+        const performanceScore = (metrics.efficiency + metrics.accuracy) / 2;
+        
+        // Define thresholds for difficulty adjustment
+        const HIGH_PERFORMANCE_THRESHOLD = 0.75;
+        const LOW_PERFORMANCE_THRESHOLD = 0.35;
+        
+        // Logic for difficulty adjustment
+        if (performanceScore >= HIGH_PERFORMANCE_THRESHOLD && 
+            this.gameState.difficulty !== 'hard' && 
+            metrics.discoveredConditions >= 3) {
+            // Player is excelling, increase difficulty
+            this.increaseDifficulty();
+        } else if (performanceScore <= LOW_PERFORMANCE_THRESHOLD && 
+                   this.gameState.difficulty !== 'easy' &&
+                   metrics.hintsUsed >= 2) {
+            // Player is struggling, decrease difficulty
+            this.decreaseDifficulty();
+        }
+        
+        // Additionally adjust based on discovery rate and learning progress
+        this.adaptBasedOnLearning(metrics);
+    }
+    
+    // Increase game difficulty
+    private increaseDifficulty(): void {
+        if (this.gameState.difficulty === 'medium') {
+            this.gameState.difficulty = 'hard';
+            this.gameState.timeRemaining = Math.max(180, this.gameState.timeRemaining * 0.8); // Reduce time by 20%
+            
+            this.emit('difficultyIncreased', { 
+                newDifficulty: 'hard',
+                message: 'Difficulty increased to Hard! Scanning conditions are now more subtle.',
+                timeRemaining: this.gameState.timeRemaining
+            });
+        } else if (this.gameState.difficulty === 'easy') {
+            this.gameState.difficulty = 'medium';
+            this.gameState.timeRemaining = Math.max(240, this.gameState.timeRemaining * 0.9); // Reduce time by 10%
+            
+            this.emit('difficultyIncreased', { 
+                newDifficulty: 'medium',
+                message: 'Difficulty increased to Medium! Conditions are becoming more challenging to identify.',
+                timeRemaining: this.gameState.timeRemaining
+            });
+        }
+        
+        this.emit('gameStateUpdated', this.gameState);
+    }
+    
+    // Decrease game difficulty
+    private decreaseDifficulty(): void {
+        if (this.gameState.difficulty === 'hard') {
+            this.gameState.difficulty = 'medium';
+            this.gameState.timeRemaining = Math.min(420, this.gameState.timeRemaining * 1.25); // Increase time by 25%
+            
+            this.emit('difficultyDecreased', { 
+                newDifficulty: 'medium',
+                message: 'Difficulty decreased to Medium. Conditions are more apparent now.',
+                timeRemaining: this.gameState.timeRemaining
+            });
+        } else if (this.gameState.difficulty === 'medium') {
+            this.gameState.difficulty = 'easy';
+            this.gameState.timeRemaining = Math.min(480, this.gameState.timeRemaining * 1.5); // Increase time by 50%
+            
+            this.emit('difficultyDecreased', { 
+                newDifficulty: 'easy',
+                message: 'Difficulty decreased to Easy. Conditions are now more obvious and scanning is easier.',
+                timeRemaining: this.gameState.timeRemaining
+            });
+        }
+        
+        this.emit('gameStateUpdated', this.gameState);
+    }
+    
+    // Adapt based on learning progress and condition mastery
+    private adaptBasedOnLearning(metrics: any): void {
+        // Check if user is mastering specific conditions
+        let masteredConditions = 0;
+        metrics.learningProgress.forEach((progress: number) => {
+            if (progress >= 0.9) masteredConditions++;
+        });
+        
+        // If user is mastering many conditions, add more complex cases
+        if (masteredConditions >= 3) {
+            this.emit('learningMilestoneReached', {
+                masteredConditions,
+                message: 'You\'re mastering these conditions! Expect more complex cases ahead.',
+                suggestion: 'Try switching to a different anatomical region or increasing scan complexity.'
+            });
+        }
+        
+        // If user is struggling with specific conditions, provide targeted help
+        let strugglingConditions = 0;
+        metrics.learningProgress.forEach((progress: number) => {
+            if (progress <= 0.2) strugglingConditions++;
+        });
+        
+        if (strugglingConditions >= 2) {
+            this.emit('strugglingDetected', {
+                strugglingConditions,
+                message: 'Some conditions are proving challenging. Would you like targeted practice?',
+                suggestion: 'Focus on the conditions you\'re finding most difficult.'
+            });
+        }
+    }
+    
+    // Get current performance metrics
+    public getPerformanceMetrics(): any {
+        return {
+            efficiency: this.gameState.efficiency,
+            accuracy: this.gameState.accuracy,
+            score: this.gameState.score,
+            discoveredConditions: this.gameState.discoveredConditions.size,
+            timeRemaining: this.gameState.timeRemaining,
+            hintsUsed: this.gameState.hintsUsed,
+            difficulty: this.gameState.difficulty,
+            learningProgress: Array.from(this.gameState.learningProgress.entries())
+        };
+    }
+    
+    // ENHANCED: Spaced repetition system for long-term retention
+    public recordConditionPractice(conditionId: string, success: boolean): void {
+        const now = Date.now();
+        
+        // Update learning progress based on performance
+        const currentProgress = this.gameState.learningProgress.get(conditionId) || 0;
+        let newProgress = success ? 
+            Math.min(1.0, currentProgress + 0.1) : 
+            Math.max(0, currentProgress - 0.15);
+        
+        this.gameState.learningProgress.set(conditionId, newProgress);
+        
+        // Record the practice session
+        const practiceRecord = {
+            timestamp: now,
+            success,
+            progress: newProgress
+        };
+        
+        this.emit('conditionPracticed', {
+            conditionId,
+            practiceRecord,
+            message: success ? 
+                `${conditionId} practiced successfully!` : 
+                `${conditionId} needs more practice.`
+        });
+        
+        // Update game state
+        this.emit('gameStateUpdated', this.gameState);
+    }
+    
+    // Determine which conditions to review based on spaced repetition algorithm
+    public getConditionsForReview(): string[] {
+        const now = Date.now();
+        const reviewConditions: string[] = [];
+        
+        // Define spaced intervals (in milliseconds)
+        const intervals = {
+            'new': 1000 * 60 * 5,      // 5 minutes for new items
+            'early': 1000 * 60 * 25,   // 25 minutes 
+            'intermediate': 1000 * 60 * 60 * 8,      // 8 hours
+            'advanced': 1000 * 60 * 60 * 24,        // 24 hours
+            'mastery': 1000 * 60 * 60 * 24 * 7      // 7 days
+        };
+        
+        // TODO: This would require storing practice history
+        // For now, return conditions that have been discovered but not recently practiced
+        this.gameState.learningProgress.forEach((progress, conditionId) => {
+            // If progress is high but condition was discovered early in the session
+            // or if progress is low, add to review list
+            if (progress < 0.6 || this.gameState.discoveredConditions.has(conditionId)) {
+                reviewConditions.push(conditionId);
+            }
+        });
+        
+        // Limit to 3 conditions for review to avoid overwhelming the player
+        return reviewConditions.slice(0, 3);
+    }
+    
+    // Get conditions that are due for review based on spaced repetition intervals
+    public getReviewRecommendations(): any[] {
+        const recommendations: any[] = [];
+        const now = Date.now();
+        
+        // Sample implementation - in a real system, we would track last review times
+        this.gameState.learningProgress.forEach((progress, conditionId) => {
+            // If the condition is not well-learned (progress < 0.8), recommend for review
+            if (progress < 0.8) {
+                recommendations.push({
+                    conditionId,
+                    progress,
+                    priority: 1 - progress, // Higher priority for lower progress
+                    recommendation: `Review ${conditionId} to improve retention`
+                });
+            }
+        });
+        
+        // Sort by priority (highest first)
+        recommendations.sort((a, b) => b.priority - a.priority);
+        
+        return recommendations;
+    }
+    
+    // Record a session completion to support spaced repetition
+    public recordSessionCompletion(): void {
+        // Store session data for spaced repetition algorithm
+        const sessionData = {
+            timestamp: Date.now(),
+            score: this.gameState.score,
+            discoveredConditions: Array.from(this.gameState.discoveredConditions),
+            accuracy: this.gameState.accuracy,
+            efficiency: this.gameState.efficiency,
+            timeSpent: Date.now() - this.gameState.sessionStartTime
+        };
+        
+        this.emit('sessionCompleted', sessionData);
+        
+        // Save session data for future spaced repetition scheduling
+        this.saveSessionData(sessionData);
+    }
+    
+    // Save session data for spaced repetition scheduling
+    private saveSessionData(sessionData: any): void {
+        // In a real implementation, this would save to localStorage or a database
+        // For now, we'll just emit an event indicating data was saved
+        const savedData = {
+            ...sessionData,
+            learningProgress: Array.from(this.gameState.learningProgress.entries())
+        };
+        
+        this.emit('sessionDataSaved', savedData);
+        
+        // Store in localStorage as backup
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('xray-session-data', JSON.stringify(savedData));
+        }
+    }
+    
+    // Load previous session data to support spaced repetition
+    public loadPreviousSessionData(): void {
+        if (typeof window !== 'undefined') {
+            const savedData = localStorage.getItem('xray-session-data');
+            if (savedData) {
+                try {
+                    const parsedData = JSON.parse(savedData);
+                    // Restore learning progress
+                    if (parsedData.learningProgress) {
+                        this.gameState.learningProgress = new Map(parsedData.learningProgress);
+                    }
+                    
+                    this.emit('sessionDataLoaded', parsedData);
+                } catch (e) {
+                    console.error('Failed to load session data:', e);
+                }
+            }
+        }
+    }
 
+    // MODULAR: Local leaderboard and competitive elements
+    public recordHighScore(): void {
+        const currentScore = this.gameState.score;
+        const currentCase = this.gameState.patientCase?.id || 'unknown';
+        const sessionTime = Date.now() - this.gameState.sessionStartTime;
+        const conditionsFound = this.gameState.discoveredConditions.size;
+        
+        const newEntry = {
+            score: currentScore,
+            caseId: currentCase,
+            time: sessionTime,
+            conditionsFound,
+            date: new Date().toISOString(),
+            accuracy: this.gameState.accuracy,
+            efficiency: this.gameState.efficiency
+        };
+        
+        // Get existing high scores
+        const highScores = this.getHighScores();
+        highScores.push(newEntry);
+        
+        // Sort and keep top 10
+        highScores.sort((a, b) => b.score - a.score);
+        const topScores = highScores.slice(0, 10);
+        
+        // Save to localStorage
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('xray-high-scores', JSON.stringify(topScores));
+        }
+        
+        this.emit('highScoreRecorded', {
+            entry: newEntry,
+            rank: highScores.indexOf(newEntry) + 1,
+            isNewRecord: highScores[0] === newEntry
+        });
+    }
+    
+    public getHighScores(): any[] {
+        if (typeof window !== 'undefined') {
+            const scoresStr = localStorage.getItem('xray-high-scores');
+            if (scoresStr) {
+                try {
+                    return JSON.parse(scoresStr);
+                } catch (e) {
+                    console.error('Failed to parse high scores:', e);
+                    return [];
+                }
+            }
+        }
+        return [];
+    }
+    
     // Reset the game state to initial values
     public resetGameState(difficulty: 'easy' | 'medium' | 'hard' = 'medium') {
+        // Record current session before resetting and potentially store high score
+        if (this.gameState.phase === 'solved') {
+            this.recordSessionCompletion();
+            this.recordHighScore(); // Record high score when game is completed
+        }
+        
         const timeMap: Record<string, number> = { 'easy': 420, 'medium': 300, 'hard': 240 };
         this.gameState = {
             ...this.initializeGameState(),
             timeRemaining: timeMap[difficulty] || 300,
             difficulty: difficulty
         };
+        this.loadCase('case-x487');
         this.emit('gameStateUpdated', this.gameState);
     }
 
@@ -314,6 +714,11 @@ export class GameManager {
         // Every 30 seconds, provide a hint or clue based on game state
         if (timeRemaining > 0) {
             this.provideDynamicHint();
+        }
+        
+        // Every 45 seconds, evaluate player performance for adaptive difficulty
+        if (this.dynamicTimer % 3 === 0) { // Every 90 seconds
+            this.evaluatePerformance();
         }
         
         // Sometimes reveal a new possible condition after some time has passed

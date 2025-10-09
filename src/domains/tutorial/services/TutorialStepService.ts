@@ -15,6 +15,7 @@ export interface TutorialStep {
   autoProgress?: boolean
   duration?: number
   data?: any
+  tooltipMessage?: string;
 }
 
 export class TutorialStepService {
@@ -83,6 +84,26 @@ export class TutorialStepService {
         action: 'click-condition',
         autoProgress: false,
         duration: 4000
+      },
+      {
+        id: 'investigation-tools',
+        title: 'Investigation Tools',
+        description: 'Use these tools to gather more information about the patient.',
+        action: 'show-investigation-tools',
+        targetElement: '#investigation-tools-panel',
+        autoProgress: false,
+        duration: 4000,
+        tooltipMessage: 'This panel contains all the tools you need to investigate the case.'
+      },
+      {
+        id: 'voice-consultation',
+        title: 'Voice Consultation',
+        description: 'Click the microphone to consult with Nurse Amy, your AI assistant.',
+        action: 'show-voice-consultation',
+        targetElement: '#voice-toggle-btn',
+        autoProgress: false,
+        duration: 4000,
+        tooltipMessage: 'Click here to talk to Nurse Amy.'
       },
       {
         id: 'tutorial-complete',

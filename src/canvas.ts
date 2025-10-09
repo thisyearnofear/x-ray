@@ -2,6 +2,7 @@ import * as THREE from "three"
 import { Dimensions, Size } from "./types/types"
 import { OrbitControls } from "three/addons/controls/OrbitControls.js"
 import GUI from "lil-gui"
+import { gsap } from 'gsap';
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js"
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js"
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js"
@@ -12,8 +13,8 @@ import { AudioManager } from "./components/AudioManager"
 import { SoundType } from "./components/AudioManager"
 import { ScanFeedbackSystem } from "./components/ScanFeedbackSystem"
 import { DiagnosticUIFacade } from "./domains/diagnostic/DiagnosticUIFacade"
-import { GameManager } from "./domains/diagnostic/GameManager"
-import { MedicalWorkflowManager } from "./domains/diagnostic/MedicalWorkflowManager"
+import { GameManager, GameState } from "./domains/diagnostic/GameManager"
+import { MedicalServiceFacade } from "./domains/medical/MedicalServiceFacade"
 import { TutorialFacade } from "./domains/tutorial/TutorialFacade"
 import { VoiceConsultationManager } from "./domains/voice/VoiceConsultationManager"
 
@@ -49,7 +50,7 @@ export default class Canvas {
 
   // ENHANCEMENT FIRST: Game systems
   gameManager: GameManager | null = null
-  medicalWorkflow: MedicalWorkflowManager | null = null
+  medicalService: MedicalServiceFacade | null = null
 
   // ENHANCEMENT FIRST: Tutorial and voice systems
   tutorial: TutorialFacade | null = null
@@ -189,12 +190,12 @@ export default class Canvas {
 
   onMouseMove = (event: MouseEvent) => {
     if (this._disposed) return;
-    
+
     // Skip interactions if mobile camera is active
     if (this.mobileCamera && this.mobileCamera.getState().isActive) {
       return;
     }
-    
+
     // Store normalized device coordinates for raycasting
     const ndcX = (event.clientX / window.innerWidth) * 2 - 1
     const ndcY = -(event.clientY / window.innerHeight) * 2 + 1
@@ -204,6 +205,7 @@ export default class Canvas {
     const xRayY = 1 - event.clientY / window.innerHeight
 
     this.xRayEffect?.onMouseMove({ x: xRayX, y: xRayY })
+    this.scanFeedbackSystem?.updateMousePosition(this.mouse);
 
     // Use NDC coordinates for raycasting
     this.mouse.x = ndcX
@@ -230,12 +232,12 @@ export default class Canvas {
 
   onMouseClick = (event: MouseEvent) => {
     if (this._disposed) return;
-    
+
     // Skip interactions if mobile camera is active
     if (this.mobileCamera && this.mobileCamera.getState().isActive) {
       return;
     }
-    
+
     this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1
     this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
     this.raycaster.setFromCamera(this.mouse, this.camera)
@@ -261,6 +263,24 @@ export default class Canvas {
     this.xRayEffect?.onResize()
   }
 
+  public animateCameraTo(position: THREE.Vector3, target: THREE.Vector3, duration: number = 1.5): void {
+    gsap.to(this.camera.position, {
+        duration,
+        x: position.x,
+        y: position.y,
+        z: position.z,
+        ease: "power2.inOut"
+    });
+
+    gsap.to(this.orbitControls.target, {
+        duration,
+        x: target.x,
+        y: target.y,
+        z: target.z,
+        ease: "power2.inOut"
+    });
+  }
+
   createXRayEffect() {
     this.xRayEffect = new XRayEffect({
       scene: this.scene,
@@ -270,24 +290,35 @@ export default class Canvas {
       audioManager: this.audioManager,
       scanFeedbackSystem: this.scanFeedbackSystem,
       mobileCamera: this.mobileCamera,
+      gameManager: this.gameManager,
     })
   }
 
   createScanFeedbackSystem() {
     // ENHANCEMENT FIRST: Initialize visual scan feedback
-    this.scanFeedbackSystem = new ScanFeedbackSystem(this.scene)
+    this.scanFeedbackSystem = new ScanFeedbackSystem(this.scene, this.audioManager)
     console.log('✨ ScanFeedbackSystem initialized')
   }
 
   // ENHANCEMENT FIRST: Initialize diagnostic UI using existing systems
   createDiagnosticUI() {
+    // Create diagnostic UI first without game manager
     this.diagnosticUI = new DiagnosticUIFacade({
       audioManager: this.audioManager,
       xRayEffect: this.xRayEffect,
       scanFeedbackSystem: this.scanFeedbackSystem,
+      canvas: this,
       onConsultationClick: () => this.startVoiceConsultation()
     })
     this.diagnosticUI.initialize()
+    
+    // Create GameManager with reference to diagnostic UI manager
+    this.gameManager = new GameManager({
+      diagnosticUIManager: this.diagnosticUI.getUIManager()
+    });
+    
+    // Update the diagnostic UI with the GameManager
+    this.diagnosticUI.updateGameManager(this.gameManager);
     console.log('🏥 DiagnosticUI initialized')
   }
 
@@ -301,10 +332,10 @@ export default class Canvas {
         score: 0,
         patientCase: { patientName: 'Test Patient' }
       }
-      
+
       // Use real patient case data if available, otherwise fall back to test
       const patientCase = gameState.patientCase || { patientName: 'Test Patient' };
-      
+
       const context = {
         patientCase: patientCase,
         discoveredConditions: gameState.discoveredConditions,
@@ -319,24 +350,51 @@ export default class Canvas {
 
   // ENHANCEMENT FIRST: Initialize tutorial and voice using existing systems
   createTutorialAndVoice() {
-    // Initialize GameManager
-    this.gameManager = new GameManager()
-    
-    // Initialize MedicalWorkflowManager (for patient case generation)
-    this.medicalWorkflow = new MedicalWorkflowManager(null) // Pass cerebras service if available
-    
+    // The GameManager should already exist from createDiagnosticUI, but ensure it has the UI manager reference
+    if (!this.gameManager) {
+      if (this.diagnosticUI) {
+        this.gameManager = new GameManager({
+          diagnosticUIManager: this.diagnosticUI.getUIManager()
+        });
+      } else {
+        this.gameManager = new GameManager();
+      }
+    } else if (this.diagnosticUI && !this.gameManager.diagnosticUIManager) {
+      // Update the GameManager with the UI manager if it wasn't set before
+      this.gameManager.diagnosticUIManager = this.diagnosticUI.getUIManager();
+    }
+
+    this.gameManager.on('gameStateUpdated', (gameState: GameState) => {
+        if (this.diagnosticUI) {
+            this.diagnosticUI.getUIManager()?.updateCaseInfo(gameState.patientCase);
+            this.diagnosticUI.getUIManager()?.updatePatientInfo(gameState.patientCase);
+        }
+    });
+
+    // Initialize MedicalServiceFacade (for AI-powered patient case generation)
+    this.medicalService = new MedicalServiceFacade()
+
     // Tutorial facade
     this.tutorial = new TutorialFacade({
       audioManager: this.audioManager,
       xRayEffect: this.xRayEffect,
       scanFeedbackSystem: this.scanFeedbackSystem,
       diagnosticUI: this.diagnosticUI,
-      onTutorialComplete: () => this.startGame()
+      onTutorialComplete: () => {
+        // Check for tutorial completion achievement
+        if (this.gameManager) {
+          const gameState = this.gameManager.getGameState();
+          this.gameManager.achievementSystem?.checkAchievements(gameState, {
+            type: 'tutorial_complete'
+          });
+        }
+        this.startGame();
+      }
     })
-    
+
     // Voice consultation manager - pass the diagnostic UI manager for AI integration
     this.voiceConsultation = new VoiceConsultationManager(this.diagnosticUI?.getUIManager())
-    
+
     // Register with the AI panel after diagnostic UI is initialized
     if (this.diagnosticUI) {
       const aiPanel = this.diagnosticUI.getUIManager()?.getAIPanel()
@@ -344,87 +402,128 @@ export default class Canvas {
         this.voiceConsultation.registerWithAIpanel(aiPanel)
       }
     }
-    
+
     // Auto-start tutorial for new users
     const hasSeenTutorial = localStorage.getItem('xrai_tutorial_completed')
     if (!hasSeenTutorial) {
       setTimeout(() => this.tutorial?.start(), 2000) // Start after model loads
     }
-    
+
     console.log('📚 Tutorial and Voice systems initialized')
   }
 
   // ENHANCEMENT FIRST: Start the game when tutorial completes
   private startGame() {
     console.log('🎮 Starting game after tutorial completion')
-    
+
     // Mark tutorial as completed in localStorage
     localStorage.setItem('xrai_tutorial_completed', 'true')
-    
+
     // Generate a realistic patient case
     this.generateAndIntroducePatientCase()
-    
+
     // Start the game timer
     this.gameManager?.startTimer()
-    
+
     // Switch audio to hospital ambience
     this.diagnosticUI?.getUIManager().startGameAudio()
-    
+
     // Update UI for active game state
     this.diagnosticUI?.updatePhase('Active Game')
-    
+
     // Show feedback to user
     this.audioManager?.showFeedback('🏥 Welcome to the diagnostic challenge! Find medical conditions before time runs out.', 'info')
   }
-  
-  // ENHANCEMENT: Generate and introduce a realistic patient case
+
+  // AGGRESSIVE CONSOLIDATION: Use AI-powered case generation with progressive revelation
   private async generateAndIntroducePatientCase() {
     try {
-      // Generate a realistic patient case based on current model
       const currentModel = this.xRayEffect?.currentModel || 'head'
-      const patientCase = await this.medicalWorkflow?.generatePatientCase(currentModel)
-      
-      // Update the game manager with the patient case
+      const difficulty: 'easy' | 'medium' | 'hard' = 'medium' // Future: Make dynamic based on performance
+
+      // Single source: AI-generated case from MedicalServiceFacade
+      const patientCase = await this.medicalService?.generatePatientCase(currentModel, difficulty)
+
       if (patientCase) {
+        // DRY: Update game state (single call updates everything)
         this.gameManager?.updateState({ patientCase })
-        
-        // Update the diagnostic UI with full patient information
-        this.diagnosticUI?.updatePatientInfo(patientCase)
-        
-        console.log(`🏥 Patient case generated: ${patientCase.patientName}, Age: ${patientCase.age}, Chief Complaint: ${patientCase.chiefComplaint}`)
-        
-        // Provide immersive audio feedback about the patient
-        this.audioManager?.showFeedback(`New patient: ${patientCase.patientName}, age ${patientCase.age}, ${patientCase.gender}. Chief complaint: ${patientCase.chiefComplaint}`, 'info')
-        
-        // Play medical notification sound
-        this.audioManager?.playSound(SoundType.MEDICAL_BEEP);
-        
-        // Add immersive "patient loading" sequence
-        setTimeout(() => {
-          this.audioManager?.showFeedback(`Vital signs stable: BP ${patientCase.vitalSigns.bloodPressure}, HR ${patientCase.vitalSigns.heartRate}`, 'info');
-          this.audioManager?.playSound(SoundType.HEARTBEAT_MONITOR);
-        }, 2000);
+
+        // MODULAR: Connect case timer to game timer
+        if (patientCase.estimatedCaseLength && patientCase.estimatedCaseLength > 0) {
+          this.gameManager?.updateTimeRemaining(patientCase.estimatedCaseLength)
+          console.log(`⏰ Case timer: ${patientCase.estimatedCaseLength}s (${patientCase.caseComplexity})`)
+        }
+
+        // CLEAN: Progressive revelation - only show revealed information
+        this.updatePatientDisplay()
+
+        // PERFORMANT: Immersive feedback with staggered notifications
+        this.providePatientIntroductionFeedback(patientCase)
+
+        console.log(`🏥 AI Case Loaded: ${patientCase.patientName} (${patientCase.age}yo ${patientCase.gender})`)
+        console.log(`   Complexity: ${patientCase.caseComplexity} | Timer: ${patientCase.estimatedCaseLength}s`)
       }
     } catch (error) {
-      console.error('Failed to generate patient case:', error)
-      // Fallback to basic patient info if generation fails
-      const fallbackPatient = { 
-        patientName: 'Test Patient', 
-        age: 42, 
-        gender: 'Unknown',
-        chiefComplaint: 'Diagnostic evaluation needed'
-      }
-      this.gameManager?.updateState({ patientCase: fallbackPatient })
-      this.diagnosticUI?.updatePatientInfo(fallbackPatient)
-      this.audioManager?.showFeedback('🏥 New patient: Test Patient. Ready for diagnostic evaluation.', 'info')
+      console.error('AI case generation failed:', error)
+      this.handleCaseGenerationFallback()
     }
+  }
+
+  // CLEAN: Separate method for patient display updates
+  private updatePatientDisplay(): void {
+    const revealedInfo = this.medicalService?.getRevealedPatientInfo()
+    if (revealedInfo) {
+      this.diagnosticUI?.updatePatientInfo(revealedInfo)
+    }
+  }
+
+  // CLEAN: Separate method for patient introduction feedback
+  private providePatientIntroductionFeedback(patientCase: any): void {
+    this.audioManager?.showFeedback(
+      `New patient: ${patientCase.patientName}, ${patientCase.age}yo ${patientCase.gender}`,
+      'info'
+    )
+    this.audioManager?.playSound(SoundType.MEDICAL_BEEP)
+
+    setTimeout(() => {
+      this.audioManager?.showFeedback(
+        `Chief complaint: ${patientCase.chiefComplaint}`,
+        'info'
+      )
+      this.audioManager?.playSound(SoundType.HEARTBEAT_MONITOR)
+    }, 2500)
+
+    if (patientCase.initialPresentation?.vitalSigns) {
+      setTimeout(() => {
+        const vitals = patientCase.initialPresentation.vitalSigns
+        this.audioManager?.showFeedback(
+          `Initial vitals: BP ${vitals.bloodPressure}, HR ${vitals.heartRate}/min`,
+          'info'
+        )
+      }, 4500)
+    }
+  }
+
+  // CLEAN: Separate method for fallback case handling
+  private handleCaseGenerationFallback(): void {
+    const fallbackPatient = {
+      patientName: 'Emergency Patient',
+      age: 38,
+      gender: 'Unknown',
+      chiefComplaint: 'Urgent diagnostic evaluation required',
+      caseComplexity: 'straightforward' as const,
+      estimatedCaseLength: 180
+    }
+    this.gameManager?.updateState({ patientCase: fallbackPatient })
+    this.updatePatientDisplay()
+    this.audioManager?.showFeedback('🏥 Emergency patient ready. AI diagnosis support limited.', 'warning')
   }
 
   // ENHANCEMENT FIRST: Minimal keyboard shortcuts using existing systems
   setupKeyboardShortcuts() {
     document.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement) return
-      
+
       switch (e.key.toLowerCase()) {
         case 'c':
           this.xRayEffect?.toggleConditions()

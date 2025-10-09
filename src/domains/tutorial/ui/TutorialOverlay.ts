@@ -60,6 +60,28 @@ export class TutorialOverlay {
     if (progressBar) progressBar.style.width = `${progress.percentage}%`
 
     this.updateButtons(step)
+    this.highlightElement(step.targetElement);
+  }
+
+  private highlightElement(selector: string | undefined): void {
+    // Clear previous highlights
+    const highlighted = document.querySelectorAll('.tutorial-highlight');
+    highlighted.forEach(el => {
+        (el as HTMLElement).style.boxShadow = '';
+        (el as HTMLElement).style.borderRadius = '';
+        (el as HTMLElement).style.transition = '';
+        el.classList.remove('tutorial-highlight');
+    });
+
+    if (!selector) return;
+
+    const element = document.querySelector(selector) as HTMLElement;
+    if (element) {
+        element.classList.add('tutorial-highlight');
+        element.style.boxShadow = `0 0 20px 10px ${colors.primary.base}`;
+        element.style.borderRadius = borders.radius.lg;
+        element.style.transition = 'box-shadow 0.3s ease-in-out';
+    }
   }
 
   hide(): void {

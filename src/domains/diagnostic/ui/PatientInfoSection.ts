@@ -85,26 +85,152 @@ export class PatientInfoSection {
           <strong style="display: block; color: ${colors.neutral.base}; font-weight: ${typography.fontWeight.normal}; font-size: ${typography.fontSize.xs}; text-transform: uppercase; letter-spacing: ${typography.letterSpacing.wider};">Chief Complaint</strong>
           <span style="display: block; margin-top: ${spacing.xs}; color: ${colors.accent.base}; font-weight: ${typography.fontWeight.bold};">${patientInfo.chiefComplaint}</span>
         </div>
+        
+        <!-- CASE STATUS INDICATORS -->
+        <div style="
+          display: grid; 
+          grid-template-columns: 1fr 1fr 1fr; 
+          gap: ${spacing.xs}; 
+          margin-top: ${spacing.sm};
+          padding-top: ${spacing.sm};
+          border-top: ${borders.width.thin} solid ${colors.border.neutral};
+        ">
+          <div style="
+            text-align: center;
+            padding: ${spacing.xs};
+            background: ${colors.background.panelLight};
+            border-radius: ${borders.radius.md};
+            border: ${borders.width.thin} solid ${colors.border.primary};
+          ">
+            <div style="font-size: ${typography.fontSize.lg}; font-weight: ${typography.fontWeight.bold}; color: ${colors.primary.base};">2</div>
+            <div style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.base};">Findings</div>
+          </div>
+          <div style="
+            text-align: center;
+            padding: ${spacing.xs};
+            background: ${colors.background.panelLight};
+            border-radius: ${borders.radius.md};
+            border: ${borders.width.thin} solid ${colors.border.accent};
+          ">
+            <div style="font-size: ${typography.fontSize.lg}; font-weight: ${typography.fontWeight.bold}; color: ${colors.accent.base};">3</div>
+            <div style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.base};">Investigations</div>
+          </div>
+          <div style="
+            text-align: center;
+            padding: ${spacing.xs};
+            background: ${colors.background.panelLight};
+            border-radius: ${borders.radius.md};
+            border: ${borders.width.thin} solid ${colors.border.info};
+          ">
+            <div style="font-size: ${typography.fontSize.lg}; font-weight: ${typography.fontWeight.bold}; color: ${colors.info.base};">75%</div>
+            <div style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.base};">Confidence</div>
+          </div>
+        </div>
       </div>
 
       ${this.isExpanded ? this.generateExpandedContent(patientInfo) : ''}
-
-      <div class="hpi-section" style="margin-top: ${spacing.md}; border-top: 1px solid ${colors.border.primary}; padding-top: ${spacing.md};">
-        <div style="color: ${colors.neutral.base}; font-weight: ${typography.fontWeight.bold}; font-size: ${typography.fontSize.xs}; text-transform: uppercase; letter-spacing: ${typography.letterSpacing.wider}; margin-bottom: ${spacing.sm};">
-          HISTORY OF PRESENT ILLNESS
-        </div>
-        <div style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.light}; line-height: ${typography.lineHeight.relaxed};">
-          <span class="hpi-content">${displayHPI}</span>
-          ${hpi.length > 150 ? `<span class="hpi-full" style="display: none;">${hpi}</span>` : ''}
-          ${hpi.length > 150 ? '<a href="#" class="read-more" style="color: ' + colors.primary.base + '; text-decoration: underline; margin-left: 5px; font-size: ' + typography.fontSize.xs + ';">Read more</a>' : ''}
-        </div>
-      </div>
-    `
   }
 
   private generateExpandedContent(patientInfo: PatientInfo): string {
     return `
       <div class="expanded-info" style="margin-bottom: ${spacing.md};">
+        <!-- DIFFERENTIAL DIAGNOSIS TRACKER -->
+        <div class="differential-section" style="
+          margin-bottom: ${spacing.md};
+          background: ${colors.background.panelLight};
+          border: ${borders.width.thin} solid ${colors.border.accent};
+          border-radius: ${borders.radius.lg};
+          padding: ${spacing.md};
+        ">
+          <div style="
+            color: ${colors.accent.base};
+            font-weight: ${typography.fontWeight.bold};
+            font-size: ${typography.fontSize.xs};
+            text-transform: uppercase;
+            letter-spacing: ${typography.letterSpacing.wider};
+            margin-bottom: ${spacing.sm};
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          ">
+            <span>🧬 DIFFERENTIAL DIAGNOSIS</span>
+            <span style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.base};">3 hypotheses</span>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: ${spacing.xs};">
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: ${spacing.xs} ${spacing.sm};
+              background: ${colors.background.gradient.primary};
+              border-radius: ${borders.radius.md};
+              border: ${borders.width.thin} solid ${colors.border.primary};
+            ">
+              <div style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.white};">
+                <span style="font-weight: ${typography.fontWeight.bold};">✓</span> Temporomandibular Joint Dysfunction
+              </div>
+              <div style="font-size: ${typography.fontSize.xs}; color: ${colors.primary.base}; font-weight: ${typography.fontWeight.bold};">
+                85% Likely
+              </div>
+            </div>
+            
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: ${spacing.xs} ${spacing.sm};
+              background: ${colors.background.gradient.accent};
+              border-radius: ${borders.radius.md};
+              border: ${borders.width.thin} solid ${colors.border.accent};
+            ">
+              <div style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.white};">
+                <span style="font-weight: ${typography.fontWeight.bold};">?</span> Sinusitis
+              </div>
+              <div style="font-size: ${typography.fontSize.xs}; color: ${colors.accent.base}; font-weight: ${typography.fontWeight.bold};">
+                45% Possible
+              </div>
+            </div>
+            
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: ${spacing.xs} ${spacing.sm};
+              background: ${colors.background.gradient.info};
+              border-radius: ${borders.radius.md};
+              border: ${borders.width.thin} solid ${colors.border.info};
+            ">
+              <div style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.white};">
+                <span style="font-weight: ${typography.fontWeight.bold};">✗</span> Migraine Headache
+              </div>
+              <div style="font-size: ${typography.fontSize.xs}; color: ${colors.info.base}; font-weight: ${typography.fontWeight.bold};">
+                25% Unlikely
+              </div>
+            </div>
+          </div>
+          
+          <div style="
+            margin-top: ${spacing.sm};
+            padding-top: ${spacing.sm};
+            border-top: ${borders.width.thin} solid ${colors.border.neutral};
+            font-size: ${typography.fontSize.xs};
+            color: ${colors.neutral.base};
+            text-align: center;
+          ">
+            <button style="
+              background: ${colors.background.primaryGlow};
+              color: ${colors.primary.base};
+              border: ${borders.width.thin} solid ${colors.border.primary};
+              padding: ${spacing.xs} ${spacing.sm};
+              border-radius: ${borders.radius.full};
+              cursor: pointer;
+              font-size: ${typography.fontSize.xs};
+              font-weight: ${typography.fontWeight.medium};
+            ">➕ Add New Hypothesis</button>
+          </div>
+        </div>
+        
         ${patientInfo.conditionName || patientInfo.conditionDescription || patientInfo.conditionLocation ? `
           <div class="condition-info" style="margin-bottom: ${spacing.md};">
             <div style="color: ${colors.neutral.base}; font-weight: ${typography.fontWeight.bold}; font-size: ${typography.fontSize.xs}; text-transform: uppercase; letter-spacing: ${typography.letterSpacing.wider}; margin-bottom: ${spacing.sm};">
@@ -113,7 +239,7 @@ export class PatientInfoSection {
             ${patientInfo.conditionName ? `
               <div style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.white}; margin-bottom: ${spacing.xs};">
                 <strong style="display: block; color: ${colors.neutral.base}; font-weight: ${typography.fontWeight.normal}; font-size: ${typography.fontSize.xs}; text-transform: uppercase; letter-spacing: ${typography.letterSpacing.wider};">Name</strong>
-                <span style="display: block; margin-top: ${spacing.xs}; color: ${colors.error.base};">${patientInfo.conditionName}</span>
+                <span style="display: block; margin-top: ${spacing.xs}; color: ${colors.error.base}; font-weight: ${typography.fontWeight.bold};">${patientInfo.conditionName}</span>
               </div>
             ` : ''}
             ${patientInfo.conditionDescription ? `

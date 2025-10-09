@@ -8,6 +8,10 @@
 
 import { AudioManager } from '../../components/AudioManager'
 import { DiagnosticUIManager } from './managers/DiagnosticUIManager'
+import { GamePhase, GamePhaseManager } from './game-phase-manager';
+import { GameManager } from './GameManager';
+import Canvas from '../../canvas';
+
 // Simple interfaces for now
 interface PatientCase {
   patientName?: string
@@ -19,6 +23,8 @@ export interface DiagnosticUIConfig {
   audioManager: AudioManager
   xRayEffect?: any
   scanFeedbackSystem?: any
+  gameManager?: GameManager;
+  canvas?: Canvas;
   onSolveClick?: () => void
   onHintClick?: () => void
   onConsultationClick?: () => void
@@ -30,12 +36,13 @@ export class DiagnosticUIFacade {
   private uiManager: DiagnosticUIManager
   private audioManager: AudioManager
   private isInitialized: boolean = false
+  private gamePhaseManager: GamePhaseManager;
 
   // CLEAN: External system references
   private xRayEffect: any = null
   private scanFeedbackSystem: any = null
 
-  constructor(config: DiagnosticUIConfig) {
+  constructor(config: DiagnosticUIConfig = {}) {
     this.audioManager = config.audioManager
     this.xRayEffect = config.xRayEffect
     this.scanFeedbackSystem = config.scanFeedbackSystem
@@ -48,6 +55,12 @@ export class DiagnosticUIFacade {
       onDiagnosisSubmit: config.onDiagnosisSubmit,
       onError: config.onError || this.showError.bind(this)
     })
+
+    this.gamePhaseManager = new GamePhaseManager(config.gameManager, this.uiManager, this.audioManager, config.canvas);
+  }
+
+  public getGamePhaseManager(): GamePhaseManager {
+    return this.gamePhaseManager;
   }
 
   // CLEAN: Public interface - only essential methods
@@ -142,5 +155,12 @@ export class DiagnosticUIFacade {
   // MODULAR: Allow access to underlying manager for advanced use cases
   getUIManager(): DiagnosticUIManager {
     return this.uiManager
+  }
+  
+  // MODULAR: Allow updating GameManager after initialization
+  public updateGameManager(gameManager: any) {
+    if (this.gamePhaseManager) {
+      this.gamePhaseManager.updateGameManager(gameManager);
+    }
   }
 }

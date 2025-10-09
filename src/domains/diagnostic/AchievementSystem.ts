@@ -36,6 +36,16 @@ export class AchievementSystem {
         const achievementDefinitions: Achievement[] = [
             // Discovery Achievements
             {
+                id: 'first_scan',
+                name: 'First Scan',
+                description: 'Perform your first scan',
+                icon: '🔬',
+                category: 'discovery',
+                points: 50,
+                requirements: { type: 'first_scan', target: 1 },
+                rarity: 'common'
+            },
+            {
                 id: 'first_discovery',
                 name: 'First Discovery',
                 description: 'Discover your first medical condition',
@@ -43,6 +53,16 @@ export class AchievementSystem {
                 category: 'discovery',
                 points: 100,
                 requirements: { type: 'conditions_discovered', target: 1 },
+                rarity: 'common'
+            },
+            {
+                id: 'tutorial_complete',
+                name: 'Tutorial Complete',
+                description: 'Complete the tutorial',
+                icon: '🎓',
+                category: 'learning',
+                points: 75,
+                requirements: { type: 'tutorial_complete', target: 1 },
                 rarity: 'common'
             },
             {
@@ -184,6 +204,12 @@ export class AchievementSystem {
 
             case 'streak':
                 return gameState.streak >= req.target
+
+            case 'first_scan':
+                return eventData?.type === 'first_scan'
+
+            case 'tutorial_complete':
+                return eventData?.type === 'tutorial_complete'
 
             case 'conditions_discovered':
                 return gameState.discoveredConditions.size >= req.target

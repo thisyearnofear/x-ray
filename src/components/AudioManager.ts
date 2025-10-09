@@ -30,7 +30,8 @@ export enum SoundType {
   // ENHANCEMENT: Add feedback sounds to existing enum
   TUTORIAL_START = 'tutorial_start',
   TUTORIAL_PROGRESS = 'tutorial_progress', 
-  TUTORIAL_SUCCESS = 'tutorial_success'
+  TUTORIAL_SUCCESS = 'tutorial_success',
+  PRE_DISCOVERY = 'pre_discovery'
 }
 
 export class AudioManager {
@@ -118,6 +119,7 @@ export class AudioManager {
     // AI-related audio feedback
     this.soundMap.set(SoundType.AI_PROCESSING, this.createAIProcessingSound());
     this.soundMap.set(SoundType.CEREBRAS_INFERENCE, this.createCerebrasInferenceSound());
+    this.soundMap.set(SoundType.PRE_DISCOVERY, this.createProceduralSound(0.5, 600, 1000, 'sine', 0.2));
   }
 
   private createProceduralSound(duration: number, startFreq: number, endFreq: number, waveform: OscillatorType, volume: number): THREE.Audio {

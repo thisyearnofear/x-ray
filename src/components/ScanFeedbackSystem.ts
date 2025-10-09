@@ -11,6 +11,7 @@
 
 import * as THREE from 'three'
 import { colors, effects } from '../styles/design-tokens'
+import { AudioManager, SoundType } from './AudioManager';
 
 interface ScanRegion {
     id: string
@@ -18,6 +19,7 @@ interface ScanRegion {
     lastUpdate: number
     mesh?: THREE.Mesh
     glowMaterial?: THREE.ShaderMaterial
+    textSprite?: THREE.Sprite;
     // ENHANCEMENT: Add marker properties to existing interface
     severity?: 'low' | 'medium' | 'high'
     discovered?: boolean
@@ -29,14 +31,19 @@ export class ScanFeedbackSystem {
     private scanRegions: Map<string, ScanRegion> = new Map()
     private heatMapTexture: THREE.DataTexture | null = null
     private particleSystems: Map<string, THREE.Points> = new Map()
+    private audioManager: AudioManager | null = null;
+    private scanBeam: THREE.Mesh | null = null;
+    private mousePosition: THREE.Vector2 = new THREE.Vector2();
 
     // Performance optimization
     private updateInterval: number = 50 // Update every 50ms (20fps for effects)
     private lastUpdate: number = 0
 
-    constructor(scene: THREE.Scene) {
+    constructor(scene: THREE.Scene, audioManager?: AudioManager) {
         this.scene = scene
-        this.initializeHeatMap()
+        this.audioManager = audioManager || null;
+        this.initializeHeatMap();
+        this.createScanBeam();
     }
 
     private initializeHeatMap(): void {
@@ -51,6 +58,12 @@ export class ScanFeedbackSystem {
             THREE.RGBAFormat
         )
         this.heatMapTexture.needsUpdate = true
+    }
+
+    private vibrate(duration: number): void {
+        if (typeof window.navigator.vibrate === 'function') {
+            window.navigator.vibrate(duration);
+        }
     }
 
     // Main update method - called from animation loop
@@ -68,6 +81,23 @@ export class ScanFeedbackSystem {
 
         // Update particle systems
         this.updateParticles(deltaTime)
+
+        if (this.scanBeam) {
+            this.scanBeam.position.x = this.mousePosition.x * 10;
+            this.scanBeam.position.y = this.mousePosition.y * 5;
+        }
+    }
+
+    public updateMousePosition(position: THREE.Vector2): void {
+        this.mousePosition.copy(position);
+    }
+
+    private createScanBeam(): void {
+        const geometry = new THREE.CylinderGeometry(0.1, 0.1, 20, 32);
+        const material = new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.2 });
+        this.scanBeam = new THREE.Mesh(geometry, material);
+        this.scanBeam.rotation.x = Math.PI / 2;
+        this.scene.add(this.scanBeam);
     }
 
     // Start scanning a specific anatomical region
@@ -82,6 +112,48 @@ export class ScanFeedbackSystem {
             this.scanRegions.set(regionId, region)
             this.createGlowEffect(region, position)
             this.createParticleSystem(regionId, position)
+            this.createTextLabel(region, position);
+        }
+    }
+
+    private createTextLabel(region: ScanRegion, position: THREE.Vector3): void {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) return;
+
+        const fontSize = 48;
+        context.font = `${fontSize}px Arial`;
+        context.fillStyle = 'white';
+        context.fillText('0%', 0, fontSize);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(material);
+        sprite.position.copy(position).add(new THREE.Vector3(0, 0.5, 0));
+        sprite.scale.set(0.5, 0.25, 1);
+
+        this.scene.add(sprite);
+        region.textSprite = sprite;
+    }
+
+    private updateTextLabel(region: ScanRegion): void {
+        if (!region.textSprite) return;
+
+        const canvas = (region.textSprite.material.map as THREE.CanvasTexture).image as HTMLCanvasElement;
+        const context = canvas.getContext('2d');
+        if (!context) return;
+
+        const percentage = Math.round(region.progress * 100);
+        const text = `${percentage}%`;
+
+        const fontSize = 48;
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.font = `${fontSize}px Arial`;
+        context.fillStyle = 'white';
+        context.fillText(text, 0, fontSize);
+
+        if (region.textSprite.material.map) {
+            region.textSprite.material.map.needsUpdate = true;
         }
     }
 
@@ -123,6 +195,16 @@ export class ScanFeedbackSystem {
                 // Update visual intensity based on progress
                 this.updateGlowIntensity(region)
                 this.updateParticleIntensity(regionId, progress)
+                this.updateTextLabel(region);
+
+                if (this.audioManager) {
+                    if (progress > 0.9) {
+                        this.audioManager.playSound(SoundType.PRE_DISCOVERY);
+                    }
+                    this.audioManager.playProgressiveBeep(progress);
+                }
+
+                this.vibrate(progress * 50);
 
                 // Trigger discovery effect at 100%
                 if (progress >= 1.0) {
@@ -252,13 +334,14 @@ export class ScanFeedbackSystem {
     }
 
     private updateRegionVisuals(region: ScanRegion, deltaTime: number): void {
-        if (!region.mesh || !region.glowMaterial) return
+        if (!region.mesh || !region.glowMaterial) return;
 
         // Update shader time uniform for animation
-        region.glowMaterial.uniforms.time.value += deltaTime
+        region.glowMaterial.uniforms.time.value += deltaTime;
 
         // Pulse scale based on progress
-        const scale = 1.0 + 0.1 * Math.sin(Date.now() * 0.005)
+        const pulseSpeed = region.progress > 0.9 ? 0.01 : 0.005;
+        const scale = 1.0 + 0.1 * Math.sin(Date.now() * pulseSpeed)
         region.mesh.scale.setScalar(scale)
 
         // Rotate glow mesh for dynamic effect

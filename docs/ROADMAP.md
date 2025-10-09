@@ -862,7 +862,23 @@ Example: Scanning
 
 ---
 
-## 🔥 NEXT IMMEDIATE ACTIONS
+### ✅ COMPLETED: Phase 1.6 - Medical Mystery Framework (October 9, 2025)
+
+**Deliverables**:
+- ✅ **Defined the Case Structure**: Created `MedicalCase` type.
+- ✅ **Created a Medical Data Service**: Created `MedicalDataService` with a sample case.
+- ✅ **Created a Medical Service Facade**: Created `MedicalServiceFacade` to provide a single point of access to medical services.
+- ✅ **Integrated with GameManager**: Updated `GameManager` to load and manage case data.
+- ✅ **Updated the UI**: Updated `DiagnosticUIManager` to display case information from the `GameManager`.
+- ✅ **Decoupled UI from static data**: Removed hardcoded patient data from `DiagnosticUIManager` and made it fully data-driven.
+
+**Impact**:
+- The application now has a solid foundation for building out the rest of the medical detective experience.
+- The next phases will involve adding more narrative elements, implementing the progressive revelation system, and building out the doctor persona and multi-modal investigation toolkit.
+
+---
+
+### 🔥 NEXT IMMEDIATE ACTIONS
 
 ### Phase 1.5: Improved Panel Layout 🎯 NEXT UP
 **Priority**: HIGH - Completes Phase 1 foundation

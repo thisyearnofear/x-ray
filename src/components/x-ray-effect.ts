@@ -35,6 +35,7 @@ interface Props {
   audioManager: AudioManagerType
   scanFeedbackSystem?: any
   mobileCamera?: any
+  gameManager?: any
 }
 
 export default class XRayEffect {
@@ -76,6 +77,9 @@ export default class XRayEffect {
   // Reference to mobile camera to prevent interactions when camera is active
   mobileCamera: any;
 
+  // Reference to game manager for achievements
+  gameManager: any;
+
   // INTEGRATION: Progressive discovery and model switching
   currentModel: 'head' | 'torso' | 'fullbody' = 'head'
   scanProgress: Map<string, number> = new Map() // Track scanning progress per condition
@@ -94,7 +98,7 @@ export default class XRayEffect {
   lastHintTime: number = 0; // Track when last hint was shown
   lastHintCheckTime: number = 0; // Track when last hint check was performed
   
-  constructor({ scene, composer, renderer, camera, audioManager, scanFeedbackSystem, mobileCamera }: Props) {
+  constructor({ scene, composer, renderer, camera, audioManager, scanFeedbackSystem, mobileCamera, gameManager }: Props) {
     this.scene = scene
     this.composer = composer
     this.renderer = renderer
@@ -120,12 +124,15 @@ export default class XRayEffect {
       audioManager: this.audioManager,
       xRayEffect: this,
       scanFeedbackSystem: this.scanFeedbackSystem,
+      gameManager: gameManager,
       onSolveClick: () => console.log('Solve clicked'),
       onHintClick: () => console.log('Hint clicked'),
       onConsultationClick: () => console.log('Consultation clicked'),
       onDiagnosisSubmit: (conditions) => console.log('Diagnosis submitted:', conditions),
       onError: (message) => console.error('Error:', message)
     })
+    
+    this.gameManager = gameManager;
 
     // PREVENT BLOAT: Single event listener with cleanup
     this.keyHandler = (event: KeyboardEvent) => this.onPressKey(event)
@@ -207,6 +214,27 @@ export default class XRayEffect {
           this.audioManager?.showFeedback(`Almost there! Keep scanning ${condition.name}!`, 'success');
         } else if (condition && progressRatio > 0.5 && progressRatio < 0.55) { // Halfway
           this.audioManager?.showFeedback(`Halfway to discovering ${condition.name}. Keep going!`, 'info');
+        }
+
+        // Check if this is the first scan (any scanning activity)
+        if (currentProgress === 0 && newProgress > 0 && this.gameManager) {
+          // Check for first scan achievement
+          const gameState = this.gameManager.getGameState();
+          if (gameState && gameState.unlockedTechniques && !gameState.unlockedTechniques.has('first_scan_tracked')) {
+            // This is the first scan - trigger the achievement
+            this.gameManager.achievementSystem?.checkAchievements({
+              ...gameState,
+              firstScanTracked: true
+            }, {
+              type: 'first_scan',
+              conditionId
+            });
+            
+            // Update game state to mark first scan as tracked
+            this.gameManager.updateState({
+              unlockedTechniques: new Set([...gameState.unlockedTechniques, 'first_scan_tracked'])
+            });
+          }
         }
 
         // Check if condition is fully discovered
@@ -618,6 +646,22 @@ export default class XRayEffect {
 
     // Trigger diagnostic UI
     this.diagnosticUI.discoverCondition(conditionId)
+    
+    // Check for achievements related to this discovery
+    if (this.gameManager) {
+      const gameState = this.gameManager.getGameState();
+      // Check for achievements based on current game state
+      this.gameManager.achievementSystem?.checkAchievements({
+        ...gameState,
+        discoveredConditions: this.discoveredConditions
+      }, {
+        type: 'discovery',
+        conditionId
+      });
+      
+      // Record condition practice for spaced repetition
+      this.gameManager.recordConditionPractice(conditionId, true);
+    }
   }
 
   // INTEGRATION: Switch between anatomical models with reality shift effects

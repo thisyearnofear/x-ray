@@ -8,6 +8,7 @@
 import { TutorialStepService, type TutorialStep } from './services/TutorialStepService'
 import { TutorialOverlay } from './ui/TutorialOverlay'
 import { AudioManager } from '../../components/AudioManager'
+import { TooltipManager } from '../../components/ui/TooltipManager';
 
 export interface TutorialConfig {
   onStepComplete?: (stepId: string) => void
@@ -24,10 +25,12 @@ export class TutorialFacade {
   private overlay: TutorialOverlay | null = null
   private config: TutorialConfig
   private isActive: boolean = false
+  private tooltipManager: TooltipManager;
 
   constructor(config: TutorialConfig = {}) {
     this.config = config
     this.stepService = new TutorialStepService()
+    this.tooltipManager = new TooltipManager();
     
     this.overlay = new TutorialOverlay({
       onNext: () => this.nextStep(),
@@ -115,6 +118,21 @@ export class TutorialFacade {
     const progress = this.stepService.getProgress()
     this.overlay.updateStep(step, progress)
     this.overlay.show()
+
+    if (step.targetElement && step.tooltipMessage) {
+        const targetElement = document.querySelector(step.targetElement) as HTMLElement;
+        if (targetElement) {
+            this.tooltipManager.createTooltip(step.id, {
+                targetElement,
+                message: step.tooltipMessage
+            });
+            this.tooltipManager.showTooltip(step.id);
+        } else {
+            this.tooltipManager.destroyTooltip(step.id);
+        }
+    } else {
+        this.tooltipManager.destroyTooltip(this.stepService.getPreviousStep()?.id || '');
+    }
 
     // Trigger action requirement
     this.config.onActionRequired?.(step.action, step.data)

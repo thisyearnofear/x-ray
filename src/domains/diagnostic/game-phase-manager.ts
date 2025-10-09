@@ -1,5 +1,9 @@
 // CLEAN: Phase management integrated with GameManager (no duplicate state)
-import { GameManager } from './GameManager'
+import { GameManager } from './GameManager';
+import { DiagnosticUIManager } from './managers/DiagnosticUIManager';
+import { AudioManager, SoundType } from '../../components/AudioManager';
+import Canvas from '../../canvas';
+import * as THREE from 'three';
 
 export enum GamePhase {
   WELCOME = 'welcome',
@@ -17,10 +21,16 @@ export class GamePhaseManager {
   private currentPhase: GamePhase = GamePhase.WELCOME
   private listeners: Map<GamePhase, (() => void)[]> = new Map()
   private gameManager: GameManager
+  private diagnosticUIManager: DiagnosticUIManager | null = null;
+  private audioManager: AudioManager | null = null;
+  private canvas: Canvas | null = null;
 
-  constructor(gameManager?: GameManager) {
+  constructor(gameManager?: GameManager, diagnosticUIManager?: DiagnosticUIManager, audioManager?: AudioManager, canvas?: Canvas) {
     // ENHANCEMENT FIRST: Use existing GameManager instead of creating new state
     this.gameManager = gameManager || new GameManager()
+    this.diagnosticUIManager = diagnosticUIManager || null;
+    this.audioManager = audioManager || null;
+    this.canvas = canvas || null;
 
     // Initialize listeners for all phases
     Object.values(GamePhase).forEach(phase => {
@@ -29,7 +39,7 @@ export class GamePhaseManager {
   }
 
   // CLEAN: Simplified phase transitions using GameManager state
-  transitionTo(newPhase: GamePhase): boolean {
+  async transitionTo(newPhase: GamePhase): Promise<boolean> {
     // Allow same-phase transitions for welcome screen
     if (this.currentPhase === newPhase && newPhase === GamePhase.WELCOME) {
       console.log(`Same-phase transition allowed for WELCOME: ${this.currentPhase} -> ${newPhase}`)
@@ -46,6 +56,49 @@ export class GamePhaseManager {
 
     const previousPhase = this.currentPhase
     console.log(`Phase transition: ${previousPhase} -> ${newPhase}`)
+
+    if (this.diagnosticUIManager) {
+        const messageMap: Record<GamePhase, string> = {
+            [GamePhase.WELCOME]: "Welcome to X-RAI",
+            [GamePhase.TUTORIAL]: "Entering Tutorial Mode",
+            [GamePhase.EXPLORATION]: "Exploration Mode",
+            [GamePhase.READY]: "Get Ready!",
+            [GamePhase.ACTIVE]: "Starting Diagnosis",
+            [GamePhase.PAUSED]: "Game Paused",
+            [GamePhase.COMPLETE]: "Diagnosis Complete"
+        };
+        this.diagnosticUIManager.showTransitionOverlay(messageMap[newPhase]);
+    }
+
+    if (this.canvas) {
+        const cameraPositions: Record<GamePhase, {position: THREE.Vector3, target: THREE.Vector3}> = {
+            [GamePhase.WELCOME]: { position: new THREE.Vector3(0, 0, 15), target: new THREE.Vector3(0, 0, 0) },
+            [GamePhase.TUTORIAL]: { position: new THREE.Vector3(0, 0, 10), target: new THREE.Vector3(0, 0, 0) },
+            [GamePhase.EXPLORATION]: { position: new THREE.Vector3(5, 5, 5), target: new THREE.Vector3(0, 0, 0) },
+            [GamePhase.READY]: { position: new THREE.Vector3(0, 0, 7), target: new THREE.Vector3(0, 0, 0) },
+            [GamePhase.ACTIVE]: { position: new THREE.Vector3(0, 0, 7), target: new THREE.Vector3(0, 0, 0) },
+            [GamePhase.PAUSED]: { position: new THREE.Vector3(0, 0, 7), target: new THREE.Vector3(0, 0, 0) },
+            [GamePhase.COMPLETE]: { position: new THREE.Vector3(0, 0, 12), target: new THREE.Vector3(0, 0, 0) }
+        };
+        const { position, target } = cameraPositions[newPhase];
+        this.canvas.animateCameraTo(position, target);
+    }
+
+    if (this.audioManager) {
+        const soundMap: Record<GamePhase, SoundType> = {
+            [GamePhase.WELCOME]: SoundType.TUTORIAL_START,
+            [GamePhase.TUTORIAL]: SoundType.TUTORIAL_PROGRESS,
+            [GamePhase.EXPLORATION]: SoundType.TUTORIAL_PROGRESS,
+            [GamePhase.READY]: SoundType.TUTORIAL_SUCCESS,
+            [GamePhase.ACTIVE]: SoundType.MEDICAL_BEEP,
+            [GamePhase.PAUSED]: SoundType.CLICK,
+            [GamePhase.COMPLETE]: SoundType.DISCOVERY
+        };
+        this.audioManager.playSound(soundMap[newPhase]);
+    }
+
+    await this.animatePhaseTransition(newPhase, previousPhase);
+
     this.currentPhase = newPhase
 
     // Update phase in GameManager if available
@@ -71,6 +124,27 @@ export class GamePhaseManager {
     phaseListeners.forEach(listener => listener())
 
     return true
+  }
+
+  private async animatePhaseTransition(newPhase: GamePhase, oldPhase: GamePhase): Promise<void> {
+    const uiElement = this.diagnosticUIManager?.getUIElement();
+    if (!uiElement) return;
+
+    return new Promise(resolve => {
+        uiElement.classList.add('fade-out');
+
+        setTimeout(() => {
+            // Update UI content for the new phase here
+
+            uiElement.classList.remove('fade-out');
+            uiElement.classList.add('fade-in');
+
+            setTimeout(() => {
+                uiElement.classList.remove('fade-in');
+                resolve();
+            }, 500);
+        }, 500);
+    });
   }
 
   // CLEAN: Clear validation rules for phase transitions
@@ -118,6 +192,11 @@ export class GamePhaseManager {
 
   // AGGRESSIVE CONSOLIDATION: Removed duplicate timer and state management
   // These are now handled by GameManager to follow DRY principle
+
+  // MODULAR: Allow updating GameManager after initialization
+  public updateGameManager(gameManager: GameManager) {
+    this.gameManager = gameManager;
+  }
 
   // CLEAN: Explicit cleanup - timer management delegated to GameManager
   destroy(): void {
