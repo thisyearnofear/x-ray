@@ -1,8 +1,7 @@
 /**
- * Audio Domain Index
- * ORGANIZED: Central export point for audio domain
- * CLEAN: Simple domain with focused responsibility
+ * Audio Enhancement Domain
+ * Exports for enhanced audio management and contextual feedback
  */
 
-// MODULAR: Audio management system
-export { AudioManagementSystem } from './audio-management-system'
+export { EnhancedAudioManager } from './EnhancedAudioManager'
+export type { AudioCue, PhaseAudioConfig } from './EnhancedAudioManager'
