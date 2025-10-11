@@ -12,7 +12,7 @@ export { MedicalServiceFacade } from './MedicalServiceFacade'
 export { AIAnalysisService } from './services/AIAnalysisService'
 export type { AnalysisRequest, AnalysisResponse } from './services/AIAnalysisService'
 export { MedicalDataService } from './services/MedicalDataService'
-export type { PatientCase } from './services/MedicalDataService'
+export type { PatientCase } from '../diagnostic/MedicalWorkflowManager'
 
 // CLEAN: Medical Data
 export * from './medical-data'
