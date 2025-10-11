@@ -6,7 +6,7 @@
  * GUARANTEES: Information unfolds logically and educationally
  */
 
-import { PatientCase } from './MedicalDataService'
+import { PatientCase } from '../types'
 
 export interface RevelationState {
     // Core information (always available)

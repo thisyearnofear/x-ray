@@ -9,25 +9,10 @@ const sampleCase: MedicalCase = {
   mission: 'Your mission is to establish a definitive diagnosis within the next 15 minutes and recommend an initial management plan.',
   stakes: 'The patient\'s quality of life is significantly impacted. A misdiagnosis could lead to unnecessary procedures or a worsening of the underlying condition.',
   patientInfo: {
-    name: 'Sarah Johnson',
+    patientName: 'Sarah Johnson',
     age: 34,
     gender: 'Female',
-    bloodType: 'A+',
-    allergies: 'Penicillin',
-    medications: 'Ibuprofen as needed for pain',
-    medicalHistory: 'History of migraines, currently well-controlled.',
-    conditionName: 'Temporomandibular Joint Dysfunction',
-    conditionDescription: 'Pain and compromised movement of the jaw joint and the surrounding muscles.',
-    conditionLocation: 'Temporomandibular Joint',
-    hpi: '34-year-old female with a 3-week history of chronic headaches and jaw pain, with associated clicking of the jaw. Symptoms are worse in the morning and exacerbated by stress. She reports taking ibuprofen with partial relief. No history of recent trauma.',
-    vitalSigns: {
-      bp: '120/80',
-      hr: '72',
-      rr: '16',
-      temp: '98.6',
-      o2sat: '99%',
-      pain: '6/10'
-    }
+    chiefComplaint: 'Chronic headaches with jaw pain'
   }
 };
 

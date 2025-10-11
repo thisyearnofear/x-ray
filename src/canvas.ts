@@ -458,7 +458,7 @@ export default class Canvas {
         // PERFORMANT: Immersive feedback with staggered notifications
         this.providePatientIntroductionFeedback(patientCase)
 
-        console.log(`🏥 Case Loaded: ${patientCase.patientInfo.name} (${patientCase.patientInfo.age}yo ${patientCase.patientInfo.gender})`)
+        console.log(`🏥 Case Loaded: ${patientCase.patientInfo.patientName} (${patientCase.patientInfo.age}yo ${patientCase.patientInfo.gender})`)
       }
     } catch (error) {
       console.error('Case loading failed:', error)
@@ -470,7 +470,7 @@ export default class Canvas {
   private updatePatientDisplay(): void {
     const gameState = this.gameManager?.getGameState();
     if (gameState?.patientCase?.patientInfo) {
-      this.diagnosticUI?.updatePatientInfo(gameState.patientCase.patientInfo);
+      this.diagnosticUI?.updatePatientInfo(gameState.patientCase);
     }
   }
 

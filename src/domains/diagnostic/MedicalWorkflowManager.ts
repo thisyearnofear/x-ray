@@ -1,42 +1,8 @@
+import { PatientCase } from '../medical/types'
+
 // MODULAR: Realistic medical diagnostic workflow with AI integration
-export interface PatientCase {
-    id: string
-    patientName: string
-    age: number
-    gender: string
-    chiefComplaint: string
-    historyOfPresentIllness: string
-    pastMedicalHistory: string[]
-    medications: string[]
-    allergies: string[]
-    vitalSigns: VitalSigns
-    symptoms: string[]
-    physicalExamFindings: string[]
-    diagnosticHypothesis: string[]
-    differentialDiagnosis: DifferentialDiagnosis[]
-    requiredModel: string
-    conditions: string[]
-    difficulty: 'easy' | 'medium' | 'hard'
-    aiGenerated: boolean
-    estimatedStudyTime: number
-}
 
-export interface VitalSigns {
-    bloodPressure: string
-    heartRate: number
-    respiratoryRate: number
-    temperature: number
-    oxygenSaturation: number
-    painLevel: number
-}
-
-export interface DifferentialDiagnosis {
-    condition: string
-    likelihood: 'high' | 'medium' | 'low'
-    reasoning: string
-    supportingFindings: string[]
-    contradictoryFindings: string[]
-}
+import { VitalSigns, DifferentialDiagnosis } from '../medical/types'
 
 export interface DiagnosticStep {
     id: string
@@ -267,8 +233,8 @@ export class MedicalWorkflowManager {
         if (!this.currentCase) return
 
         try {
-            const symptoms = this.currentCase.symptoms.join(', ')
-            const findings = this.currentCase.physicalExamFindings.join(', ')
+            const symptoms = this.currentCase?.symptoms?.join(', ') || ''
+            const findings = this.currentCase?.physicalExamFindings?.join(', ') || ''
 
             const response = await fetch('/api/medical-analysis', {
                 method: 'POST',
@@ -340,7 +306,7 @@ export class MedicalWorkflowManager {
                 type: 'physical_exam',
                 completed: false,
                 required: true,
-                aiGuidance: `Vital signs: BP ${this.currentCase.vitalSigns.bloodPressure}, HR ${this.currentCase.vitalSigns.heartRate}, RR ${this.currentCase.vitalSigns.respiratoryRate}`
+                aiGuidance: `Vital signs: BP ${this.currentCase?.vitalSigns?.bloodPressure || 'N/A'}, HR ${this.currentCase?.vitalSigns?.heartRate || 'N/A'}, RR ${this.currentCase?.vitalSigns?.respiratoryRate || 'N/A'}`
             },
             {
                 id: 'physical_exam',
@@ -349,7 +315,7 @@ export class MedicalWorkflowManager {
                 type: 'physical_exam',
                 completed: false,
                 required: true,
-                aiGuidance: `Key findings: ${this.currentCase.physicalExamFindings.join(', ')}`
+                aiGuidance: `Key findings: ${this.currentCase?.physicalExamFindings?.join(', ') || 'N/A'}`
             },
             {
                 id: 'imaging_study',
@@ -367,7 +333,7 @@ export class MedicalWorkflowManager {
                 type: 'diagnosis',
                 completed: false,
                 required: true,
-                aiGuidance: `Consider: ${this.currentCase.differentialDiagnosis.map(d => d.condition).join(', ')}`
+                aiGuidance: `Consider: ${this.currentCase?.differentialDiagnosis?.map(d => d.condition).join(', ') || 'N/A'}`
             },
             {
                 id: 'final_diagnosis',

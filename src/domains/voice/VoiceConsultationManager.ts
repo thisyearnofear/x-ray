@@ -14,11 +14,13 @@ export interface ConsultationContext {
   currentScore: number
 }
 
+import { AIInsight } from '../diagnostic/ui/AIPanel'
+
 export interface ConsultationSession {
   id: string
   startTime: number
   context: ConsultationContext
-  insights: string[]
+  insights: AIInsight[]
   isActive: boolean
 }
 
@@ -142,7 +144,14 @@ export class VoiceConsultationManager {
     // If no active consultation session exists, create a default one
     if (!this.currentSession) {
       console.log('🎙️ No active consultation session, creating default session')
-      this.startConsultation({ patientId: 'default', caseId: 'default' })
+      this.startConsultation({ 
+        patientCase: null,
+        discoveredConditions: new Set(),
+        scanProgress: new Map(),
+        timeRemaining: 0,
+        gamePhase: 'scanning',
+        currentScore: 0
+      })
     }
 
     // Add the insight to the current session
@@ -151,7 +160,8 @@ export class VoiceConsultationManager {
         id: `voice_insight_${Date.now()}`,
         timestamp: Date.now(),
         content: transcript,
-        type: 'voice'
+        type: 'voice',
+        confidence: 0.9
       })
     }
 
@@ -366,7 +376,14 @@ export class VoiceConsultationManager {
 
       // Generate AI insights based on current context
       const insights = await this.generateInsights(context)
-      this.currentSession.insights = insights
+      // Convert string insights to AIInsight objects
+      this.currentSession.insights = insights.map((insight, index) => ({
+        id: `insight_${Date.now()}_${index}`,
+        timestamp: Date.now(),
+        content: insight,
+        type: this.getInsightType(insight),
+        confidence: 0.8
+      }))
       
       // Update the AI panel with insights
       if (this.aiPanel) {
