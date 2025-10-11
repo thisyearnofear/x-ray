@@ -26,10 +26,10 @@ export enum SoundType {
   // AI-related audio feedback
   AI_PROCESSING = 'ai_processing',
   CEREBRAS_INFERENCE = 'cerebras_inference',
-  
+
   // ENHANCEMENT: Add feedback sounds to existing enum
   TUTORIAL_START = 'tutorial_start',
-  TUTORIAL_PROGRESS = 'tutorial_progress', 
+  TUTORIAL_PROGRESS = 'tutorial_progress',
   TUTORIAL_SUCCESS = 'tutorial_success',
   PRE_DISCOVERY = 'pre_discovery'
 }
@@ -47,10 +47,10 @@ export class AudioManager {
   constructor(camera: THREE.Camera) {
     this.audioListener = new THREE.AudioListener();
     camera.add(this.audioListener);
-    
+
     this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
     this.audioLoader = new THREE.AudioLoader();
-    
+
     this.createProceduralSounds();
     this.loadSounds();
   }
@@ -90,7 +90,7 @@ export class AudioManager {
           this.soundMap.set(type, sound);
           resolve();
         },
-        undefined, 
+        undefined,
         (error) => {
           console.error(`AudioManager: Failed to load sound ${type} from ${path}`, error);
           reject(error);
@@ -161,13 +161,13 @@ export class AudioManager {
 
     // Don't re-play looping sounds that are already playing
     if (loop && sound.isPlaying) {
-        return;
+      return;
     }
 
     if (sound.isPlaying) {
       sound.stop();
     }
-    
+
     sound.setLoop(loop);
     sound.play();
   }
@@ -182,10 +182,10 @@ export class AudioManager {
   public playBackgroundMusic(type: SoundType): void {
     const sound = this.soundMap.get(type);
     if (sound) {
-        this.backgroundAudio = sound;
-        if (this.backgroundAudio && !this.backgroundAudio.isPlaying) {
-            this.backgroundAudio.play();
-        }
+      this.backgroundAudio = sound;
+      if (this.backgroundAudio && !this.backgroundAudio.isPlaying) {
+        this.backgroundAudio.play();
+      }
     }
   }
 
@@ -207,14 +207,14 @@ export class AudioManager {
   public dispose(): void {
     // Stop ambience first
     this.stopHospitalAmbience();
-    
+
     this.soundMap.forEach(sound => {
       if (sound.isPlaying) {
         sound.stop();
       }
     });
     this.soundMap.clear();
-    
+
     if (this.context.state !== 'closed') {
       this.context.close();
     }
@@ -322,12 +322,24 @@ export class AudioManager {
     `
     toast.textContent = message
     document.body.appendChild(toast)
-    
+
     requestAnimationFrame(() => toast.style.transform = 'translateX(0)')
     setTimeout(() => {
       toast.style.transform = 'translateX(100%)'
       setTimeout(() => toast.remove(), 300)
     }, 3000)
+  }
+
+  // ENHANCEMENT: Add progressive beep method for scan feedback
+  public playProgressiveBeep(progress: number): void {
+    // Create a procedural beep that changes frequency based on progress
+    const startFreq = 400 + (progress * 400); // 400Hz to 800Hz
+    const endFreq = startFreq + 100;
+    const duration = 0.1;
+    const volume = 0.1 + (progress * 0.1); // 0.1 to 0.2 volume
+
+    const audio = this.createProceduralSound(duration, startFreq, endFreq, 'sine', volume);
+    audio.play();
   }
 
   // ENHANCEMENT FIRST: Dynamic audio generation for contextual medical cases
@@ -342,7 +354,7 @@ export class AudioManager {
       // Generate contextual hospital ambience based on case
       const ambiencePrompt = this.buildAmbiencePrompt(context);
       const ambienceAudio = await this.generateElevenLabsAudio(ambiencePrompt, 30000); // 30 seconds
-      
+
       if (ambienceAudio) {
         // Replace or supplement existing ambience
         const contextualSound = new THREE.Audio(this.audioListener);
@@ -357,7 +369,7 @@ export class AudioManager {
       if (context.caseType.toLowerCase().includes('cardiac') || context.caseType.toLowerCase().includes('heart')) {
         const heartbeatPrompt = this.buildHeartbeatPrompt(context);
         const heartbeatAudio = await this.generateElevenLabsAudio(heartbeatPrompt, 10000); // 10 seconds loop
-        
+
         if (heartbeatAudio) {
           const contextualHeartbeat = new THREE.Audio(this.audioListener);
           contextualHeartbeat.setBuffer(heartbeatAudio);
@@ -375,10 +387,10 @@ export class AudioManager {
 
   private buildAmbiencePrompt(context: any): string {
     let prompt = "Create subtle hospital ambience audio with ";
-    
+
     // Base hospital sounds
     prompt += "distant medical equipment beeps, soft ventilator breathing, ";
-    
+
     // Adjust based on severity
     switch (context.severity) {
       case 'high':
@@ -391,21 +403,21 @@ export class AudioManager {
         prompt += "calm, slow beeping, peaceful atmosphere, ";
         break;
     }
-    
+
     // Adjust based on anatomical region
     if (context.anatomicalRegion.includes('head') || context.anatomicalRegion.includes('brain')) {
       prompt += "neurological monitoring sounds, ";
     } else if (context.anatomicalRegion.includes('chest') || context.anatomicalRegion.includes('heart')) {
       prompt += "cardiac monitoring emphasis, ";
     }
-    
+
     prompt += "very subtle, non-intrusive, medical professional environment. 30 seconds, seamless loop.";
     return prompt;
   }
 
   private buildHeartbeatPrompt(context: any): string {
     let prompt = "Create realistic heartbeat monitor audio with ";
-    
+
     // Adjust based on patient age
     if (context.patientAge) {
       if (context.patientAge < 18) {
@@ -414,7 +426,7 @@ export class AudioManager {
         prompt += "slightly slower, more deliberate heart rhythm, ";
       }
     }
-    
+
     // Adjust based on severity
     switch (context.severity) {
       case 'high':
@@ -427,7 +439,7 @@ export class AudioManager {
         prompt += "normal, healthy rhythm, ";
         break;
     }
-    
+
     prompt += "clear ECG beep sounds, medical monitor quality. 10 seconds, perfect loop.";
     return prompt;
   }
@@ -435,7 +447,7 @@ export class AudioManager {
   private async generateElevenLabsAudio(prompt: string, durationMs: number): Promise<AudioBuffer | null> {
     try {
       console.log(`🎵 Attempting to generate audio: "${prompt.substring(0, 50)}..."`);
-      
+
       const response = await fetch('/api/generate-audio', {
         method: 'POST',
         headers: {
@@ -457,7 +469,7 @@ export class AudioManager {
       const audioBlob = await response.blob();
       const arrayBuffer = await audioBlob.arrayBuffer();
       const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
-      
+
       console.log(`✅ Successfully generated audio: ${audioBuffer.duration}s`);
       return audioBuffer;
     } catch (error) {
