@@ -42,7 +42,7 @@ export class DiagnosticUIFacade {
   private xRayEffect: any = null
   private scanFeedbackSystem: any = null
 
-  constructor(config: DiagnosticUIConfig = {}) {
+  constructor(config: DiagnosticUIConfig) {
     this.audioManager = config.audioManager
     this.xRayEffect = config.xRayEffect
     this.scanFeedbackSystem = config.scanFeedbackSystem
@@ -66,7 +66,7 @@ export class DiagnosticUIFacade {
   // CLEAN: Public interface - only essential methods
   initialize(): void {
     if (this.isInitialized) return
-    
+
     this.uiManager.initialize()
     this.isInitialized = true
   }
@@ -156,7 +156,7 @@ export class DiagnosticUIFacade {
   getUIManager(): DiagnosticUIManager {
     return this.uiManager
   }
-  
+
   // MODULAR: Allow updating GameManager after initialization
   public updateGameManager(gameManager: any) {
     if (this.gamePhaseManager) {
