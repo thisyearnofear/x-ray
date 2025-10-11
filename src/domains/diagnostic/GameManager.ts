@@ -46,7 +46,7 @@ export class GameManager {
     constructor(config?: GameManagerConfig) {
         this.medicalService = new MedicalServiceFacade();
         this.achievementSystem = new AchievementSystem();
-        this.achievementSystem.on('achievementUnlocked', (data) => {
+        this.achievementSystem.on('achievementUnlocked', (data: any) => {
             // Show achievement notification when an achievement is unlocked
             this.emit('achievementUnlocked', data);
             // If we have a UI manager, show the notification
@@ -56,10 +56,10 @@ export class GameManager {
         });
         this.gameState = this.initializeGameState()
         this.startDynamicElementsSystem()
-        
+
         // Initialize spaced repetition system with previous data
         this.loadPreviousSessionData();
-        
+
         // Store UI manager reference if provided
         if (config?.diagnosticUIManager) {
             this.diagnosticUIManager = config.diagnosticUIManager;
@@ -125,20 +125,20 @@ export class GameManager {
     public startTimer(): void {
         const timerInterval = setInterval(() => {
             this.gameState.timeRemaining -= 1
-            
+
             // Emit timer events for UI updates
             this.emit('timer_update', {
                 timeRemaining: this.gameState.timeRemaining,
                 urgency: this.getTimerUrgency()
             })
-            
+
             // Critical time warnings
             if (this.gameState.timeRemaining === 60) {
                 this.emit('timer_warning', { message: '⚠️ 1 minute remaining!' })
             } else if (this.gameState.timeRemaining === 30) {
                 this.emit('timer_critical', { message: '🚨 30 seconds left!' })
             }
-            
+
             if (this.gameState.timeRemaining <= 0) {
                 clearInterval(timerInterval)
                 this.emit('timer_expired', { finalScore: this.gameState.score })
@@ -268,20 +268,6 @@ export class GameManager {
         ]
     }
 
-    // MODULAR: Dynamic difficulty adaptation
-    public adaptDifficulty(): void {
-        const performanceScore = (this.gameState.accuracy + this.gameState.efficiency) / 2
-
-        if (performanceScore > 0.8 && this.gameState.difficulty === 'medium') {
-            this.gameState.difficulty = 'hard'
-            this.gameState.timeRemaining = 240
-            this.emit('difficultyIncreased', { newDifficulty: 'hard' })
-        } else if (performanceScore < 0.4 && this.gameState.difficulty === 'medium') {
-            this.gameState.difficulty = 'easy'
-            this.gameState.timeRemaining = 420
-            this.emit('difficultyDecreased', { newDifficulty: 'easy' })
-        }
-    }
 
     // Getters for game state
     public getGameState(): GameState {
@@ -316,13 +302,13 @@ export class GameManager {
     public updatePhase(newPhase: 'scanning' | 'analyzing' | 'solved') {
         const oldPhase = this.gameState.phase;
         this.gameState.phase = newPhase;
-        
+
         // If phase changed to 'solved' (game completed), record session completion and high score
         if (oldPhase !== 'solved' && newPhase === 'solved') {
             this.recordSessionCompletion();
             this.recordHighScore();
         }
-        
+
         this.emit('gameStateUpdated', this.gameState);
     }
 
@@ -330,25 +316,25 @@ export class GameManager {
     public updateState(updates: Partial<GameState>) {
         const oldPhase = this.gameState.phase;
         this.gameState = { ...this.gameState, ...updates };
-        
+
         // If phase changed to 'solved' (game completed), record session completion
         if (oldPhase !== 'solved' && this.gameState.phase === 'solved') {
             this.recordSessionCompletion();
             this.recordHighScore(); // Also record high score
         }
-        
+
         this.emit('gameStateUpdated', this.gameState);
     }
-    
+
     // ENHANCED: Adaptive difficulty based on performance
     public evaluatePerformance(): void {
         // Calculate various performance metrics
         const efficiency = this.gameState.efficiency;
         const accuracy = this.gameState.accuracy;
-        const discoveryRate = this.gameState.discoveredConditions.size / 
-                             (this.gameState.timeRemaining > 0 ? this.gameState.timeRemaining : 1);
+        const discoveryRate = this.gameState.discoveredConditions.size /
+            (this.gameState.timeRemaining > 0 ? this.gameState.timeRemaining : 1);
         const currentScore = this.gameState.score;
-        
+
         // Create performance profile
         const performanceMetrics = {
             efficiency,
@@ -360,44 +346,44 @@ export class GameManager {
             hintsUsed: this.gameState.hintsUsed,
             learningProgress: this.gameState.learningProgress
         };
-        
+
         // Adjust difficulty based on performance
         this.adaptDifficulty(performanceMetrics);
     }
-    
+
     // ENHANCED: Advanced difficulty adaptation algorithm
     private adaptDifficulty(metrics: any): void {
         // Calculate performance score (0-1 scale)
         const performanceScore = (metrics.efficiency + metrics.accuracy) / 2;
-        
+
         // Define thresholds for difficulty adjustment
         const HIGH_PERFORMANCE_THRESHOLD = 0.75;
         const LOW_PERFORMANCE_THRESHOLD = 0.35;
-        
+
         // Logic for difficulty adjustment
-        if (performanceScore >= HIGH_PERFORMANCE_THRESHOLD && 
-            this.gameState.difficulty !== 'hard' && 
+        if (performanceScore >= HIGH_PERFORMANCE_THRESHOLD &&
+            this.gameState.difficulty !== 'hard' &&
             metrics.discoveredConditions >= 3) {
             // Player is excelling, increase difficulty
             this.increaseDifficulty();
-        } else if (performanceScore <= LOW_PERFORMANCE_THRESHOLD && 
-                   this.gameState.difficulty !== 'easy' &&
-                   metrics.hintsUsed >= 2) {
+        } else if (performanceScore <= LOW_PERFORMANCE_THRESHOLD &&
+            this.gameState.difficulty !== 'easy' &&
+            metrics.hintsUsed >= 2) {
             // Player is struggling, decrease difficulty
             this.decreaseDifficulty();
         }
-        
+
         // Additionally adjust based on discovery rate and learning progress
         this.adaptBasedOnLearning(metrics);
     }
-    
+
     // Increase game difficulty
     private increaseDifficulty(): void {
         if (this.gameState.difficulty === 'medium') {
             this.gameState.difficulty = 'hard';
             this.gameState.timeRemaining = Math.max(180, this.gameState.timeRemaining * 0.8); // Reduce time by 20%
-            
-            this.emit('difficultyIncreased', { 
+
+            this.emit('difficultyIncreased', {
                 newDifficulty: 'hard',
                 message: 'Difficulty increased to Hard! Scanning conditions are now more subtle.',
                 timeRemaining: this.gameState.timeRemaining
@@ -405,24 +391,24 @@ export class GameManager {
         } else if (this.gameState.difficulty === 'easy') {
             this.gameState.difficulty = 'medium';
             this.gameState.timeRemaining = Math.max(240, this.gameState.timeRemaining * 0.9); // Reduce time by 10%
-            
-            this.emit('difficultyIncreased', { 
+
+            this.emit('difficultyIncreased', {
                 newDifficulty: 'medium',
                 message: 'Difficulty increased to Medium! Conditions are becoming more challenging to identify.',
                 timeRemaining: this.gameState.timeRemaining
             });
         }
-        
+
         this.emit('gameStateUpdated', this.gameState);
     }
-    
+
     // Decrease game difficulty
     private decreaseDifficulty(): void {
         if (this.gameState.difficulty === 'hard') {
             this.gameState.difficulty = 'medium';
             this.gameState.timeRemaining = Math.min(420, this.gameState.timeRemaining * 1.25); // Increase time by 25%
-            
-            this.emit('difficultyDecreased', { 
+
+            this.emit('difficultyDecreased', {
                 newDifficulty: 'medium',
                 message: 'Difficulty decreased to Medium. Conditions are more apparent now.',
                 timeRemaining: this.gameState.timeRemaining
@@ -430,17 +416,17 @@ export class GameManager {
         } else if (this.gameState.difficulty === 'medium') {
             this.gameState.difficulty = 'easy';
             this.gameState.timeRemaining = Math.min(480, this.gameState.timeRemaining * 1.5); // Increase time by 50%
-            
-            this.emit('difficultyDecreased', { 
+
+            this.emit('difficultyDecreased', {
                 newDifficulty: 'easy',
                 message: 'Difficulty decreased to Easy. Conditions are now more obvious and scanning is easier.',
                 timeRemaining: this.gameState.timeRemaining
             });
         }
-        
+
         this.emit('gameStateUpdated', this.gameState);
     }
-    
+
     // Adapt based on learning progress and condition mastery
     private adaptBasedOnLearning(metrics: any): void {
         // Check if user is mastering specific conditions
@@ -448,7 +434,7 @@ export class GameManager {
         metrics.learningProgress.forEach((progress: number) => {
             if (progress >= 0.9) masteredConditions++;
         });
-        
+
         // If user is mastering many conditions, add more complex cases
         if (masteredConditions >= 3) {
             this.emit('learningMilestoneReached', {
@@ -457,13 +443,13 @@ export class GameManager {
                 suggestion: 'Try switching to a different anatomical region or increasing scan complexity.'
             });
         }
-        
+
         // If user is struggling with specific conditions, provide targeted help
         let strugglingConditions = 0;
         metrics.learningProgress.forEach((progress: number) => {
             if (progress <= 0.2) strugglingConditions++;
         });
-        
+
         if (strugglingConditions >= 2) {
             this.emit('strugglingDetected', {
                 strugglingConditions,
@@ -472,7 +458,7 @@ export class GameManager {
             });
         }
     }
-    
+
     // Get current performance metrics
     public getPerformanceMetrics(): any {
         return {
@@ -486,43 +472,43 @@ export class GameManager {
             learningProgress: Array.from(this.gameState.learningProgress.entries())
         };
     }
-    
+
     // ENHANCED: Spaced repetition system for long-term retention
     public recordConditionPractice(conditionId: string, success: boolean): void {
         const now = Date.now();
-        
+
         // Update learning progress based on performance
         const currentProgress = this.gameState.learningProgress.get(conditionId) || 0;
-        let newProgress = success ? 
-            Math.min(1.0, currentProgress + 0.1) : 
+        let newProgress = success ?
+            Math.min(1.0, currentProgress + 0.1) :
             Math.max(0, currentProgress - 0.15);
-        
+
         this.gameState.learningProgress.set(conditionId, newProgress);
-        
+
         // Record the practice session
         const practiceRecord = {
             timestamp: now,
             success,
             progress: newProgress
         };
-        
+
         this.emit('conditionPracticed', {
             conditionId,
             practiceRecord,
-            message: success ? 
-                `${conditionId} practiced successfully!` : 
+            message: success ?
+                `${conditionId} practiced successfully!` :
                 `${conditionId} needs more practice.`
         });
-        
+
         // Update game state
         this.emit('gameStateUpdated', this.gameState);
     }
-    
+
     // Determine which conditions to review based on spaced repetition algorithm
     public getConditionsForReview(): string[] {
         const now = Date.now();
         const reviewConditions: string[] = [];
-        
+
         // Define spaced intervals (in milliseconds)
         const intervals = {
             'new': 1000 * 60 * 5,      // 5 minutes for new items
@@ -531,7 +517,7 @@ export class GameManager {
             'advanced': 1000 * 60 * 60 * 24,        // 24 hours
             'mastery': 1000 * 60 * 60 * 24 * 7      // 7 days
         };
-        
+
         // TODO: This would require storing practice history
         // For now, return conditions that have been discovered but not recently practiced
         this.gameState.learningProgress.forEach((progress, conditionId) => {
@@ -541,16 +527,16 @@ export class GameManager {
                 reviewConditions.push(conditionId);
             }
         });
-        
+
         // Limit to 3 conditions for review to avoid overwhelming the player
         return reviewConditions.slice(0, 3);
     }
-    
+
     // Get conditions that are due for review based on spaced repetition intervals
     public getReviewRecommendations(): any[] {
         const recommendations: any[] = [];
         const now = Date.now();
-        
+
         // Sample implementation - in a real system, we would track last review times
         this.gameState.learningProgress.forEach((progress, conditionId) => {
             // If the condition is not well-learned (progress < 0.8), recommend for review
@@ -563,13 +549,13 @@ export class GameManager {
                 });
             }
         });
-        
+
         // Sort by priority (highest first)
         recommendations.sort((a, b) => b.priority - a.priority);
-        
+
         return recommendations;
     }
-    
+
     // Record a session completion to support spaced repetition
     public recordSessionCompletion(): void {
         // Store session data for spaced repetition algorithm
@@ -581,13 +567,13 @@ export class GameManager {
             efficiency: this.gameState.efficiency,
             timeSpent: Date.now() - this.gameState.sessionStartTime
         };
-        
+
         this.emit('sessionCompleted', sessionData);
-        
+
         // Save session data for future spaced repetition scheduling
         this.saveSessionData(sessionData);
     }
-    
+
     // Save session data for spaced repetition scheduling
     private saveSessionData(sessionData: any): void {
         // In a real implementation, this would save to localStorage or a database
@@ -596,15 +582,15 @@ export class GameManager {
             ...sessionData,
             learningProgress: Array.from(this.gameState.learningProgress.entries())
         };
-        
+
         this.emit('sessionDataSaved', savedData);
-        
+
         // Store in localStorage as backup
         if (typeof window !== 'undefined') {
             localStorage.setItem('xray-session-data', JSON.stringify(savedData));
         }
     }
-    
+
     // Load previous session data to support spaced repetition
     public loadPreviousSessionData(): void {
         if (typeof window !== 'undefined') {
@@ -616,7 +602,7 @@ export class GameManager {
                     if (parsedData.learningProgress) {
                         this.gameState.learningProgress = new Map(parsedData.learningProgress);
                     }
-                    
+
                     this.emit('sessionDataLoaded', parsedData);
                 } catch (e) {
                     console.error('Failed to load session data:', e);
@@ -631,7 +617,7 @@ export class GameManager {
         const currentCase = this.gameState.patientCase?.id || 'unknown';
         const sessionTime = Date.now() - this.gameState.sessionStartTime;
         const conditionsFound = this.gameState.discoveredConditions.size;
-        
+
         const newEntry = {
             score: currentScore,
             caseId: currentCase,
@@ -641,27 +627,27 @@ export class GameManager {
             accuracy: this.gameState.accuracy,
             efficiency: this.gameState.efficiency
         };
-        
+
         // Get existing high scores
         const highScores = this.getHighScores();
         highScores.push(newEntry);
-        
+
         // Sort and keep top 10
         highScores.sort((a, b) => b.score - a.score);
         const topScores = highScores.slice(0, 10);
-        
+
         // Save to localStorage
         if (typeof window !== 'undefined') {
             localStorage.setItem('xray-high-scores', JSON.stringify(topScores));
         }
-        
+
         this.emit('highScoreRecorded', {
             entry: newEntry,
             rank: highScores.indexOf(newEntry) + 1,
             isNewRecord: highScores[0] === newEntry
         });
     }
-    
+
     public getHighScores(): any[] {
         if (typeof window !== 'undefined') {
             const scoresStr = localStorage.getItem('xray-high-scores');
@@ -676,7 +662,12 @@ export class GameManager {
         }
         return [];
     }
-    
+
+    // Public method to check achievements
+    public checkAchievements(gameState: GameState, event: any) {
+        this.achievementSystem?.checkAchievements(gameState, event);
+    }
+
     // Reset the game state to initial values
     public resetGameState(difficulty: 'easy' | 'medium' | 'hard' = 'medium') {
         // Record current session before resetting and potentially store high score
@@ -684,7 +675,7 @@ export class GameManager {
             this.recordSessionCompletion();
             this.recordHighScore(); // Record high score when game is completed
         }
-        
+
         const timeMap: Record<string, number> = { 'easy': 420, 'medium': 300, 'hard': 240 };
         this.gameState = {
             ...this.initializeGameState(),
@@ -707,20 +698,20 @@ export class GameManager {
     private updateDynamicElements() {
         // Increment the timer to track when to show dynamic elements
         this.dynamicTimer++;
-        
+
         const timeRemaining = this.gameState.timeRemaining;
         const conditionsFound = this.gameState.discoveredConditions.size;
-        
+
         // Every 30 seconds, provide a hint or clue based on game state
         if (timeRemaining > 0) {
             this.provideDynamicHint();
         }
-        
+
         // Every 45 seconds, evaluate player performance for adaptive difficulty
         if (this.dynamicTimer % 3 === 0) { // Every 90 seconds
             this.evaluatePerformance();
         }
-        
+
         // Sometimes reveal a new possible condition after some time has passed
         if (this.dynamicTimer % 2 === 0 && conditionsFound > 0) { // Every 60 seconds if conditions found
             this.maybeRevealNewClue();
@@ -732,7 +723,7 @@ export class GameManager {
         const conditionsFound = this.gameState.discoveredConditions.size;
         const timeRemaining = this.gameState.timeRemaining;
         const hints: string[] = [];
-        
+
         if (conditionsFound === 0) {
             hints.push("🔍 Remember to scan systematically. Start with the center of the image.");
             hints.push("💡 Look for areas that appear different from the surrounding anatomy.");
@@ -744,13 +735,13 @@ export class GameManager {
             hints.push("🚀 Excellent progress! You're developing diagnostic skills.");
             hints.push("💡 Try to correlate your findings with the patient's symptoms.");
         }
-        
+
         if (timeRemaining < 60) {
             hints.push("⏰ Time is running out! Focus on areas you haven't examined thoroughly.");
         } else if (timeRemaining < 120) {
             hints.push("⏳ Consider the most critical anatomical regions next.");
         }
-        
+
         // Select a random hint if available
         if (hints.length > 0) {
             const randomHint = hints[Math.floor(Math.random() * hints.length)];
@@ -770,7 +761,7 @@ export class GameManager {
                 "🔎 Look for any unexpected calcifications",
                 "💡 The pathology might be subtle - examine margins carefully"
             ];
-            
+
             const randomClue = clues[Math.floor(Math.random() * clues.length)];
             this.emit('dynamicClueReceived', { clue: randomClue });
         }
@@ -785,10 +776,10 @@ export class GameManager {
             "💡 Potential finding identified in a different region",
             "🔬 Scanning reveals additional area of interest"
         ];
-        
+
         const randomMessage = conditionDiscoveryMessages[Math.floor(Math.random() * conditionDiscoveryMessages.length)];
         this.emit('conditionDiscoveryOpportunity', { message: randomMessage });
-        
+
         return randomMessage;
     }
 
@@ -804,7 +795,7 @@ export class GameManager {
             "💡 The 'bat wing' pattern is associated with pulmonary edema",
             "💡 Always look for foreign bodies, especially in trauma cases"
         ];
-        
+
         return tips[Math.floor(Math.random() * tips.length)];
     }
 

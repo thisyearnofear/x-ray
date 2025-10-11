@@ -15,6 +15,7 @@ import { ScanFeedbackSystem } from "./components/ScanFeedbackSystem"
 import { DiagnosticUIFacade } from "./domains/diagnostic/DiagnosticUIFacade"
 import { GameManager, GameState } from "./domains/diagnostic/GameManager"
 import { MedicalServiceFacade } from "./domains/medical/MedicalServiceFacade"
+import { MedicalCase } from "./domains/medical/types"
 import { TutorialFacade } from "./domains/tutorial/TutorialFacade"
 import { VoiceConsultationManager } from "./domains/voice/VoiceConsultationManager"
 
@@ -265,19 +266,19 @@ export default class Canvas {
 
   public animateCameraTo(position: THREE.Vector3, target: THREE.Vector3, duration: number = 1.5): void {
     gsap.to(this.camera.position, {
-        duration,
-        x: position.x,
-        y: position.y,
-        z: position.z,
-        ease: "power2.inOut"
+      duration,
+      x: position.x,
+      y: position.y,
+      z: position.z,
+      ease: "power2.inOut"
     });
 
     gsap.to(this.orbitControls.target, {
-        duration,
-        x: target.x,
-        y: target.y,
-        z: target.z,
-        ease: "power2.inOut"
+      duration,
+      x: target.x,
+      y: target.y,
+      z: target.z,
+      ease: "power2.inOut"
     });
   }
 
@@ -311,12 +312,12 @@ export default class Canvas {
       onConsultationClick: () => this.startVoiceConsultation()
     })
     this.diagnosticUI.initialize()
-    
+
     // Create GameManager with reference to diagnostic UI manager
     this.gameManager = new GameManager({
       diagnosticUIManager: this.diagnosticUI.getUIManager()
     });
-    
+
     // Update the diagnostic UI with the GameManager
     this.diagnosticUI.updateGameManager(this.gameManager);
     console.log('🏥 DiagnosticUI initialized')
@@ -365,10 +366,10 @@ export default class Canvas {
     }
 
     this.gameManager.on('gameStateUpdated', (gameState: GameState) => {
-        if (this.diagnosticUI) {
-            this.diagnosticUI.getUIManager()?.updateCaseInfo(gameState.patientCase);
-            this.diagnosticUI.getUIManager()?.updatePatientInfo(gameState.patientCase);
-        }
+      if (this.diagnosticUI) {
+        this.diagnosticUI.getUIManager()?.updateCaseInfo(gameState.patientCase);
+        this.diagnosticUI.getUIManager()?.updatePatientInfo(gameState.patientCase);
+      }
     });
 
     // Initialize MedicalServiceFacade (for AI-powered patient case generation)
@@ -384,7 +385,7 @@ export default class Canvas {
         // Check for tutorial completion achievement
         if (this.gameManager) {
           const gameState = this.gameManager.getGameState();
-          this.gameManager.achievementSystem?.checkAchievements(gameState, {
+          this.gameManager.checkAchievements(gameState, {
             type: 'tutorial_complete'
           });
         }
@@ -438,21 +439,18 @@ export default class Canvas {
   // AGGRESSIVE CONSOLIDATION: Use AI-powered case generation with progressive revelation
   private async generateAndIntroducePatientCase() {
     try {
-      const currentModel = this.xRayEffect?.currentModel || 'head'
-      const difficulty: 'easy' | 'medium' | 'hard' = 'medium' // Future: Make dynamic based on performance
-
-      // Single source: AI-generated case from MedicalServiceFacade
-      const patientCase = await this.medicalService?.generatePatientCase(currentModel, difficulty)
+      // Use existing case from MedicalServiceFacade
+      const patientCase = this.medicalService?.getCase('case-x487')
 
       if (patientCase) {
         // DRY: Update game state (single call updates everything)
         this.gameManager?.updateState({ patientCase })
 
         // MODULAR: Connect case timer to game timer
-        if (patientCase.estimatedCaseLength && patientCase.estimatedCaseLength > 0) {
-          this.gameManager?.updateTimeRemaining(patientCase.estimatedCaseLength)
-          console.log(`⏰ Case timer: ${patientCase.estimatedCaseLength}s (${patientCase.caseComplexity})`)
-        }
+        // Using a fixed time for now since the case doesn't have estimatedCaseLength
+        const estimatedCaseLength = 300; // 5 minutes
+        this.gameManager?.updateTimeRemaining(estimatedCaseLength)
+        console.log(`⏰ Case timer: ${estimatedCaseLength}s`)
 
         // CLEAN: Progressive revelation - only show revealed information
         this.updatePatientDisplay()
@@ -460,59 +458,55 @@ export default class Canvas {
         // PERFORMANT: Immersive feedback with staggered notifications
         this.providePatientIntroductionFeedback(patientCase)
 
-        console.log(`🏥 AI Case Loaded: ${patientCase.patientName} (${patientCase.age}yo ${patientCase.gender})`)
-        console.log(`   Complexity: ${patientCase.caseComplexity} | Timer: ${patientCase.estimatedCaseLength}s`)
+        console.log(`🏥 Case Loaded: ${patientCase.patientInfo.name} (${patientCase.patientInfo.age}yo ${patientCase.patientInfo.gender})`)
       }
     } catch (error) {
-      console.error('AI case generation failed:', error)
+      console.error('Case loading failed:', error)
       this.handleCaseGenerationFallback()
     }
   }
 
   // CLEAN: Separate method for patient display updates
   private updatePatientDisplay(): void {
-    const revealedInfo = this.medicalService?.getRevealedPatientInfo()
-    if (revealedInfo) {
-      this.diagnosticUI?.updatePatientInfo(revealedInfo)
+    const gameState = this.gameManager?.getGameState();
+    if (gameState?.patientCase?.patientInfo) {
+      this.diagnosticUI?.updatePatientInfo(gameState.patientCase.patientInfo);
     }
   }
 
   // CLEAN: Separate method for patient introduction feedback
-  private providePatientIntroductionFeedback(patientCase: any): void {
+  private providePatientIntroductionFeedback(patientCase: MedicalCase): void {
     this.audioManager?.showFeedback(
-      `New patient: ${patientCase.patientName}, ${patientCase.age}yo ${patientCase.gender}`,
+      `New patient: ${patientCase.patientInfo.patientName}, ${patientCase.patientInfo.age}yo ${patientCase.patientInfo.gender}`,
       'info'
     )
     this.audioManager?.playSound(SoundType.MEDICAL_BEEP)
 
     setTimeout(() => {
       this.audioManager?.showFeedback(
-        `Chief complaint: ${patientCase.chiefComplaint}`,
+        `Chief complaint: ${patientCase.patientInfo.chiefComplaint}`,
         'info'
       )
       this.audioManager?.playSound(SoundType.HEARTBEAT_MONITOR)
     }, 2500)
-
-    if (patientCase.initialPresentation?.vitalSigns) {
-      setTimeout(() => {
-        const vitals = patientCase.initialPresentation.vitalSigns
-        this.audioManager?.showFeedback(
-          `Initial vitals: BP ${vitals.bloodPressure}, HR ${vitals.heartRate}/min`,
-          'info'
-        )
-      }, 4500)
-    }
   }
 
   // CLEAN: Separate method for fallback case handling
   private handleCaseGenerationFallback(): void {
-    const fallbackPatient = {
-      patientName: 'Emergency Patient',
-      age: 38,
-      gender: 'Unknown',
-      chiefComplaint: 'Urgent diagnostic evaluation required',
-      caseComplexity: 'straightforward' as const,
-      estimatedCaseLength: 180
+    const fallbackPatient: MedicalCase = {
+      id: 'fallback-case',
+      title: 'Emergency Patient',
+      presentingComplaint: 'Urgent diagnostic evaluation required',
+      patientStory: 'An emergency patient requiring immediate diagnostic evaluation.',
+      initialFindings: 'Initial examination pending',
+      mission: 'Perform urgent diagnostic evaluation',
+      stakes: 'Patient requires immediate medical attention',
+      patientInfo: {
+        patientName: 'Emergency Patient',
+        age: 38,
+        gender: 'Unknown',
+        chiefComplaint: 'Urgent diagnostic evaluation required'
+      }
     }
     this.gameManager?.updateState({ patientCase: fallbackPatient })
     this.updatePatientDisplay()

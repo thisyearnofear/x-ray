@@ -40,11 +40,11 @@ export class PatientInfoSection {
     this.element = document.createElement('div')
     this.element.className = 'patient-info-section'
     this.element.style.cssText = this.getSectionStyles()
-    
+
     this.element.innerHTML = this.generateContent(patientInfo)
     this.setupExpandFunctionality()
     this.addStyles()
-    
+
     return this.element
   }
 
@@ -129,6 +129,7 @@ export class PatientInfoSection {
       </div>
 
       ${this.isExpanded ? this.generateExpandedContent(patientInfo) : ''}
+    `
   }
 
   private generateExpandedContent(patientInfo: PatientInfo): string {
@@ -197,7 +198,7 @@ export class PatientInfoSection {
               justify-content: space-between;
               align-items: center;
               padding: ${spacing.xs} ${spacing.sm};
-              background: ${colors.background.gradient.info};
+              background: ${colors.background.gradient.accent};
               border-radius: ${borders.radius.md};
               border: ${borders.width.thin} solid ${colors.border.info};
             ">
@@ -348,14 +349,14 @@ export class PatientInfoSection {
     // Add click handler for the main element
     this.element.addEventListener('click', (e) => {
       e.stopPropagation();
-      
+
       // Check if clicked on "Read more" link to expand HPI without toggling section
       if ((e.target as HTMLElement).classList.contains('read-more')) {
         e.preventDefault();
         this.expandHPI();
         return;
       }
-      
+
       // Toggle the expanded state and regenerate content
       this.isExpanded = !this.isExpanded;
       this.element!.innerHTML = this.generateContent((this.element as any).patientInfo || this.getLastKnownPatientInfo());
@@ -367,7 +368,7 @@ export class PatientInfoSection {
     const hpiContent = this.element?.querySelector('.hpi-content') as HTMLElement;
     const readMore = this.element?.querySelector('.read-more, .read-less') as HTMLElement;
     const hpiFull = this.element?.querySelector('.hpi-full') as HTMLElement;
-    
+
     if (hpiContent && hpiFull && readMore) {
       if (readMore.classList.contains('read-more')) {
         // Expand to full HPI
@@ -380,7 +381,7 @@ export class PatientInfoSection {
         const patientInfo = (this.element as any).patientInfo || this.getLastKnownPatientInfo();
         const hpi = patientInfo.historyOfPresentIllness || 'Patient requires comprehensive diagnostic assessment.';
         const displayHPI = hpi.length > 150 ? hpi.substring(0, 150) + '...' : hpi;
-        
+
         hpiContent.innerHTML = displayHPI;
         readMore.textContent = 'Read more';
         readMore.classList.remove('read-less');
@@ -391,14 +392,14 @@ export class PatientInfoSection {
 
   // Store patient info temporarily to access in event handlers
   private lastKnownPatientInfo: PatientInfo | null = null;
-  
+
   private setLastKnownPatientInfo(patientInfo: PatientInfo): void {
     this.lastKnownPatientInfo = patientInfo;
     if (this.element) {
       (this.element as any).patientInfo = patientInfo;
     }
   }
-  
+
   private getLastKnownPatientInfo(): PatientInfo {
     return this.lastKnownPatientInfo || {
       patientName: 'Unknown Patient',
