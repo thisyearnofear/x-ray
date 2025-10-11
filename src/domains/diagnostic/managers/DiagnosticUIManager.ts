@@ -27,6 +27,7 @@ export class DiagnosticUIManager {
   private patientInfoSection: PatientInfoSection | null = null
   private aiPanel: AIPanel | null = null
   private audioEnabled: boolean = false // Track audio state
+  private currentPatientCase: MedicalCase | null = null // Store current patient case
 
   // Public getter to access the AI panel for voice integration
   public showTransitionOverlay(message: string): Promise<void> {
@@ -446,6 +447,35 @@ export class DiagnosticUIManager {
           }
         }, index * 500)
       })
+
+      // Add patient responses based on the current case
+      setTimeout(() => {
+        if (this.aiPanel && this.currentPatientCase) {
+          const patientName = this.currentPatientCase.patientInfo.patientName;
+          const patientResponses = [
+            `🗣️ ${patientName}: \"The pain is mainly in my temples and jaw area. It feels like a constant dull ache that sometimes sharpens when I chew.\"`,
+            `🗣️ ${patientName}: \"These headaches started about three weeks ago. They've been getting worse, especially in the mornings.\"`,
+            `🗣️ ${patientName}: \"They're pretty constant now. I used to get occasional headaches, but this is different - much more persistent.\"`,
+            `🗣️ ${patientName}: \"The pain gets worse when I'm stressed or chew hard foods. Warm compresses and rest help a little.\"`,
+            `🗣️ ${patientName}: \"Yes, they're really affecting my sleep. I wake up with a stiff jaw and headache most mornings.\"`,
+            `🗣️ ${patientName}: \"Yes! There's definitely clicking when I open my mouth wide, especially when I yawn.\"`
+          ];
+
+          patientResponses.forEach((response, index) => {
+            setTimeout(() => {
+              if (this.aiPanel) {
+                this.aiPanel.addInsight({
+                  id: `patient_response_${Date.now()}_${index}`,
+                  timestamp: Date.now(),
+                  content: response,
+                  type: 'voice',
+                  confidence: 0.95
+                })
+              }
+            }, index * 600)
+          })
+        }
+      }, 3500) // Start responses after questions are shown
     }
   }
 
@@ -649,6 +679,9 @@ export class DiagnosticUIManager {
   }
 
   updatePatientInfo(patientCase: MedicalCase | null): void {
+    // Store the current patient case for use in other methods
+    this.currentPatientCase = patientCase;
+    
     const patientInfoContainer = document.getElementById('patient-info-container')
     if (!patientInfoContainer) return
 

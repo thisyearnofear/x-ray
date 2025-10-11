@@ -95,7 +95,7 @@ export class XRayControls {
     
     this.controlsPanel.style.cssText = `
       position: fixed;
-      top: 20px;
+      bottom: 20px;
       right: 20px;
       width: 280px;
       padding: 16px;

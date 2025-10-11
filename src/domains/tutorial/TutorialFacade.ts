@@ -57,6 +57,8 @@ export class TutorialFacade {
     
     this.showCurrentStep()
     this.playTutorialAudio('welcome')
+    
+    console.log('Tutorial started')
   }
 
   nextStep(): void {
@@ -118,6 +120,8 @@ export class TutorialFacade {
     const progress = this.stepService.getProgress()
     this.overlay.updateStep(step, progress)
     this.overlay.show()
+    
+    console.log('Showing tutorial step:', step.id, step.title)
 
     if (step.targetElement && step.tooltipMessage) {
         const targetElement = document.querySelector(step.targetElement) as HTMLElement;

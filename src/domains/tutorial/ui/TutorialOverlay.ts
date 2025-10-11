@@ -32,7 +32,7 @@ export class TutorialOverlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0, 0, 0, 0.8);
-      z-index: ${zIndex.modal};
+      z-index: ${zIndex.modal + 10};
       display: flex;
       align-items: center;
       justify-content: center;
@@ -41,6 +41,7 @@ export class TutorialOverlay {
 
     this.element.innerHTML = this.generateHTML()
     this.setupEventListeners()
+    console.log('Tutorial overlay created')
     return this.element
   }
 
@@ -87,12 +88,14 @@ export class TutorialOverlay {
   hide(): void {
     if (this.element) {
       this.element.style.display = 'none'
+      console.log('Tutorial overlay hidden')
     }
   }
 
   show(): void {
     if (this.element) {
       this.element.style.display = 'flex'
+      console.log('Tutorial overlay shown')
     }
   }
 
