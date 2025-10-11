@@ -1,0 +1,321 @@
+/**
+ * Enhanced UI Animations
+ * ENHANCEMENT: Smooth animations for enhanced medical mystery game features
+ * PERFORMANCE: GPU-accelerated animations with minimal impact
+ */
+
+/* Notification animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+}
+
+/* Panel entrance animations */
+@keyframes panelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes panelSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+/* Progress bar animations */
+@keyframes progressFill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--progress-width);
+  }
+}
+
+/* Pulse animation for important elements */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(0, 255, 136, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 255, 136, 0);
+  }
+}
+
+/* Glow animation for enhanced elements */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+  }
+}
+
+/* Button hover effects */
+.technique-btn:hover {
+  background: rgba(0, 255, 136, 0.3) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 255, 136, 0.3);
+}
+
+.technique-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 255, 136, 0.3);
+}
+
+/* Enhanced panel styles */
+.enhanced-ui-element {
+  animation: panelSlideIn 0.3s ease-out;
+}
+
+.enhanced-ui-element.removing {
+  animation: panelSlideOut 0.3s ease-in;
+}
+
+/* Progress bar enhancements */
+.progress-bar {
+  transition: width 0.5s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Narrative choice animations */
+.narrative-choice {
+  transition: all 0.3s ease;
+}
+
+.narrative-choice:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(255, 170, 0, 0.3);
+}
+
+/* Investigation technique button states */
+.technique-btn.used {
+  background: rgba(0, 255, 136, 0.5) !important;
+  color: #ffffff !important;
+  border-color: #00ff88 !important;
+}
+
+.technique-btn.pending {
+  animation: pulse 2s infinite;
+}
+
+/* Difficulty adjustment indicator */
+.difficulty-indicator {
+  transition: all 0.5s ease;
+}
+
+.difficulty-indicator.increasing {
+  animation: glow 1s ease-in-out;
+  border-color: #ff4444;
+}
+
+.difficulty-indicator.decreasing {
+  animation: glow 1s ease-in-out;
+  border-color: #44ff44;
+}
+
+/* Revelation flash effect */
+@keyframes revelationFlash {
+  0% {
+    background: rgba(0, 212, 255, 0.1);
+  }
+  50% {
+    background: rgba(0, 212, 255, 0.3);
+  }
+  100% {
+    background: rgba(0, 212, 255, 0.1);
+  }
+}
+
+.revelation-flash {
+  animation: revelationFlash 0.5s ease-in-out;
+}
+
+/* Performance metrics animations */
+.performance-metric {
+  transition: all 0.3s ease;
+}
+
+.performance-metric.improving {
+  color: #44ff44 !important;
+  animation: glow 0.5s ease-in-out;
+}
+
+.performance-metric.declining {
+  color: #ff4444 !important;
+  animation: pulse 0.5s ease-in-out;
+}
+
+/* Loading states */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0, 255, 136, 0.3);
+  border-top: 2px solid #00ff88;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Consultation status indicators */
+.consultation-pending {
+  position: relative;
+}
+
+.consultation-pending::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #ffaa00;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+/* Enhanced mode activation overlay */
+.enhanced-mode-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 255, 136, 0.1) 0%,
+    rgba(0, 20, 40, 0.8) 70%,
+    rgba(0, 0, 0, 0.9) 100%
+  );
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .enhanced-ui-element {
+    width: calc(100vw - 40px) !important;
+    left: 20px !important;
+    right: 20px !important;
+  }
+  
+  .enhanced-ui-element.positioned-right {
+    right: 20px !important;
+    left: auto !important;
+    width: calc(100vw - 40px) !important;
+  }
+  
+  .enhanced-ui-element.positioned-left {
+    left: 20px !important;
+    right: auto !important;
+    width: calc(100vw - 40px) !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .enhanced-ui-element {
+    border-width: 3px !important;
+    box-shadow: none !important;
+  }
+  
+  .technique-btn {
+    border-width: 2px !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .enhanced-ui-element,
+  .technique-btn,
+  .narrative-choice,
+  .progress-bar,
+  .performance-metric {
+    animation: none !important;
+    transition: none !important;
+  }
+  
+  .progress-bar::after {
+    display: none;
+  }
+}
