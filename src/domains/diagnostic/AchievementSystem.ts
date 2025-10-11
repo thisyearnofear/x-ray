@@ -12,7 +12,7 @@ export interface Achievement {
 }
 
 export interface AchievementRequirement {
-    type: 'score' | 'streak' | 'conditions_discovered' | 'accuracy' | 'efficiency' | 'time' | 'specialization'
+    type: 'score' | 'streak' | 'conditions_discovered' | 'accuracy' | 'efficiency' | 'time' | 'specialization' | 'first_scan' | 'tutorial_complete'
     target: number
     condition?: string
 }
