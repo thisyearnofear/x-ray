@@ -13,3 +13,10 @@ export interface Position {
   x: number
   y: number
 }
+
+export interface PatientInfo {
+  patientName: string
+  age: number
+  gender: string
+  chiefComplaint: string
+}

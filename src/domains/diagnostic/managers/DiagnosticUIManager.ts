@@ -9,6 +9,7 @@
 import { SoundType } from '../../../components/AudioManager'
 import { PatientInfoSection, type PatientInfo } from '../ui/PatientInfoSection'
 import { AIPanel, type AIInsight } from '../ui/AIPanel'
+import { MedicalCase } from '../../medical/types'
 import { colors, spacing, typography, borders, effects, zIndex } from '../../../styles/design-tokens'
 
 export interface DiagnosticUIConfig {
@@ -26,12 +27,12 @@ export class DiagnosticUIManager {
   private patientInfoSection: PatientInfoSection | null = null
   private aiPanel: AIPanel | null = null
   private audioEnabled: boolean = false // Track audio state
-  
+
   // Public getter to access the AI panel for voice integration
   public showTransitionOverlay(message: string): Promise<void> {
     return new Promise(resolve => {
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
@@ -47,20 +48,20 @@ export class DiagnosticUIManager {
             opacity: 0;
             transition: opacity 0.5s ease-in-out;
         `;
-        overlay.textContent = message;
-        document.body.appendChild(overlay);
+      overlay.textContent = message;
+      document.body.appendChild(overlay);
 
-        setTimeout(() => {
-            overlay.style.opacity = '1';
-        }, 10);
+      setTimeout(() => {
+        overlay.style.opacity = '1';
+      }, 10);
 
+      setTimeout(() => {
+        overlay.style.opacity = '0';
         setTimeout(() => {
-            overlay.style.opacity = '0';
-            setTimeout(() => {
-                document.body.removeChild(overlay);
-                resolve();
-            }, 500);
-        }, 2000);
+          document.body.removeChild(overlay);
+          resolve();
+        }, 500);
+      }, 2000);
     });
   }
 
@@ -74,7 +75,7 @@ export class DiagnosticUIManager {
 
   initialize(): void {
     if (this.isInitialized) return
-    
+
     this.createUI()
     this.createAIPanel()
     this.isInitialized = true
@@ -101,7 +102,7 @@ export class DiagnosticUIManager {
       backdrop-filter: ${effects.blur.lg};
       ${effects.inset.medium}
     `
-    
+
     this.uiElement.innerHTML = `
       <div style="
         display: flex;
@@ -309,7 +310,7 @@ export class DiagnosticUIManager {
         </div>
       </div>
     `
-    
+
     document.body.appendChild(this.uiElement)
     this.setupEventListeners()
   }
@@ -320,7 +321,7 @@ export class DiagnosticUIManager {
       title: 'AI Consultation Panel',
       position: 'bottom' // Move to bottom to avoid blocking X-ray panel
     })
-    
+
     const aiPanelElement = this.aiPanel.create()
     document.body.appendChild(aiPanelElement)
   }
@@ -369,7 +370,7 @@ export class DiagnosticUIManager {
     const labOrdersBtn = document.getElementById('lab-orders-btn')
     const imagingBtn = document.getElementById('imaging-btn')
     const consultNurseBtn = document.getElementById('consult-nurse-btn')
-    
+
     conditionsBtn?.addEventListener('click', () => {
       // Enable audio on first interaction
       this.enableAudio()
@@ -380,37 +381,37 @@ export class DiagnosticUIManager {
     audioBtn?.addEventListener('click', () => {
       this.toggleAudio()
     })
-    
+
     // Add collapsible functionality
     let isPanelCollapsed = false
     toggleBtn?.addEventListener('click', () => {
       if (!diagnosticContent) return
-      
+
       isPanelCollapsed = !isPanelCollapsed
       diagnosticContent.style.display = isPanelCollapsed ? 'none' : 'block'
       if (toggleBtn) {
         toggleBtn.textContent = isPanelCollapsed ? '+' : '−'
       }
     })
-    
+
     // Add investigation tool functionality
     patientInterviewBtn?.addEventListener('click', () => {
       this.showPatientInterview()
     })
-    
+
     labOrdersBtn?.addEventListener('click', () => {
       this.showLabOrders()
     })
-    
+
     imagingBtn?.addEventListener('click', () => {
       this.showImagingOptions()
     })
-    
+
     consultNurseBtn?.addEventListener('click', () => {
       this.consultNurse()
     })
   }
-  
+
   // NEW: Patient interview functionality
   private showPatientInterview(): void {
     if (this.aiPanel) {
@@ -421,7 +422,7 @@ export class DiagnosticUIManager {
         type: 'voice',
         confidence: 0.9
       })
-      
+
       // Add symptom questions
       const symptoms = [
         "📍 Where exactly do you feel the pain?",
@@ -431,7 +432,7 @@ export class DiagnosticUIManager {
         "😴 Are the headaches affecting your sleep?",
         "🥱 Any associated jaw clicking or popping?"
       ]
-      
+
       symptoms.forEach((symptom, index) => {
         setTimeout(() => {
           if (this.aiPanel) {
@@ -447,7 +448,7 @@ export class DiagnosticUIManager {
       })
     }
   }
-  
+
   // NEW: Lab orders functionality
   private showLabOrders(): void {
     if (this.aiPanel) {
@@ -458,7 +459,7 @@ export class DiagnosticUIManager {
         type: 'diagnostic',
         confidence: 0.9
       })
-      
+
       // Add lab order options
       const labTests = [
         { name: "Complete Blood Count (CBC)", rationale: "Rule out infection/inflammation", ordered: false },
@@ -466,7 +467,7 @@ export class DiagnosticUIManager {
         { name: "ESR/CRP", rationale: "Inflammatory markers", ordered: true },
         { name: "Thyroid Function Tests", rationale: "Rule out endocrine causes", ordered: false }
       ]
-      
+
       labTests.forEach((test, index) => {
         setTimeout(() => {
           if (this.aiPanel) {
@@ -482,7 +483,7 @@ export class DiagnosticUIManager {
       })
     }
   }
-  
+
   // NEW: Imaging options functionality
   private showImagingOptions(): void {
     if (this.aiPanel) {
@@ -493,14 +494,14 @@ export class DiagnosticUIManager {
         type: 'diagnostic',
         confidence: 0.9
       })
-      
+
       // Add imaging options
       const imagingStudies = [
         { name: "Panoramic X-ray", status: "ordered", finding: "TMJ degenerative changes" },
         { name: "CT Head", status: "available", finding: "Sinus opacification noted" },
         { name: "MRI Brain", status: "pending", finding: "Awaiting neurology consult" }
       ]
-      
+
       imagingStudies.forEach((study, index) => {
         setTimeout(() => {
           if (this.aiPanel) {
@@ -518,7 +519,7 @@ export class DiagnosticUIManager {
       })
     }
   }
-  
+
   // NEW: Nurse consultation functionality
   private consultNurse(): void {
     if (this.aiPanel) {
@@ -529,7 +530,7 @@ export class DiagnosticUIManager {
         type: 'voice',
         confidence: 0.9
       })
-      
+
       setTimeout(() => {
         if (this.aiPanel) {
           this.aiPanel.addInsight({
@@ -547,7 +548,7 @@ export class DiagnosticUIManager {
   // ENHANCEMENT FIRST: Enable audio using existing systems
   private enableAudio(): void {
     if (this.audioEnabled) return // Prevent multiple calls
-    
+
     if (typeof window !== 'undefined' && (window as any).audioManager) {
       try {
         const audioManager = (window as any).audioManager
@@ -570,7 +571,7 @@ export class DiagnosticUIManager {
     if (typeof window !== 'undefined' && (window as any).audioManager) {
       try {
         const audioManager = (window as any).audioManager
-        
+
         if (this.audioEnabled) {
           // Turn off audio
           audioManager.stopSound?.(SoundType.BACKGROUND_MUSIC)
@@ -618,7 +619,7 @@ export class DiagnosticUIManager {
     if (!caseInfoContainer) return;
 
     if (patientCase) {
-        caseInfoContainer.innerHTML = `
+      caseInfoContainer.innerHTML = `
             <div style="
               background: ${colors.background.panelLight};
               border: ${borders.width.thin} solid ${colors.border.primary};
@@ -643,7 +644,7 @@ export class DiagnosticUIManager {
             </div>
         `;
     } else {
-        caseInfoContainer.innerHTML = 'Loading case...';
+      caseInfoContainer.innerHTML = 'Loading case...';
     }
   }
 
@@ -652,8 +653,8 @@ export class DiagnosticUIManager {
     if (!patientInfoContainer) return
 
     if (!patientCase) {
-        patientInfoContainer.innerHTML = 'Loading patient information...';
-        return;
+      patientInfoContainer.innerHTML = 'Loading patient information...';
+      return;
     }
 
     // Create or update the patient info section

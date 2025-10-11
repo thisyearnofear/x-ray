@@ -10,14 +10,10 @@ import { AudioManager } from '../../components/AudioManager'
 import { DiagnosticUIManager } from './managers/DiagnosticUIManager'
 import { GamePhase, GamePhaseManager } from './game-phase-manager';
 import { GameManager } from './GameManager';
+import { MedicalCase } from '../medical/types';
 import Canvas from '../../canvas';
 
-// Simple interfaces for now
-interface PatientCase {
-  patientName?: string
-  age?: number
-  [key: string]: any
-}
+// Use the proper MedicalCase type from medical domain
 
 export interface DiagnosticUIConfig {
   audioManager: AudioManager
@@ -71,7 +67,7 @@ export class DiagnosticUIFacade {
     this.isInitialized = true
   }
 
-  updatePatientInfo(patientCase: PatientCase): void {
+  updatePatientInfo(patientCase: MedicalCase): void {
     this.uiManager.updatePatientInfo(patientCase)
   }
 
