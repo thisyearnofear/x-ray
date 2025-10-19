@@ -1,0 +1,219 @@
+'use client'
+
+import React, { useState } from 'react'
+import { useWeb3 } from '../../hooks/web3/useWeb3'
+
+interface DelegationPanelProps {
+  walletAddress: string | null
+}
+
+export const DelegationPanel: React.FC<DelegationPanelProps> = ({
+  walletAddress
+}) => {
+  const { createMedicalConsultationDelegation, createDataSharingDelegation, error: web3Error } = useWeb3()
+  const [delegateAddress, setDelegateAddress] = useState('')
+  const [isDelegating, setIsDelegating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+
+  const handleEnableConsultationDelegation = async () => {
+    if (!walletAddress || !delegateAddress) return
+
+    setIsDelegating(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      await createMedicalConsultationDelegation(delegateAddress as `0x${string}`)
+      setSuccess('🎙️ AI Consultation delegation enabled! Voice AI can now operate gaslessly.')
+      setDelegateAddress('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to enable delegation')
+    } finally {
+      setIsDelegating(false)
+    }
+  }
+
+  const handleShareMedicalData = async () => {
+    if (!walletAddress || !delegateAddress) return
+
+    setIsDelegating(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      await createDataSharingDelegation(delegateAddress as `0x${string}`, ['diagnosis', 'treatment', 'progress', 'ai-insights'])
+      setSuccess('📊 Medical AI data sharing delegation enabled! Diagnostic history accessible.')
+      setDelegateAddress('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to share medical data')
+    } finally {
+      setIsDelegating(false)
+    }
+  }
+
+  return (
+    <div style={{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      zIndex: 1000,
+      background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(20, 20, 40, 0.95))',
+      border: '1px solid rgba(0, 212, 255, 0.3)',
+      padding: '30px',
+      borderRadius: '15px',
+      color: 'white',
+      fontSize: '14px',
+      minWidth: '400px',
+      maxWidth: '500px',
+      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 212, 255, 0.1)'
+    }}>
+      <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', textAlign: 'center', color: '#00d4ff' }}>
+        🔐 AI Consultation Permissions
+      </h3>
+      <p style={{ margin: '0 0 25px 0', fontSize: '13px', opacity: 0.8, textAlign: 'center', lineHeight: '1.4' }}>
+        Grant AI assistants permission to provide gasless medical consultations
+      </p>
+
+      {!walletAddress && (
+        <div style={{
+          color: '#ff6b6b',
+          fontSize: '13px',
+          marginBottom: '20px',
+          textAlign: 'center',
+          padding: '10px',
+          background: 'rgba(255, 107, 107, 0.1)',
+          borderRadius: '8px',
+          border: '1px solid rgba(255, 107, 107, 0.3)'
+        }}>
+          🔗 Please connect your MetaMask wallet first
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          color: '#ff6b6b',
+          marginBottom: '20px',
+          fontSize: '13px',
+          textAlign: 'center',
+          padding: '10px',
+          background: 'rgba(255, 107, 107, 0.1)',
+          borderRadius: '8px',
+          border: '1px solid rgba(255, 107, 107, 0.3)'
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      {success && (
+        <div style={{
+          color: '#4ecdc4',
+          marginBottom: '20px',
+          fontSize: '13px',
+          textAlign: 'center',
+          padding: '10px',
+          background: 'rgba(78, 205, 196, 0.1)',
+          borderRadius: '8px',
+          border: '1px solid rgba(78, 205, 196, 0.3)'
+        }}>
+          ✅ {success}
+        </div>
+      )}
+
+      {walletAddress && (
+        <>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '8px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: '#00d4ff'
+            }}>
+              🤖 AI Assistant Address:
+            </label>
+            <input
+              type="text"
+              value={delegateAddress}
+              onChange={(e) => setDelegateAddress(e.target.value)}
+              placeholder="0x1234...abcd"
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid rgba(0, 212, 255, 0.3)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: 'white',
+                fontSize: '13px',
+                fontFamily: 'monospace'
+              }}
+            />
+            <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '5px' }}>
+              Address of the AI system that will provide consultations
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <button
+              onClick={handleEnableConsultationDelegation}
+              disabled={!walletAddress || !delegateAddress || isDelegating}
+              style={{
+                flex: 1,
+                background: isDelegating ? 'rgba(85, 85, 85, 0.8)' : 'linear-gradient(135deg, #4ecdc4, #44a08d)',
+                color: 'white',
+                border: 'none',
+                padding: '15px 20px',
+                borderRadius: '8px',
+                cursor: isDelegating ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                transition: 'all 0.3s ease',
+                boxShadow: isDelegating ? 'none' : '0 4px 15px rgba(78, 205, 196, 0.3)',
+                opacity: (!walletAddress || !delegateAddress) ? 0.5 : 1
+              }}
+            >
+              {isDelegating ? '🔄 Setting up...' : '🎙️ Enable Gasless AI'}
+            </button>
+
+            <button
+              onClick={handleShareMedicalData}
+              disabled={!walletAddress || !delegateAddress || isDelegating}
+              style={{
+                flex: 1,
+                background: isDelegating ? 'rgba(85, 85, 85, 0.8)' : 'linear-gradient(135deg, #f39c12, #e67e22)',
+                color: 'white',
+                border: 'none',
+                padding: '15px 20px',
+                borderRadius: '8px',
+                cursor: isDelegating ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                transition: 'all 0.3s ease',
+                boxShadow: isDelegating ? 'none' : '0 4px 15px rgba(243, 156, 18, 0.3)',
+                opacity: (!walletAddress || !delegateAddress) ? 0.5 : 1
+              }}
+            >
+              📊 Share Progress
+            </button>
+          </div>
+
+          <div style={{
+            marginTop: '20px',
+            fontSize: '12px',
+            opacity: 0.7,
+            textAlign: 'center',
+            lineHeight: '1.4'
+          }}>
+            <div style={{ marginBottom: '8px' }}>
+              🎯 <strong>Gasless AI Consultations:</strong> AI can respond without you paying gas fees
+            </div>
+            <div>
+              🔒 <strong>Controlled Access:</strong> You maintain full control over permissions
+            </div>
+          </div>
+        </>
+        )}
+        </div>
+        )
+}

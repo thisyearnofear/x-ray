@@ -1,4 +1,5 @@
 import { MedicalCase } from '../types';
+import { MedicalCondition } from '../medical-data';
 
 const sampleCase: MedicalCase = {
   id: 'case-x487',
@@ -27,5 +28,11 @@ export class MedicalDataService {
 
   public getAllCases(): MedicalCase[] {
     return [sampleCase];
+  }
+
+  // ENHANCED: Get individual medical condition
+  public getCondition(conditionId: string): MedicalCondition | undefined {
+    const { MEDICAL_CONDITIONS } = require('../medical-data');
+    return MEDICAL_CONDITIONS.find((condition: MedicalCondition) => condition.id === conditionId);
   }
 }

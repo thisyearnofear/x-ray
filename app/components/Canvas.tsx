@@ -2,6 +2,10 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { WalletConnection } from '../../src/components/WalletConnection';
+import { DelegationPanel } from '../../src/components/DelegationPanel';
+import { MedicalNFTMinter } from '../../src/components/MedicalNFTMinter';
+import { useWeb3 } from '../../hooks/web3/useWeb3';
 
 const CanvasComponent = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -9,6 +13,9 @@ const CanvasComponent = () => {
   const [loadingMessage, setLoadingMessage] = useState('Loading X-RAI...');
   const initializingRef = useRef(false);
   const canvasInstanceRef = useRef<any>(null);
+
+  // Web3 integration
+  const { isConnected, address: walletAddress } = useWeb3();
 
   useEffect(() => {
     let disposed = false;
@@ -83,6 +90,24 @@ const CanvasComponent = () => {
           <div style={{ marginBottom: '1rem' }}>🏥</div>
           <div>{loadingMessage}</div>
         </div>
+      )}
+
+      {isLoaded && (
+        <>
+          <WalletConnection
+            onConnected={() => {}} // Handled by useWeb3 hook internally
+          />
+          <DelegationPanel
+            walletAddress={walletAddress || null}
+          />
+          <MedicalNFTMinter
+            walletAddress={walletAddress || null}
+            lastDiagnosis={{
+              conditions: ['Sample Condition'],
+              accuracy: 85
+            }}
+          />
+        </>
       )}
     </>
   );

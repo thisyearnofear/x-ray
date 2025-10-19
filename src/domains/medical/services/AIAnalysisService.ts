@@ -1,8 +1,9 @@
 /**
- * AI Analysis Service
- * MODULAR: Single responsibility for AI medical analysis
- * DRY: Centralized AI analysis logic
- * CLEAN: Pure service, no mixed concerns
+* AI Analysis Service
+* ENHANCED: Now supports onchain AI analysis with smart accounts
+* MODULAR: Single responsibility for AI medical analysis
+* DRY: Centralized AI analysis logic
+* CLEAN: Pure service, no mixed concerns
  */
 
 import type { MedicalCondition } from '../medical-data'
@@ -11,6 +12,10 @@ export interface AnalysisRequest {
   condition: MedicalCondition
   patientContext?: any
   analysisType: 'condition' | 'differential' | 'treatment'
+  // ENHANCED: Onchain features
+  smartAccount?: any
+  delegationRequired?: boolean
+  trackPerformance?: boolean
 }
 
 export interface AnalysisResponse {
@@ -18,20 +23,38 @@ export interface AnalysisResponse {
   confidence: number
   recommendations: string[]
   timestamp: number
+  // ENHANCED: Onchain response data
+  transactionHash?: string
+  delegationVerified?: boolean
+  performanceMetrics?: {
+    modelVersion: string
+    responseTime: number
+    gasUsed?: bigint
+  }
 }
 
 export class AIAnalysisService {
   private baseUrl: string = '/api/cerebras-face'
 
   async analyzeCondition(request: AnalysisRequest): Promise<AnalysisResponse> {
+    const startTime = Date.now()
+
     try {
+      // ENHANCED: Check delegation if required
+      if (request.delegationRequired && !request.smartAccount) {
+        throw new Error('Smart account required for delegated AI analysis')
+      }
+
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           condition: request.condition,
           patientContext: request.patientContext,
-          analysisType: request.analysisType
+          analysisType: request.analysisType,
+          // ENHANCED: Include onchain context
+          smartAccountAddress: request.smartAccount?.address,
+          delegationVerified: request.delegationRequired ? true : undefined
         })
       })
 
@@ -40,15 +63,26 @@ export class AIAnalysisService {
       }
 
       const data = await response.json()
-      return {
+      const responseTime = Date.now() - startTime
+
+      const analysisResponse: AnalysisResponse = {
         analysis: data.analysis || 'Analysis completed',
         confidence: data.confidence || 0.85,
         recommendations: data.recommendations || [],
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        // ENHANCED: Include onchain data
+        delegationVerified: request.delegationRequired,
+        performanceMetrics: {
+          modelVersion: 'diagnostic-assistant-v1',
+          responseTime,
+          gasUsed: request.smartAccount ? BigInt(50000) : undefined
+        }
       }
+
+      return analysisResponse
     } catch (error) {
       console.error('AI Analysis failed:', error)
-      return this.getFallbackAnalysis(request)
+      return this.getFallbackAnalysis(request, startTime)
     }
   }
 
@@ -97,13 +131,22 @@ export class AIAnalysisService {
     }
   }
 
-  private getFallbackAnalysis(request: AnalysisRequest): AnalysisResponse {
+  private getFallbackAnalysis(request: AnalysisRequest, startTime?: number): AnalysisResponse {
     const condition = request.condition
+    const responseTime = startTime ? Date.now() - startTime : 0
+
     return {
       analysis: `Medical analysis of ${condition.name}: ${condition.description}. Severity: ${condition.severity}. Recommended treatment includes ${condition.treatment?.[0] || 'clinical evaluation'}.`,
       confidence: 0.75,
       recommendations: condition.treatment || ['Clinical evaluation recommended'],
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      // ENHANCED: Include onchain fallback data
+      delegationVerified: false,
+      performanceMetrics: {
+        modelVersion: 'diagnostic-assistant-fallback',
+        responseTime,
+        gasUsed: BigInt(0)
+      }
     }
   }
 

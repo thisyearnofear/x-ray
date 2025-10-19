@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "deploy:testnet": "vercel --prod",
+    "build:testnet": "NODE_ENV=production next build"
   },
   "devDependencies": {
     "@types/node": "^24.6.2",
@@ -18,13 +20,16 @@
     "typescript": "~5.8.3"
   },
   "dependencies": {
+    "@metamask/delegation-toolkit": "^0.13.0",
     "@types/three": "^0.177.0",
+    "account-abstraction": "^0.2.2",
     "gsap": "^3.13.0",
     "lil-gui": "^0.20.0",
     "next": "15.5.4",
     "react": "^18",
     "react-dom": "^18",
     "sharp": "^0.34.4",
-    "three": "^0.177.0"
+    "three": "^0.177.0",
+    "viem": "^2.38.3"
   }
 }

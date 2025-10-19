@@ -20,3 +20,10 @@ export interface PatientInfo {
   gender: string
   chiefComplaint: string
 }
+
+// Web3 Types
+declare global {
+  interface Window {
+    ethereum?: any
+  }
+}

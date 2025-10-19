@@ -2,6 +2,7 @@
 // ENHANCEMENT FIRST: Extends existing AudioManager and DiagnosticUI systems
 // AGGRESSIVE CONSOLIDATION: Centralized in AI panel with voice integration
 // ENHANCED: Now integrates with dedicated AI panel with voice controls
+// ENHANCED: Onchain features for smart account integration and delegation
 
 import { AIPanel } from '../diagnostic/ui/AIPanel'
 
@@ -19,9 +20,13 @@ import { AIInsight } from '../diagnostic/ui/AIPanel'
 export interface ConsultationSession {
   id: string
   startTime: number
+  endTime?: number
   context: ConsultationContext
   insights: AIInsight[]
   isActive: boolean
+  // ENHANCED: Onchain session data
+  smartAccountAddress?: string
+  delegationUsed?: boolean
 }
 
 export interface VoiceRecognition {
@@ -43,11 +48,22 @@ export class VoiceConsultationManager {
   private onErrorCallback: ((error: any) => void) | null = null
   private transcriptQueue: string[] = []
 
+  // ENHANCED: Onchain features
+  private smartAccount: any = null
+  private delegationEnabled: boolean = false
+  private consultationHistory: ConsultationSession[] = []
+
   constructor(diagnosticUIManager?: any, aiPanel?: AIPanel) {
     this.checkVoiceSupport()
     this.diagnosticUIManager = diagnosticUIManager
     this.aiPanel = aiPanel || null
     this.setupSpeechRecognition()
+  }
+
+  // ENHANCED: Configure onchain features
+  public configureOnchainFeatures(smartAccount: any, delegationEnabled: boolean = false) {
+    this.smartAccount = smartAccount
+    this.delegationEnabled = delegationEnabled
   }
 
   // PERFORMANT: Check voice capabilities before loading heavy dependencies
@@ -341,10 +357,16 @@ export class VoiceConsultationManager {
     callbacks.forEach(callback => callback(data))
   }
 
-  // ENHANCED: Integrate with dedicated AI panel
+  // ENHANCED: Integrate with dedicated AI panel and onchain features
   public async startConsultation(context: ConsultationContext): Promise<boolean> {
     if (this.currentSession?.isActive) {
       console.warn('🎙️ Consultation already active')
+      return false
+    }
+
+    // ENHANCED: Check delegation if required
+    if (this.delegationEnabled && !this.smartAccount) {
+      console.error('🎙️ Smart account required for delegated consultation')
       return false
     }
 
@@ -354,7 +376,10 @@ export class VoiceConsultationManager {
       startTime: Date.now(),
       context: { ...context },
       insights: [],
-      isActive: true
+      isActive: true,
+      // ENHANCED: Onchain session data
+      smartAccountAddress: this.smartAccount?.address,
+      delegationUsed: this.delegationEnabled
     }
 
     try {
@@ -670,10 +695,18 @@ export class VoiceConsultationManager {
     document.body.appendChild(consultationDiv)
   }
 
-  // CLEAN: End consultation session
+  // CLEAN: End consultation session and track history
   public endConsultation(): void {
     if (this.currentSession) {
       this.currentSession.isActive = false
+      this.currentSession.endTime = Date.now() // ENHANCED: Track session duration
+
+      // ENHANCED: Save to consultation history for onchain tracking
+      this.consultationHistory.push({ ...this.currentSession })
+      if (this.consultationHistory.length > 50) { // Keep last 50 consultations
+        this.consultationHistory.shift()
+      }
+
       this.emit('consultation_ended', this.currentSession)
       this.currentSession = null
     }
@@ -701,5 +734,32 @@ export class VoiceConsultationManager {
   // CLEAN: Check if consultation is active
   public isActive(): boolean {
     return this.currentSession?.isActive || false
+  }
+
+  // ENHANCED: Get consultation history for onchain analytics
+  public getConsultationHistory(limit?: number): ConsultationSession[] {
+    const history = [...this.consultationHistory].reverse()
+    return limit ? history.slice(0, limit) : history
+  }
+
+  // ENHANCED: Get onchain performance metrics
+  public getOnchainMetrics() {
+    const totalConsultations = this.consultationHistory.length
+    const delegatedConsultations = this.consultationHistory.filter(s => s.delegationUsed).length
+    const averageSessionTime = totalConsultations > 0
+      ? this.consultationHistory.reduce((sum, session) => {
+          const duration = session.endTime ? session.endTime - session.startTime : 0
+          return sum + duration
+        }, 0) / totalConsultations
+      : 0
+
+    return {
+      totalConsultations,
+      delegatedConsultations,
+      delegationRate: totalConsultations > 0 ? delegatedConsultations / totalConsultations : 0,
+      averageSessionTime,
+      smartAccountConfigured: !!this.smartAccount,
+      delegationEnabled: this.delegationEnabled
+    }
   }
 }
