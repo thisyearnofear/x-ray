@@ -734,13 +734,15 @@ export default class XRayEffect {
   createScanningVFX(conditionId: string, position: THREE.Vector3): THREE.Mesh {
     // Create a torus ring that indicates active scanning
     const geometry = new THREE.TorusGeometry(0.08, 0.015, 16, 64);
-    const material = new THREE.MeshBasicMaterial({ 
-      color: 0x00ffff, 
-      transparent: true, 
+    const material = new THREE.MeshStandardMaterial({
+      color: 0x00ffff,
+      transparent: true,
       opacity: 0.7,
       side: THREE.DoubleSide,
-      emissive: 0x004444,  // Add subtle glow
-      emissiveIntensity: 0.5
+      emissive: 0x004444,  // Add subtle cyan glow
+      emissiveIntensity: 0.5,
+      metalness: 0.3,
+      roughness: 0.4
     });
     
     const ring = new THREE.Mesh(geometry, material);
@@ -775,13 +777,15 @@ export default class XRayEffect {
   // ENHANCEMENT: Progress ring visualization
   createProgressRing(conditionId: string, position: THREE.Vector3): THREE.Mesh {
     const geometry = new THREE.RingGeometry(0.05, 0.07, 32);
-    const material = new THREE.MeshBasicMaterial({
+    const material = new THREE.MeshStandardMaterial({
       color: 0x00ff00,
       side: THREE.DoubleSide,
       transparent: true,
       opacity: 0.6,
-      emissive: 0x004400,  // Add subtle glow
-      emissiveIntensity: 0.3
+      emissive: 0x004400,  // Add subtle green glow
+      emissiveIntensity: 0.3,
+      metalness: 0.2,
+      roughness: 0.5
     });
     
     const ring = new THREE.Mesh(geometry, material);
@@ -797,18 +801,21 @@ export default class XRayEffect {
     const ring = this.progressRings.get(conditionId);
     if (ring) {
       // Update the ring to show progress as a partial circle
-      const material = ring.material as THREE.MeshBasicMaterial;
+      const material = ring.material as THREE.MeshStandardMaterial;
       
-      // Change color based on progress
+      // Change color based on progress with enhanced emissive glow
       if (progress < 0.33) {
         material.color.setHex(0xffff00); // Yellow for low progress
-        material.emissive.setHex(0x444400); // Add glow
+        material.emissive.setHex(0x444400); // Yellow glow
+        material.emissiveIntensity = 0.4;
       } else if (progress < 0.66) {
         material.color.setHex(0xffaa00); // Orange for medium progress
-        material.emissive.setHex(0x442200); // Add glow
+        material.emissive.setHex(0x442200); // Orange glow
+        material.emissiveIntensity = 0.5;
       } else {
         material.color.setHex(0x00ff00); // Green for high progress
-        material.emissive.setHex(0x004400); // Add glow
+        material.emissive.setHex(0x004400); // Green glow
+        material.emissiveIntensity = 0.6;
       }
       
       material.opacity = 0.6;
@@ -825,7 +832,7 @@ export default class XRayEffect {
         
         // Create new partial ring based on progress
         const newGeometry = new THREE.RingGeometry(0.05, 0.07, 32, 1, 0, progress * Math.PI * 2);
-        const newRing = new THREE.Mesh(newGeometry, (ringObj.material as THREE.MeshBasicMaterial).clone());
+        const newRing = new THREE.Mesh(newGeometry, (ringObj.material as THREE.MeshStandardMaterial).clone());
         newRing.position.copy(position);
         newRing.rotation.copy(rotation);
         
