@@ -1,5 +1,5 @@
 import { MedicalServiceFacade } from '../medical/MedicalServiceFacade';
-import { MedicalCase } from '../medical/types';
+import { PatientCase } from '../medical/types';
 import { AchievementSystem } from './AchievementSystem';
 
 // MODULAR: Game state management and progression system
@@ -16,7 +16,7 @@ export interface GameState {
     learningProgress: Map<string, number>
     achievements: Set<string>
     difficulty: 'easy' | 'medium' | 'hard'
-    patientCase: MedicalCase | null
+    patientCase: PatientCase | null
     specialization: MedicalSpecialization
     unlockedTechniques: Set<string>
 }

@@ -14,6 +14,22 @@ export interface MedicalCase {
   mission: string;
   stakes: string;
   patientInfo: PatientInfo;
+  
+  // Enhanced diagnostic properties for immersive experience
+  estimatedCaseLength?: number;
+  caseDifficulty?: 'easy' | 'medium' | 'hard';
+  difficulty?: 'easy' | 'medium' | 'hard';
+  caseComplexity?: 'straightforward' | 'complex' | 'advanced';
+  requiredModel?: string;
+  conditions?: string[];
+  aiGenerated?: boolean;
+  estimatedStudyTime?: number;
+  timestamp?: number;
+  
+  // Onchain features
+  isAIGenerated?: boolean;
+  generatedAt?: number;
+  smartAccountAddress?: string;
 }
 
 /**

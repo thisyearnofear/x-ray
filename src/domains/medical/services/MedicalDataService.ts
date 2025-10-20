@@ -14,7 +14,17 @@ const sampleCase: MedicalCase = {
     age: 34,
     gender: 'Female',
     chiefComplaint: 'Chronic headaches with jaw pain'
-  }
+  },
+  // Enhanced diagnostic properties for immersive experience
+  estimatedCaseLength: 300, // 5 minutes
+  caseDifficulty: 'medium',
+  difficulty: 'medium',
+  caseComplexity: 'complex',
+  requiredModel: 'head',
+  conditions: ['tmj_disorder', 'tension_headache'],
+  aiGenerated: false,
+  estimatedStudyTime: 300,
+  timestamp: Date.now()
 };
 
 export class MedicalDataService {

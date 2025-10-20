@@ -1,13 +1,13 @@
 # 🩻 X-RAI: Onchain AI Powered Medical Diagnostic Experience
 
 > **MetaMask Smart Accounts Hackathon x Monad x Envio Submission**
-> World's First Onchain Medical X-Ray Experience with Smart Account Abstraction & AI Consultation
+> Onchain Medical X-Ray Experience with Smart Account Abstraction & AI Consultation
 >
 > **Note**: Using CLI-enhanced approach - CLI provides Web3 foundation, enhanced with our AI services following ENHANCEMENT FIRST principle
 
 An interactive 3D medical visualization experience that combines **face-swapping**, **AI-powered medical analysis**, **real-time X-ray effects**, and **revolutionary Web3 features** including smart accounts, delegation, and verifiable medical achievements for next-generation healthcare applications.
 
-## 🔐 **ENHANCED: Onchain AI Integration**
+## Onchain AI Integration**
 **Experience gasless medical consultations!** Connect your MetaMask smart account to enable delegation for AI consultations, mint verifiable medical achievement NFTs, and securely share health data with privacy-preserving permissions - all while maintaining our core AI-powered diagnostic capabilities.
 
 ## 🚀 Quick Start
@@ -79,7 +79,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 - Real anatomical positioning on skeleton model
 - Educational symptom and treatment information
 
-### 🔐 **Onchain AI Enhancement** ⭐ ENHANCED!
+### 🔐 **Onchain AI Enhancement** 
 - **MetaMask Smart Accounts** enabling gasless AI consultations
 - **ERC-7710 Delegation** for controlled AI access and privacy
 - **Medical Achievement NFTs** as verifiable AI performance credentials
