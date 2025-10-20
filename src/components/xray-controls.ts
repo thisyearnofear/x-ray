@@ -19,7 +19,7 @@ export class XRayControls {
   private element: HTMLCanvasElement
   private camera: THREE.PerspectiveCamera
   private renderer: THREE.WebGLRenderer
-  private controlsPanel: HTMLElement
+  private controlsPanel!: HTMLElement
   private callbacks: {
     onScaleChange?: (scale: number) => void
     onToggleConditions?: () => void

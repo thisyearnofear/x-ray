@@ -1,0 +1,8 @@
+type MedicalAchievementNFT_CertificateMinted {
+  id: ID!
+  tokenId: BigInt!
+  recipient: String!
+  diagnosis: String!
+  accuracy: BigInt!
+}
+

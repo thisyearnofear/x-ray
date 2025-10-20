@@ -11,7 +11,7 @@ export interface MarkerConfig {
 export class MedicalMarker {
   private markerGroup: THREE.Group
   private config: MarkerConfig
-  private marker: THREE.Mesh
+  private marker!: THREE.Mesh
 
   constructor(config: MarkerConfig) {
     this.config = config

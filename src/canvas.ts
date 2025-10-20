@@ -22,27 +22,27 @@ import { NurseAmyNudgeSystem } from "./domains/diagnostic/NurseAmyNudgeSystem"
 
 export default class Canvas {
   element: HTMLCanvasElement
-  scene: THREE.Scene
-  camera: THREE.PerspectiveCamera
-  composer: EffectComposer
-  renderer: THREE.WebGLRenderer
-  sizes: Size
-  dimensions: Dimensions
+  scene!: THREE.Scene
+  camera!: THREE.PerspectiveCamera
+  composer!: EffectComposer
+  renderer!: THREE.WebGLRenderer
+  sizes!: Size
+  dimensions!: Dimensions
   time: number
-  clock: THREE.Clock
-  raycaster: THREE.Raycaster
-  mouse: THREE.Vector2
-  orbitControls: OrbitControls
-  debug: GUI
-  xRayEffect: XRayEffect
+  clock!: THREE.Clock
+  raycaster!: THREE.Raycaster
+  mouse!: THREE.Vector2
+  orbitControls!: OrbitControls
+  debug!: GUI
+  xRayEffect!: XRayEffect
 
   // Enhanced mobile components
-  xrayControls: XRayControls
-  mobileCamera: MobileCamera
+  xrayControls!: XRayControls
+  mobileCamera!: MobileCamera
   isMobile: boolean
 
   // Audio system
-  audioManager: AudioManager
+  audioManager!: AudioManager
 
   // ENHANCEMENT FIRST: Visual scan feedback system
   scanFeedbackSystem: ScanFeedbackSystem | null = null

@@ -1,5 +1,5 @@
 // Example usage of the contract integration
-import { useWeb3 } from '../hooks/web3/useWeb3'
+import { useWeb3 } from '../../hooks/web3/useWeb3'
 
 export default function ContractIntegrationExample() {
   const {

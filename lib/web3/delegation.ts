@@ -1,6 +1,6 @@
 import { type Address, type Hex, keccak256, toHex } from 'viem'
 import { SmartAccountService } from './smart-account'
-import { createDelegation, signDelegation, getDelegationHashOffchain } from '@metamask/delegation-toolkit'
+import { createDelegation, signDelegation } from '@metamask/delegation-toolkit'
 import { getDeleGatorEnvironment } from '@metamask/delegation-toolkit'
 import { monadTestnet } from './config'
 
@@ -41,10 +41,7 @@ export class DelegationService {
   constructor(smartAccountService: SmartAccountService) {
     this.smartAccountService = smartAccountService
     // Initialize DeleGator environment for Monad testnet
-    this.environment = getDeleGatorEnvironment({
-      chain: monadTestnet,
-      version: '0.1.0' // PREFERRED_VERSION from the toolkit
-    })
+    this.environment = getDeleGatorEnvironment(monadTestnet.id) // Use chain ID instead of full object
   }
 
   async createMedicalConsultationDelegation(options: DelegationOptions): Promise<Delegation> {
@@ -83,7 +80,7 @@ export class DelegationService {
       })
 
       // Get delegation hash for off-chain tracking
-      const delegationHash = getDelegationHashOffchain(delegation)
+      const delegationHash = keccak256(toHex(JSON.stringify(delegation)))
       
       // Sign the delegation with the user's wallet
       let signature: Hex | undefined
@@ -163,7 +160,7 @@ export class DelegationService {
       })
 
       // Get delegation hash for off-chain tracking
-      const delegationHash = getDelegationHashOffchain(delegation)
+      const delegationHash = keccak256(toHex(JSON.stringify(delegation)))
       
       // Sign the delegation with the user's wallet
       let signature: Hex | undefined

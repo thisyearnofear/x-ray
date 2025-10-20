@@ -1,147 +1,140 @@
-// MedicalPaymaster Contract ABI
-// Generated from MedicalPaymaster.sol
-export const MedicalPaymasterABI = [
-  // ERC-4337 Paymaster Interface
+[
   {
-    inputs: [
+    "inputs": [
       {
-        components: [
-          { name: 'sender', type: 'address' },
-          { name: 'nonce', type: 'uint256' },
-          { name: 'initCode', type: 'bytes' },
-          { name: 'callData', type: 'bytes' },
-          { name: 'callGasLimit', type: 'uint256' },
-          { name: 'verificationGasLimit', type: 'uint256' },
-          { name: 'preVerificationGas', type: 'uint256' },
-          { name: 'maxFeePerGas', type: 'uint256' },
-          { name: 'maxPriorityFeePerGas', type: 'uint256' },
-          { name: 'paymasterAndData', type: 'bytes' },
-          { name: 'signature', type: 'bytes' },
+        "components": [
+          { "name": "sender", "type": "address" },
+          { "name": "nonce", "type": "uint256" },
+          { "name": "initCode", "type": "bytes" },
+          { "name": "callData", "type": "bytes" },
+          { "name": "callGasLimit", "type": "uint256" },
+          { "name": "verificationGasLimit", "type": "uint256" },
+          { "name": "preVerificationGas", "type": "uint256" },
+          { "name": "maxFeePerGas", "type": "uint256" },
+          { "name": "maxPriorityFeePerGas", "type": "uint256" },
+          { "name": "paymasterAndData", "type": "bytes" },
+          { "name": "signature", "type": "bytes" }
         ],
-        name: 'userOp',
-        type: 'tuple',
+        "name": "userOp",
+        "type": "tuple"
       },
-      { name: 'userOpHash', type: 'bytes32' },
-      { name: 'maxCost', type: 'uint256' },
+      { "name": "userOpHash", "type": "bytes32" },
+      { "name": "maxCost", "type": "uint256" }
     ],
-    name: 'validatePaymasterUserOp',
-    outputs: [
-      { name: 'context', type: 'bytes' },
-      { name: 'validationData', type: 'uint256' },
+    "name": "validatePaymasterUserOp",
+    "outputs": [
+      { "name": "context", "type": "bytes" },
+      { "name": "validationData", "type": "uint256" }
     ],
-    stateMutability: 'nonpayable',
-    type: 'function',
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    inputs: [
-      { name: 'mode', type: 'uint8' },
-      { name: 'context', type: 'bytes' },
-      { name: 'actualGasCost', type: 'uint256' },
-      { name: 'actualUserOpFeePerGas', type: 'uint256' },
+    "inputs": [
+      { "name": "mode", "type": "uint8" },
+      { "name": "context", "type": "bytes" },
+      { "name": "actualGasCost", "type": "uint256" },
+      { "name": "actualUserOpFeePerGas", "type": "uint256" }
     ],
-    name: 'postOp',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-
-  // MedicalPaymaster Specific
-  {
-    inputs: [{ name: 'contractAddress', type: 'address' }],
-    name: 'authorizeContract',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
+    "name": "postOp",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    inputs: [{ name: 'contractAddress', type: 'address' }],
-    name: 'revokeContract',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
+    "inputs": [{ "name": "contractAddress", "type": "address" }],
+    "name": "authorizeContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    inputs: [{ name: 'contractAddress', type: 'address' }],
-    name: 'isContractAuthorized',
-    outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
+    "inputs": [{ "name": "contractAddress", "type": "address" }],
+    "name": "revokeContract",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    inputs: [{ name: 'users', type: 'address[]' }],
-    name: 'resetSponsorshipLimits',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
+    "inputs": [{ "name": "contractAddress", "type": "address" }],
+    "name": "isContractAuthorized",
+    "outputs": [{ "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    inputs: [{ name: 'user', type: 'address' }],
-    name: 'getSponsoredGas',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
+    "inputs": [{ "name": "users", "type": "address[]" }],
+    "name": "resetSponsorshipLimits",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    inputs: [],
-    name: 'deposit',
-    outputs: [],
-    stateMutability: 'payable',
-    type: 'function',
+    "inputs": [{ "name": "user", "type": "address" }],
+    "name": "getSponsoredGas",
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    inputs: [{ name: 'amount', type: 'uint256' }],
-    name: 'withdrawStake',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
+    "inputs": [],
+    "name": "deposit",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
   },
   {
-    inputs: [],
-    name: 'getDeposit',
-    outputs: [{ name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
+    "inputs": [{ "name": "amount", "type": "uint256" }],
+    "name": "withdrawStake",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
   },
   {
-    inputs: [{ name: '', type: 'address' }],
-    name: 'authorizedContracts',
-    outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
+    "inputs": [],
+    "name": "getDeposit",
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
-    inputs: [{ name: '', type: 'address' }],
-    name: 'sponsoredGas',
-    outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
+    "inputs": [{ "name": "", "type": "address" }],
+    "name": "authorizedContracts",
+    "outputs": [{ "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
   },
-
-  // Events
   {
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: 'contractAddress', type: 'address' },
+    "inputs": [{ "name": "", "type": "address" }],
+    "name": "sponsoredGas",
+    "outputs": [{ "name": "", "type": "bool" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "name": "contractAddress", "type": "address" }
     ],
-    name: 'ContractAuthorized',
-    type: 'event',
+    "name": "ContractAuthorized",
+    "type": "event"
   },
   {
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: 'contractAddress', type: 'address' },
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "name": "contractAddress", "type": "address" }
     ],
-    name: 'ContractRevoked',
-    type: 'event',
+    "name": "ContractRevoked",
+    "type": "event"
   },
   {
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: 'user', type: 'address' },
-      { indexed: false, name: 'amount', type: 'uint256' },
-      { indexed: false, name: 'reason', type: 'string' },
+    "anonymous": false,
+    "inputs": [
+      { "indexed": true, "name": "user", "type": "address" },
+      { "indexed": false, "name": "amount", "type": "uint256" },
+      { "indexed": false, "name": "reason", "type": "string" }
     ],
-    name: 'GasSponsored',
-    type: 'event',
-  },
-] as const;
+    "name": "GasSponsored",
+    "type": "event"
+  }
+]

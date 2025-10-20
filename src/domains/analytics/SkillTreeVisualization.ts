@@ -23,7 +23,7 @@ export interface SkillTreeVisualizationConfig {
 
 export class SkillTreeVisualization {
   private container: HTMLElement
-  private svg: SVGElement
+  private svg!: SVGElement
   private skillTreeData: SkillTreeData
   private config: SkillTreeVisualizationConfig
   private currentZoom: number = 1

@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: x-ray-indexer
+networks:
+- id: 10143
+  start_block: 0
+  contracts:
+  - name: MedicalAchievementNFT
+    address:
+    - 0xA960B1692aa11a10Ff1c1595300301DfF1CDAcB4
+    handler: src/EventHandlers.ts
+    events:
+    - event: CertificateMinted(uint256 indexed tokenId, address indexed recipient, string diagnosis, uint256 accuracy)
+unordered_multichain_mode: true
+preload_handlers: true

@@ -1,7 +1,7 @@
 // PREMIUM: Instructions panel with holographic aesthetic
 
 export class InstructionsPanel {
-  private panel: HTMLElement
+  private panel!: HTMLElement
 
   constructor() {
     this.createPanel()

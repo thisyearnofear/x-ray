@@ -12,8 +12,8 @@ export default class LeePerry {
   mapTexture: THREE.Texture | null = null
   normalTexture: THREE.Texture | null = null
   faceApiLoaded: boolean = false
-  processingCanvas: HTMLCanvasElement
-  processingCtx: CanvasRenderingContext2D
+  processingCanvas!: HTMLCanvasElement
+  processingCtx!: CanvasRenderingContext2D
 
   constructor({ scene }: Props) {
     this.scene = scene

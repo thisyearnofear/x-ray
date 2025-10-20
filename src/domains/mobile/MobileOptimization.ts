@@ -27,8 +27,8 @@ export interface TouchGesture {
 }
 
 export class MobileOptimization {
-  private isMobile: boolean
-  private isTablet: boolean
+  private isMobile!: boolean
+  private isTablet!: boolean
   private config: MobileConfig
   private gestureHandlers: Map<string, TouchGesture> = new Map()
   private resizeObserver: ResizeObserver | null = null

@@ -42,34 +42,34 @@ export default class XRayEffect {
   scene: THREE.Scene
   composer: EffectComposer
   renderer: THREE.WebGLRenderer
-  renderTargetA: THREE.WebGLRenderTarget
+  renderTargetA!: THREE.WebGLRenderTarget
   skeletonModel: THREE.Group | null = null
   leePerryModel: THREE.Group | null = null
-  xRayPass: ShaderPass
+  xRayPass!: ShaderPass
   camera: THREE.PerspectiveCamera
-  leePerry: LeePerry
-  skeleton: Skeleton
+  leePerry!: LeePerry
+  skeleton!: Skeleton
   medicalMarkers: Map<string, MedicalMarker> = new Map()
   // Track whether medical markers are currently visible
   private areConditionsVisible: boolean = false
-  diagnosticUI: DiagnosticUIFacade
-  instructionsPanel: InstructionsPanel
-  mouse: {
+  diagnosticUI!: DiagnosticUIFacade
+  instructionsPanel!: InstructionsPanel
+  mouse!: {
     current: Position
     target: Position
   }
   expanded: boolean = false
   // Add scale property for X-ray effect scaling
   scale: number = 1.0
-  keyHandler: (event: KeyboardEvent) => void
+  keyHandler!: (event: KeyboardEvent) => void
 
   // Audio system
   audioManager: AudioManagerType;
   // Audio management system
-  audioManagementSystem: AudioManagementSystem;
+  audioManagementSystem!: AudioManagementSystem;
 
   // Visual feedback system for accessibility
-  visualFeedbackSystem: VisualFeedbackSystem;
+  visualFeedbackSystem!: VisualFeedbackSystem;
 
   // ENHANCEMENT FIRST: Reference to scan feedback system from canvas
   scanFeedbackSystem: any;

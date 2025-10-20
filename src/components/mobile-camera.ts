@@ -38,12 +38,12 @@ interface FaceDetectionResult {
 
 export class MobileCamera {
   private config: CameraConfig
-  private state: CameraState
-  private videoElement: HTMLVideoElement
-  private canvasElement: HTMLCanvasElement
-  private containerElement: HTMLElement
-  private controlsContainer: HTMLElement
-  private ctx: CanvasRenderingContext2D
+  private state!: CameraState
+  private videoElement!: HTMLVideoElement
+  private canvasElement!: HTMLCanvasElement
+  private containerElement!: HTMLElement
+  private controlsContainer!: HTMLElement
+  private ctx!: CanvasRenderingContext2D
   private animationFrame: number = 0
   private faceDetectionWorker: Worker | null = null
   
