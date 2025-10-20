@@ -67,6 +67,142 @@ export function useWeb3() {
     }
   }, [web3Facade])
 
+  // Contract client methods
+  const mintMedicalCertificate = useCallback(async (params: {
+    to: `0x${string}`
+    patientId: string
+    diagnosis: string
+    accuracy: bigint
+    conditions: string[]
+    tokenURI: string
+  }) => {
+    try {
+      setError(null)
+      if (!state.address) {
+        throw new Error('Wallet not connected')
+      }
+      const result = await web3Facade.getContractClient().mintMedicalCertificate(params, state.address)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to mint medical certificate')
+      throw err
+    }
+  }, [web3Facade, state.address])
+
+  const getCertificate = useCallback(async (tokenId: bigint) => {
+    try {
+      setError(null)
+      const result = await web3Facade.getContractClient().getCertificate(tokenId)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get certificate')
+      throw err
+    }
+  }, [web3Facade])
+
+  const certificateExists = useCallback(async (tokenId: bigint) => {
+    try {
+      setError(null)
+      const result = await web3Facade.getContractClient().certificateExists(tokenId)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to check certificate existence')
+      throw err
+    }
+  }, [web3Facade])
+
+  const getTotalCertificates = useCallback(async () => {
+    try {
+      setError(null)
+      const result = await web3Facade.getContractClient().getTotalCertificates()
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get total certificates')
+      throw err
+    }
+  }, [web3Facade])
+
+  const authorizeContract = useCallback(async (contractAddress: `0x${string}`) => {
+    try {
+      setError(null)
+      if (!state.address) {
+        throw new Error('Wallet not connected')
+      }
+      const result = await web3Facade.getContractClient().authorizeContract(contractAddress, state.address)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to authorize contract')
+      throw err
+    }
+  }, [web3Facade, state.address])
+
+  const isContractAuthorized = useCallback(async (contractAddress: `0x${string}`) => {
+    try {
+      setError(null)
+      const result = await web3Facade.getContractClient().isContractAuthorized(contractAddress)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to check contract authorization')
+      throw err
+    }
+  }, [web3Facade])
+
+  const getPaymasterDeposit = useCallback(async () => {
+    try {
+      setError(null)
+      const result = await web3Facade.getContractClient().getPaymasterDeposit()
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get paymaster deposit')
+      throw err
+    }
+  }, [web3Facade])
+
+  // Gasless transaction methods
+  const executeGaslessTransaction = useCallback(async (action: {
+    targetContract: `0x${string}`
+    functionData: `0x${string}`
+    value?: bigint
+  }) => {
+    try {
+      setError(null)
+      const result = await web3Facade.executeGaslessTransaction(action)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to execute gasless transaction')
+      throw err
+    }
+  }, [web3Facade])
+
+  const mintCertificateGasless = useCallback(async (params: {
+    to: `0x${string}`
+    patientId: string
+    diagnosis: string
+    accuracy: bigint
+    conditions: string[]
+    tokenURI: string
+  }) => {
+    try {
+      setError(null)
+      const result = await web3Facade.mintCertificateGasless(params)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to mint certificate gasless')
+      throw err
+    }
+  }, [web3Facade])
+
+  const checkGaslessQuota = useCallback(async () => {
+    try {
+      setError(null)
+      const result = await web3Facade.checkGaslessQuota()
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to check gasless quota')
+      throw err
+    }
+  }, [web3Facade])
+
   // Listen for account changes
   useEffect(() => {
     if (window.ethereum) {
@@ -98,6 +234,20 @@ export function useWeb3() {
     createMedicalConsultationDelegation,
     createDataSharingDelegation,
     executeDelegatedAction,
+
+    // Contract methods
+    mintMedicalCertificate,
+    getCertificate,
+    certificateExists,
+    getTotalCertificates,
+    authorizeContract,
+    isContractAuthorized,
+    getPaymasterDeposit,
+
+    // Gasless transaction methods
+    executeGaslessTransaction,
+    mintCertificateGasless,
+    checkGaslessQuota,
 
     // Services
     web3Facade

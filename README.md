@@ -19,6 +19,31 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) to view the application.
 
+## 📚 Documentation
+
+### 🎯 [Core Concepts & Architecture](docs/CORE_CONCEPTS.md)
+- Real implementation status and what's actually working
+- System architecture and key components
+- Web3 integration overview
+
+### 🔧 [Web3 Technical Implementation](docs/WEB3_IMPLEMENTATION.md)
+- Smart Account Service implementation details
+- Delegation Service with ERC-7710 standards
+- Contract Client with caching and type safety
+- React hook integration
+
+### 👨‍💻 [Usage Guide & Deployment](docs/USAGE_GUIDE.md)
+- User workflow and demo script
+- Local development setup
+- Remix deployment instructions
+- Security considerations
+
+### 🛠️ [Developer Guide & Testing](docs/DEVELOPER_GUIDE.md)
+- Comprehensive testing guide
+- Development workflow and tools
+- Debugging and troubleshooting
+- Performance monitoring
+
 ## 🏆 Hackathon Prize Eligibility
 
 ### 🦊 MetaMask Smart Accounts Track ($5,000+)

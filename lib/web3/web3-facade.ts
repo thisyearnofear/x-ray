@@ -1,6 +1,8 @@
 import { type Address } from 'viem'
 import { SmartAccountService } from './smart-account'
 import { DelegationService } from './delegation'
+import { ContractClient } from './contract-client'
+import { PaymasterIntegrationService } from './paymaster-integration'
 
 export interface Web3State {
   isConnected: boolean
@@ -8,20 +10,26 @@ export interface Web3State {
   smartAccount?: any
   delegations: any[]
   chainId?: number
+  gaslessEnabled?: boolean
 }
 
 export class Web3Facade {
   private smartAccountService: SmartAccountService
   private delegationService: DelegationService
+  private contractClient: ContractClient
+  private paymasterService: PaymasterIntegrationService
   private state: Web3State
 
   constructor() {
     this.smartAccountService = new SmartAccountService()
     this.delegationService = new DelegationService(this.smartAccountService)
+    this.contractClient = new ContractClient()
+    this.paymasterService = new PaymasterIntegrationService(this.smartAccountService)
 
     this.state = {
       isConnected: false,
-      delegations: []
+      delegations: [],
+      gaslessEnabled: false
     }
   }
 
@@ -34,8 +42,14 @@ export class Web3Facade {
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
       const address = accounts[0] as Address
 
-      // Create smart account
+      // Initialize wallet client first
+      await this.smartAccountService.initializeWalletClient()
+
+      // Create smart account with proper configuration
       const smartAccount = await this.smartAccountService.createSmartAccount(address)
+      
+      // Initialize contract client with wallet
+      await this.contractClient.initializeWallet()
 
       this.state = {
         ...this.state,
@@ -44,6 +58,12 @@ export class Web3Facade {
         smartAccount,
         chainId: 10143 // Monad testnet
       }
+
+      console.log('Wallet connected successfully:', {
+        address,
+        smartAccountAddress: smartAccount.address,
+        chainId: 10143
+      })
 
       return this.state
     } catch (error) {
@@ -64,10 +84,17 @@ export class Web3Facade {
       throw new Error('Wallet not connected')
     }
 
+    // Get wallet client for signing
+    const walletClient = this.smartAccountService.getWalletClient()
+    if (!walletClient) {
+      throw new Error('Wallet client not initialized')
+    }
+
     const delegation = await this.delegationService.createMedicalConsultationDelegation({
       delegator: this.state.address,
       delegate: delegateAddress,
-      expiry: Math.floor(Date.now() / 1000) + 3600 // 1 hour
+      expiry: Math.floor(Date.now() / 1000) + 3600, // 1 hour
+      walletClient
     })
 
     this.state.delegations.push(delegation)
@@ -79,11 +106,18 @@ export class Web3Facade {
       throw new Error('Wallet not connected')
     }
 
+    // Get wallet client for signing
+    const walletClient = this.smartAccountService.getWalletClient()
+    if (!walletClient) {
+      throw new Error('Wallet client not initialized')
+    }
+
     const delegation = await this.delegationService.createDataSharingDelegation({
       delegator: this.state.address,
       delegate: delegateAddress,
       allowedData,
-      expiry: Math.floor(Date.now() / 1000) + 86400 // 24 hours
+      expiry: Math.floor(Date.now() / 1000) + 86400, // 24 hours
+      walletClient
     })
 
     this.state.delegations.push(delegation)
@@ -107,6 +141,47 @@ export class Web3Facade {
     return await this.delegationService.executeDelegatedAction(activeDelegation, action)
   }
 
+  async executeGaslessTransaction(action: {
+    targetContract: Address
+    functionData: `0x${string}`
+    value?: bigint
+  }) {
+    if (!this.state.address) {
+      throw new Error('Wallet not connected')
+    }
+
+    return await this.paymasterService.executeGaslessConsultation({
+      userAddress: this.state.address,
+      ...action
+    })
+  }
+
+  async mintCertificateGasless(params: {
+    to: Address
+    patientId: string
+    diagnosis: string
+    accuracy: bigint
+    conditions: string[]
+    tokenURI: string
+  }) {
+    if (!this.state.address) {
+      throw new Error('Wallet not connected')
+    }
+
+    return await this.paymasterService.executeGaslessMint({
+      userAddress: this.state.address,
+      ...params
+    })
+  }
+
+  async checkGaslessQuota() {
+    if (!this.state.address) {
+      throw new Error('Wallet not connected')
+    }
+
+    return await this.paymasterService.checkGaslessQuota(this.state.address)
+  }
+
   getState(): Web3State {
     return { ...this.state }
   }
@@ -117,5 +192,13 @@ export class Web3Facade {
 
   getDelegationService(): DelegationService {
     return this.delegationService
+  }
+  
+  getContractClient(): ContractClient {
+    return this.contractClient
+  }
+
+  getPaymasterService(): PaymasterIntegrationService {
+    return this.paymasterService
   }
 }

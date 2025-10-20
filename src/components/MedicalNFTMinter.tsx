@@ -25,7 +25,7 @@ export const MedicalNFTMinter: React.FC<MedicalNFTMinterProps> = ({
   walletAddress,
   lastDiagnosis
 }) => {
-  const { executeDelegatedAction, error: web3Error } = useWeb3()
+  const { mintMedicalCertificate, error: web3Error } = useWeb3()
   const [isMinting, setIsMinting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -48,44 +48,17 @@ export const MedicalNFTMinter: React.FC<MedicalNFTMinterProps> = ({
       // Generate IPFS metadata URI (simplified for demo)
       const certificateURI = `ipfs://QmCertificate${Date.now()}/metadata.json`
 
-      // Encode the mintCertificate function call
-      const mintData = encodeFunctionData({
-        abi: [{
-          "inputs": [
-            { "name": "to", "type": "address" },
-            { "name": "patientId", "type": "string" },
-            { "name": "diagnosis", "type": "string" },
-            { "name": "accuracy", "type": "uint256" },
-            { "name": "conditions", "type": "string[]" },
-            { "name": "certificateURI", "type": "string" }
-          ],
-          "name": "mintCertificate",
-          "outputs": [{ "name": "", "type": "uint256" }],
-          "stateMutability": "nonpayable",
-          "type": "function"
-        }],
-        functionName: 'mintCertificate',
-        args: [
-          walletAddress as `0x${string}`,
-          patientId,
-          diagnosis,
-          accuracy,
-          conditions,
-          certificateURI
-        ]
+      // Mint the certificate using the new contract client
+      const result = await mintMedicalCertificate({
+        to: walletAddress as `0x${string}`,
+        patientId,
+        diagnosis,
+        accuracy,
+        conditions,
+        tokenURI: certificateURI
       })
 
-      // Execute the minting transaction via smart account
-      const result = await executeDelegatedAction({
-        to: DEPLOYED_CONTRACTS.medicalNFT as `0x${string}`,
-        data: mintData,
-        value: BigInt(0)
-      })
-
-      // Extract token ID from transaction receipt (simplified)
-      const tokenId = `0x${Date.now().toString(16).slice(-8)}`
-
-      setSuccess(`🏆 Real AI Achievement NFT minted on Monad! Token ID: ${tokenId}`)
+      setSuccess(`🏆 Real AI Achievement NFT minted on Monad! Transaction: ${result}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to mint certificate')
     } finally {

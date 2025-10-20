@@ -1,10 +1,16 @@
 # X-RAY Medical Smart Contracts
 
 ![Monad Testnet](https://img.shields.io/badge/Network-Monad%20Testnet-blue)
-![Solidity](https://img.shields.io/badge/Solidity-0.8.20-blue)
+![Solidity](https://img.shields.io/badge/Solidity-0.8.28-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 Real Web3 medical diagnostics contracts for Monad testnet deployment.
+
+## 🏥 Deployed Contracts
+
+- **MedicalAchievementNFT**: [0xA960B1692aa11a10Ff1c1595300301DfF1CDAcB4](https://testnet.monad.xyz/address/0xA960B1692aa11a10Ff1c1595300301DfF1CDAcB4)
+- **MedicalPaymaster**: [0x2Aa0f72AEc34Ea007aeeD1c998f28278A1501423](https://testnet.monad.xyz/address/0x2Aa0f72AEc34Ea007aeeD1c998f28278A1501423)
+- **EntryPoint**: [0x0000000071727De22E5E9d8BAf0edAc6f37da032](https://testnet.monad.xyz/address/0x0000000071727De22E5E9d8BAf0edAc6f37da032)
 
 ## 🏥 Contracts Overview
 
@@ -63,9 +69,9 @@ Update `config/MonadConfig.ts` with deployed addresses:
 
 ```typescript
 export const DEPLOYED_CONTRACTS = {
-  medicalNFT: '0x...',    // Your deployed NFT address
-  paymaster: '0x...',     // Your deployed paymaster address
-  entryPoint: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
+  medicalNFT: '0xA960B1692aa11a10Ff1c1595300301DfF1CDAcB4', // MedicalAchievementNFT
+  paymaster: '0x2Aa0f72AEc34Ea007aeeD1c998f28278A1501423',  // MedicalPaymaster
+  entryPoint: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',  // ERC-4337 EntryPoint
 };
 ```
 
@@ -91,6 +97,18 @@ REPORT_GAS=true npx hardhat test
 4. Certificate details stored on-chain
 5. User receives verifiable medical credential
 
+## 🔧 Remix Compilation
+
+To compile the contracts in Remix IDE:
+
+1. Open [Remix IDE](https://remix.ethereum.org/)
+2. Create a new file and copy the contract code
+3. In the "Solidity Compiler" tab, set the compiler version to 0.8.28 or higher
+4. Enable "Enable optimization"
+5. Click "Compile"
+
+All dependencies are included inline in the contract files to avoid import issues with Remix.
+
 ### MedicalPaymaster Flow
 1. User initiates AI consultation
 2. ERC-4337 UserOperation includes paymaster data
@@ -107,7 +125,7 @@ REPORT_GAS=true npx hardhat test
 
 ## 📊 Gas Optimization
 
-- Uses Solidity 0.8.20 with optimizer enabled
+- Uses Solidity 0.8.28 with optimizer enabled
 - ERC721URIStorage for efficient metadata handling
 - Minimal storage writes in hot paths
 - Batch operations where possible

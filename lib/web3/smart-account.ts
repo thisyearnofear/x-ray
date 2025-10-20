@@ -1,4 +1,4 @@
-import { createPublicClient, createWalletClient, http, type Address } from 'viem'
+import { createPublicClient, createWalletClient, http, type Address, custom } from 'viem'
 import { createBundlerClient } from 'viem/account-abstraction'
 import { toMetaMaskSmartAccount, Implementation } from '@metamask/delegation-toolkit'
 import { monadTestnet, BUNDLER_URL } from './config'
@@ -6,6 +6,7 @@ import { monadTestnet, BUNDLER_URL } from './config'
 export class SmartAccountService {
   private publicClient: any
   private bundlerClient: any
+  private walletClient: any
 
   constructor() {
     this.publicClient = createPublicClient({
@@ -19,24 +20,45 @@ export class SmartAccountService {
     })
   }
 
-  async createSmartAccount(ownerAddress: Address, implementation: Implementation = Implementation.Hybrid): Promise<any> {
-    // ENHANCED: Create smart account that demonstrates ERC-4337 concepts
-    // TODO: Integrate with full MetaMask toolkit when API stabilizes
-    const account = {
-      address: ownerAddress, // Use owner address as smart account for demo
-      ownerAddress,
-      implementation,
-      isDeployed: false,
-      type: 'smart-account',
-      // ERC-4337 compatible interface
-      signUserOperation: async (userOp: any) => {
-        // Simulate signing (in production, this would use proper signing)
-        return `0x${Date.now().toString(16)}`
-      }
+  async initializeWalletClient() {
+    if (typeof window === 'undefined' || !window.ethereum) {
+      throw new Error('MetaMask not available')
     }
 
-    console.log('Created smart account:', account)
-    return account
+    this.walletClient = createWalletClient({
+      chain: monadTestnet,
+      transport: custom(window.ethereum)
+    })
+
+    return this.walletClient
+  }
+
+  async createSmartAccount(ownerAddress: Address, implementation: Implementation = Implementation.Hybrid): Promise<any> {
+    try {
+      // Ensure wallet client is initialized
+      if (!this.walletClient) {
+        await this.initializeWalletClient()
+      }
+
+      // Create actual MetaMask smart account using the delegation toolkit
+      const account = await toMetaMaskSmartAccount({
+        client: this.publicClient,
+        implementation,
+        deploySalt: `0x${Date.now().toString(16).padStart(64, '0')}` as `0x${string}`,
+        owners: [ownerAddress]
+      })
+
+      console.log('Created MetaMask smart account:', {
+        address: account.address,
+        implementation,
+        owner: ownerAddress
+      })
+      
+      return account
+    } catch (error) {
+      console.error('Failed to create MetaMask smart account:', error)
+      throw error
+    }
   }
 
   async sendUserOperation(account: any, calls: any[]) {
@@ -72,5 +94,9 @@ export class SmartAccountService {
 
   getBundlerClient() {
     return this.bundlerClient
+  }
+
+  getWalletClient() {
+    return this.walletClient
   }
 }

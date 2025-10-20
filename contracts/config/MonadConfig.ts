@@ -41,7 +41,7 @@ export const ENTRYPOINT_ADDRESSES = {
 export const DEPLOYED_CONTRACTS = {
   // Core Medical Contracts
   medicalNFT: '0xA960B1692aa11a10Ff1c1595300301DfF1CDAcB4', // MedicalAchievementNFT
-  paymaster: '0x0000000000000000000000000000000000000000', // MedicalPaymaster
+  paymaster: '0x2Aa0f72AEc34Ea007aeeD1c998f28278A1501423', // MedicalPaymaster
 
   // Supporting Contracts
   dataRegistry: '0x0000000000000000000000000000000000000000', // MedicalDataRegistry (future)
