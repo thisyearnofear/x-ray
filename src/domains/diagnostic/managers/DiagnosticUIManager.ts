@@ -11,6 +11,12 @@ import { PatientInfoSection, type PatientInfo } from '../ui/PatientInfoSection'
 import { AIPanel, type AIInsight } from '../ui/AIPanel'
 import { MedicalCase } from '../../medical/types'
 import { colors, spacing, typography, borders, effects, zIndex } from '../../../styles/design-tokens'
+import { TierStatusIndicator } from '../../medical/ui/TierStatusIndicator'
+import { UpgradePrompt } from '../../medical/ui/UpgradePrompt'
+import { CaseAccessManager } from '../../medical/CaseAccessManager'
+import { SmartAccountOnboarding } from '../../web3/SmartAccountOnboarding'
+import { GaslessConsultationFlow } from '../../web3/GaslessConsultationFlow'
+import { DelegationPermissionsUI } from '../../web3/DelegationPermissionsUI'
 
 export interface DiagnosticUIConfig {
   onSolveClick?: () => void
@@ -28,6 +34,11 @@ export class DiagnosticUIManager {
   private aiPanel: AIPanel | null = null
   private audioEnabled: boolean = false // Track audio state
   private currentPatientCase: MedicalCase | null = null // Store current patient case
+  private accessManager: CaseAccessManager
+  private tierIndicator: any = null // TierStatusIndicator instance
+  private upgradePrompt: any = null // UpgradePrompt instance
+  private onboardingActive: boolean = false
+  private isSmartAccountConnected: boolean = false
 
   // Public getter to access the AI panel for voice integration
   public showTransitionOverlay(message: string): Promise<void> {
@@ -72,6 +83,7 @@ export class DiagnosticUIManager {
 
   constructor(config: DiagnosticUIConfig = {}) {
     this.config = config
+    this.accessManager = CaseAccessManager.getInstance()
   }
 
   initialize(): void {
@@ -79,6 +91,9 @@ export class DiagnosticUIManager {
 
     this.createUI()
     this.createAIPanel()
+    this.createTierStatusIndicator()
+    this.setupAccessManagerListeners()
+    this.addTimerStyles()
     this.isInitialized = true
     console.log('🏥 DiagnosticUIManager initialized')
   }
@@ -115,9 +130,17 @@ export class DiagnosticUIManager {
       ">
         <h3 style="margin: 0; color: ${colors.info.base}; font-size: ${typography.fontSize.lg}; font-weight: ${typography.fontWeight.bold};">🏥 Diagnosis Controls</h3>
         <div style="display: flex; align-items: center; gap: ${spacing.sm};">
-          <div style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.base};">
-            Status: <span id="current-phase">Loading...</span>
-          </div>
+          <div id="timer-display" style="
+            font-size: ${typography.fontSize.lg};
+            color: ${colors.primary.base};
+            font-weight: ${typography.fontWeight.bold};
+            padding: ${spacing.xs} ${spacing.sm};
+            background: ${colors.background.primaryGlow};
+            border: ${borders.width.thin} solid ${colors.border.primary};
+            border-radius: ${borders.radius.md};
+            min-width: 80px;
+            text-align: center;
+          ">5:00</div>
           <button id="toggle-diagnostic-panel" style="
             background: ${colors.background.primaryGlow};
             color: ${colors.primary.base};
@@ -219,7 +242,7 @@ export class DiagnosticUIManager {
               font-weight: ${typography.fontWeight.medium};
               transition: all 0.3s ease;
               ${effects.inset.medium}
-            "><span>👩‍⚕️</span> Consult Nurse</button>
+            "><span>🤖</span> Free AI Consult</button>
           </div>
         </div>
         
@@ -327,6 +350,572 @@ export class DiagnosticUIManager {
     document.body.appendChild(aiPanelElement)
   }
 
+  // ENHANCEMENT FIRST: Create tier status indicator
+  private createTierStatusIndicator(): void {
+    const tierContainer = document.createElement('div')
+    tierContainer.id = 'tier-status-container'
+    tierContainer.style.cssText = `
+      position: fixed;
+      top: ${spacing.lg};
+      right: ${spacing.lg};
+      z-index: ${zIndex.panel};
+    `
+
+    // Create React component container
+    const tierElement = document.createElement('div')
+    tierElement.id = 'tier-status-indicator'
+    tierContainer.appendChild(tierElement)
+
+    document.body.appendChild(tierContainer)
+
+    // CLEAN: Render tier status indicator
+    this.renderTierStatusIndicator()
+  }
+
+  // MODULAR: Render tier status indicator using React-like pattern
+  private renderTierStatusIndicator(): void {
+    const container = document.getElementById('tier-status-indicator')
+    if (!container) return
+
+    const accessSummary = this.accessManager.getAccessSummary()
+    const userStatus = this.accessManager.getUserStatus()
+
+    const getTierColor = () => accessSummary.tier === 'premium' ? '#00d4ff' : '#ffa500'
+    const getTierIcon = () => accessSummary.tier === 'premium' ? '👑' : '⭐'
+    const getCasesDisplay = () => {
+      if (accessSummary.casesRemaining === 'unlimited') return 'Unlimited'
+      return `${accessSummary.casesRemaining} left today`
+    }
+
+    container.innerHTML = `
+      <div style="
+        background: rgba(0, 0, 0, 0.9);
+        border: 2px solid ${getTierColor()};
+        border-radius: 15px;
+        padding: 1rem;
+        color: white;
+        font-family: 'Segoe UI', sans-serif;
+        min-width: 200px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      ">
+        <!-- Header -->
+        <div style="
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.75rem;
+        ">
+          <div style="
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          ">
+            <span style="font-size: 1.2rem;">${getTierIcon()}</span>
+            <span style="
+              font-weight: bold;
+              text-transform: capitalize;
+              color: ${getTierColor()};
+            ">${accessSummary.tier} Tier</span>
+          </div>
+          
+          ${userStatus.isAuthenticated ? `
+            <div style="
+              font-size: 0.7rem;
+              background: rgba(0, 255, 0, 0.2);
+              color: #00ff00;
+              padding: 0.25rem 0.5rem;
+              border-radius: 10px;
+              border: 1px solid rgba(0, 255, 0, 0.3);
+            ">✅ Connected</div>
+          ` : ''}
+        </div>
+
+        <!-- Cases Remaining -->
+        <div style="margin-bottom: 0.75rem;">
+          <div style="
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-bottom: 0.25rem;
+          ">Cases Available:</div>
+          <div style="
+            font-size: 1rem;
+            font-weight: bold;
+            color: ${accessSummary.casesRemaining === 0 ? '#ff6b6b' : getTierColor()};
+          ">${getCasesDisplay()}</div>
+        </div>
+
+        <!-- Upgrade Button -->
+        ${accessSummary.canUpgrade ? `
+          <button id="tier-upgrade-btn" style="
+            width: 100%;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+          ">🚀 Upgrade to Premium</button>
+        ` : ''}
+
+        <!-- Status Messages -->
+        ${accessSummary.casesRemaining === 0 && accessSummary.tier === 'free' ? `
+          <div style="
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: #ff6b6b;
+            text-align: center;
+            opacity: 0.9;
+          ">Daily limit reached. Upgrade for unlimited access!</div>
+        ` : ''}
+      </div>
+    `
+
+    // CLEAN: Add event listeners
+    const upgradeBtn = document.getElementById('tier-upgrade-btn')
+    if (upgradeBtn) {
+      upgradeBtn.addEventListener('click', () => this.showUpgradePrompt('feature_locked'))
+    }
+  }
+
+  // MODULAR: Setup access manager event listeners
+  private setupAccessManagerListeners(): void {
+    this.accessManager.on('accessStatusChanged', () => {
+      this.renderTierStatusIndicator()
+    })
+
+    this.accessManager.on('caseUsageRecorded', () => {
+      this.renderTierStatusIndicator()
+    })
+
+    this.accessManager.on('accessDenied', (data: any) => {
+      if (data.reason === 'daily_limit_reached') {
+        this.showUpgradePrompt('daily_limit')
+      } else if (data.reason === 'premium_required') {
+        this.showUpgradePrompt('ai_access')
+      }
+    })
+  }
+
+  // ENHANCEMENT FIRST: Show upgrade prompt
+  public showUpgradePrompt(trigger: 'daily_limit' | 'ai_access' | 'feature_locked'): void {
+    if (this.upgradePrompt) return // Prevent multiple prompts
+
+    const promptContainer = document.createElement('div')
+    promptContainer.id = 'upgrade-prompt-container'
+    promptContainer.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: ${zIndex.modal};
+      backdrop-filter: blur(10px);
+    `
+
+    const getTriggerMessage = () => {
+      switch (trigger) {
+        case 'daily_limit': return `You've used all 5 free cases today`
+        case 'ai_access': return 'AI-generated cases require premium access'
+        case 'feature_locked': return 'This feature is available in premium'
+        default: return 'Upgrade to unlock premium features'
+      }
+    }
+
+    const getTriggerIcon = () => {
+      switch (trigger) {
+        case 'daily_limit': return '📊'
+        case 'ai_access': return '🤖'
+        case 'feature_locked': return '🔒'
+        default: return '⭐'
+      }
+    }
+
+    const upgradeInfo = this.accessManager.getUpgradeInfo()
+
+    promptContainer.innerHTML = `
+      <div style="
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border: 2px solid #00d4ff;
+        border-radius: 20px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        color: white;
+        font-family: 'Segoe UI', sans-serif;
+        box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
+      ">
+        <!-- Header -->
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <div style="font-size: 3rem; margin-bottom: 0.5rem;">${getTriggerIcon()}</div>
+          <h2 style="margin: 0; color: #00d4ff; font-size: 1.5rem; margin-bottom: 0.5rem;">
+            Upgrade to Premium
+          </h2>
+          <p style="margin: 0; opacity: 0.8; font-size: 0.9rem;">
+            ${getTriggerMessage()}
+          </p>
+        </div>
+
+        <!-- Benefits -->
+        <div style="
+          background: rgba(0, 212, 255, 0.1);
+          border: 1px solid rgba(0, 212, 255, 0.3);
+          border-radius: 10px;
+          padding: 1rem;
+          margin-bottom: 1.5rem;
+        ">
+          <h4 style="margin: 0 0 0.5rem 0; color: #00d4ff;">Premium Benefits:</h4>
+          ${upgradeInfo.benefits.map(benefit => `
+            <div style="font-size: 0.85rem; margin-bottom: 0.25rem; opacity: 0.9;">
+              ${benefit}
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+          <button id="upgrade-dismiss-btn" style="
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+          ">Maybe Later</button>
+          
+          <button id="upgrade-connect-btn" style="
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+          ">🔗 Connect Wallet & Upgrade</button>
+        </div>
+      </div>
+    `
+
+    document.body.appendChild(promptContainer)
+
+    // CLEAN: Add event listeners
+    const dismissBtn = document.getElementById('upgrade-dismiss-btn')
+    const connectBtn = document.getElementById('upgrade-connect-btn')
+
+    dismissBtn?.addEventListener('click', () => {
+      document.body.removeChild(promptContainer)
+      this.upgradePrompt = null
+    })
+
+    connectBtn?.addEventListener('click', () => {
+      // Trigger wallet connection
+      this.config.onConsultationClick?.() // Reuse existing wallet connection flow
+      document.body.removeChild(promptContainer)
+      this.upgradePrompt = null
+    })
+
+    this.upgradePrompt = promptContainer
+  }
+
+  // ENHANCEMENT FIRST: Smart Account onboarding for new users
+  public showSmartAccountOnboarding(): void {
+    if (this.onboardingActive) return
+
+    this.onboardingActive = true
+    const onboardingContainer = document.createElement('div')
+    onboardingContainer.id = 'smart-account-onboarding'
+    
+    // Create React-like onboarding component
+    this.renderSmartAccountOnboarding(onboardingContainer)
+    document.body.appendChild(onboardingContainer)
+  }
+
+  private renderSmartAccountOnboarding(container: HTMLElement): void {
+    // CLEAN: Simple onboarding without technical jargon
+    container.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: ${zIndex.modal};
+        backdrop-filter: blur(10px);
+      ">
+        <div style="
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+          border: 2px solid #00d4ff;
+          border-radius: 20px;
+          padding: 2rem;
+          max-width: 500px;
+          width: 90%;
+          color: white;
+          font-family: 'Segoe UI', sans-serif;
+          box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
+          text-align: center;
+        ">
+          <div style="font-size: 4rem; margin-bottom: 1rem;">🏥</div>
+          <h2 style="margin: 0 0 1rem 0; color: #00d4ff; font-size: 1.5rem;">
+            Welcome to Smart Medical Accounts
+          </h2>
+          <p style="margin: 0 0 1.5rem 0; font-size: 1rem; line-height: 1.5; opacity: 0.9;">
+            Get free AI medical consultations without any transaction fees. 
+            Our smart account technology handles all the complexity for you.
+          </p>
+          
+          <div style="
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+          ">
+            <div style="font-size: 0.9rem; font-weight: bold; color: #00d4ff; margin-bottom: 0.5rem;">
+              ✨ What you get:
+            </div>
+            <div style="font-size: 0.8rem; text-align: left;">
+              • Free AI medical consultations (no fees)<br>
+              • Instant responses from medical AI<br>
+              • Secure permission management<br>
+              • Verified medical achievement certificates
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1rem; justify-content: center;">
+            <button id="onboarding-skip" style="
+              background: rgba(255, 255, 255, 0.1);
+              color: white;
+              border: 1px solid rgba(255, 255, 255, 0.3);
+              padding: 0.75rem 1.5rem;
+              border-radius: 10px;
+              cursor: pointer;
+              font-size: 0.9rem;
+              transition: all 0.3s ease;
+            ">Skip Setup</button>
+            
+            <button id="onboarding-start" style="
+              background: linear-gradient(45deg, #00d4ff, #0099cc);
+              color: white;
+              border: none;
+              padding: 0.75rem 2rem;
+              border-radius: 10px;
+              cursor: pointer;
+              font-size: 0.9rem;
+              font-weight: bold;
+              transition: all 0.3s ease;
+              box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+            ">🚀 Set Up Smart Account</button>
+          </div>
+
+          <div style="margin-top: 1rem; font-size: 0.75rem; opacity: 0.6;">
+            Secure • Free • No technical knowledge required
+          </div>
+        </div>
+      </div>
+    `
+
+    // Add event listeners
+    const skipBtn = container.querySelector('#onboarding-skip') as HTMLElement
+    const startBtn = container.querySelector('#onboarding-start') as HTMLElement
+
+    skipBtn?.addEventListener('click', () => {
+      this.completeOnboarding(container, false)
+    })
+
+    startBtn?.addEventListener('click', () => {
+      this.completeOnboarding(container, true)
+    })
+  }
+
+  private completeOnboarding(container: HTMLElement, shouldConnect: boolean): void {
+    if (shouldConnect) {
+      // Trigger wallet connection
+      this.config.onConsultationClick?.()
+    }
+    
+    document.body.removeChild(container)
+    this.onboardingActive = false
+  }
+
+  // ENHANCEMENT FIRST: Gasless consultation flow
+  private startGaslessConsultation(): void {
+    if (!this.isSmartAccountConnected) {
+      this.showSmartAccountOnboarding()
+      return
+    }
+
+    // Show gasless consultation UI
+    this.showGaslessConsultationFlow()
+  }
+
+  private showGaslessConsultationFlow(): void {
+    const consultationContainer = document.createElement('div')
+    consultationContainer.id = 'gasless-consultation-flow'
+    consultationContainer.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: ${zIndex.panel};
+      max-width: 400px;
+    `
+
+    consultationContainer.innerHTML = `
+      <div style="
+        background: rgba(0, 212, 255, 0.1);
+        border: 1px solid rgba(0, 212, 255, 0.3);
+        border-radius: 15px;
+        padding: 1.5rem;
+        color: white;
+        font-family: 'Segoe UI', sans-serif;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      ">
+        <div style="
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 1rem;
+        ">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.5rem;">🤖</span>
+            <span style="font-weight: bold; color: #00d4ff;">AI Medical Consultation</span>
+          </div>
+          <div style="
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+            padding: 0.25rem 0.5rem;
+            border-radius: 10px;
+            fontSize: 0.7rem;
+            border: 1px solid rgba(0, 255, 0, 0.3);
+          ">✨ FREE</div>
+        </div>
+
+        <p style="margin: 0 0 1rem 0; font-size: 0.9rem; opacity: 0.9;">
+          Get instant medical advice from our AI assistant. No fees, no waiting.
+        </p>
+        
+        <button id="start-consultation" style="
+          width: 100%;
+          background: linear-gradient(45deg, #00d4ff, #0099cc);
+          color: white;
+          border: none;
+          padding: 1rem;
+          border-radius: 10px;
+          cursor: pointer;
+          font-size: 1rem;
+          font-weight: bold;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+          margin-bottom: 1rem;
+        ">🎙️ Start Free Consultation</button>
+
+        <div style="
+          padding: 0.75rem;
+          background: rgba(0, 0, 0, 0.3);
+          border-radius: 8px;
+          font-size: 0.75rem;
+        ">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+            <span>💰 Transaction Fee:</span>
+            <span style="color: #00ff00; font-weight: bold;">$0.00</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>⚡ Response Time:</span>
+            <span style="color: #00d4ff; font-weight: bold;">Instant</span>
+          </div>
+        </div>
+
+        <button id="close-consultation" style="
+          position: absolute;
+          top: 10px;
+          right: 10px;
+          background: none;
+          border: none;
+          color: white;
+          font-size: 1.2rem;
+          cursor: pointer;
+          opacity: 0.6;
+        ">×</button>
+      </div>
+    `
+
+    document.body.appendChild(consultationContainer)
+
+    // Add event listeners
+    const startBtn = consultationContainer.querySelector('#start-consultation') as HTMLElement
+    const closeBtn = consultationContainer.querySelector('#close-consultation') as HTMLElement
+
+    startBtn?.addEventListener('click', () => {
+      this.executeGaslessConsultation()
+    })
+
+    closeBtn?.addEventListener('click', () => {
+      document.body.removeChild(consultationContainer)
+    })
+  }
+
+  private executeGaslessConsultation(): void {
+    // ENHANCEMENT FIRST: Use existing voice consultation system
+    this.config.onConsultationClick?.()
+    
+    // Add gasless transaction feedback
+    if (this.aiPanel) {
+      this.aiPanel.addInsight({
+        id: `gasless_consult_${Date.now()}`,
+        timestamp: Date.now(),
+        content: '🤖 Free AI Consultation: No transaction fees charged! Your smart account handled everything automatically.',
+        type: 'voice',
+        confidence: 1.0
+      })
+    }
+  }
+
+  // ENHANCEMENT FIRST: Update smart account connection status
+  public updateSmartAccountStatus(isConnected: boolean, address?: string): void {
+    this.isSmartAccountConnected = isConnected
+    
+    if (isConnected) {
+      // Update UI to show smart account benefits
+      this.renderTierStatusIndicator()
+      
+      // Show first-time delegation setup if needed
+      const hasSetupDelegation = localStorage.getItem('delegation_setup_complete')
+      if (!hasSetupDelegation) {
+        setTimeout(() => this.showDelegationSetup(), 2000)
+      }
+    }
+  }
+
+  private showDelegationSetup(): void {
+    // Show simplified delegation permissions UI
+    if (this.aiPanel) {
+      this.aiPanel.addInsight({
+        id: `delegation_setup_${Date.now()}`,
+        timestamp: Date.now(),
+        content: '🔐 Smart Account Setup: Would you like to grant AI assistants permission to provide free medical consultations? You can change this anytime.',
+        type: 'voice',
+        confidence: 1.0
+      })
+    }
+  }
+
   // Show voice consultation active indicator
   public showVoiceActiveIndicator(): void {
     const indicator = document.getElementById('voice-status-indicator')
@@ -409,7 +998,7 @@ export class DiagnosticUIManager {
     })
 
     consultNurseBtn?.addEventListener('click', () => {
-      this.consultNurse()
+      this.startGaslessConsultation()
     })
   }
 
@@ -708,6 +1297,41 @@ export class DiagnosticUIManager {
     }
   }
 
+  // ENHANCEMENT FIRST: Update timer display
+  updateTimer(timeRemaining: number, urgency: 'normal' | 'warning' | 'critical' = 'normal'): void {
+    const timerElement = document.getElementById('timer-display')
+    if (!timerElement) return
+
+    const minutes = Math.floor(timeRemaining / 60)
+    const seconds = timeRemaining % 60
+    const timeString = `${minutes}:${seconds.toString().padStart(2, '0')}`
+    
+    timerElement.textContent = timeString
+
+    // Update color based on urgency
+    const urgencyColors = {
+      normal: colors.primary.base,
+      warning: colors.accent.base,
+      critical: colors.error.base
+    }
+    
+    const urgencyBorders = {
+      normal: colors.border.primary,
+      warning: colors.border.accent,
+      critical: colors.border.error
+    }
+
+    timerElement.style.color = urgencyColors[urgency]
+    timerElement.style.borderColor = urgencyBorders[urgency]
+    
+    // Add pulse animation for critical time
+    if (urgency === 'critical') {
+      timerElement.style.animation = 'pulse 1s ease-in-out infinite'
+    } else {
+      timerElement.style.animation = 'none'
+    }
+  }
+
   // ENHANCEMENT FIRST: Add missing methods for facade compatibility
   updateScanProgress(data: any): void {
     // Progress updates handled by visual feedback system
@@ -789,6 +1413,27 @@ export class DiagnosticUIManager {
 
   getUIElement(): HTMLElement | null {
     return this.uiElement;
+  }
+
+  // CLEAN: Add pulse animation styles
+  private addTimerStyles(): void {
+    if (document.querySelector('#timer-animation-styles')) return
+
+    const style = document.createElement('style')
+    style.id = 'timer-animation-styles'
+    style.textContent = `
+      @keyframes pulse {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.05);
+          opacity: 0.8;
+        }
+      }
+    `
+    document.head.appendChild(style)
   }
 
   destroy(): void {

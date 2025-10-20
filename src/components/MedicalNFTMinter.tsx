@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { useWeb3 } from '../../hooks/web3/useWeb3'
+
 interface MedicalCertificate {
   patientId: string
   diagnosis: string[]
@@ -15,7 +16,7 @@ interface MedicalNFTMinterProps {
   lastDiagnosis?: {
     conditions: string[]
     accuracy: number
-  }
+  } | null
 }
 
 export const MedicalNFTMinter: React.FC<MedicalNFTMinterProps> = ({
@@ -26,6 +27,7 @@ export const MedicalNFTMinter: React.FC<MedicalNFTMinterProps> = ({
   const [isMinting, setIsMinting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   const handleMintCertificate = async () => {
     if (!walletAddress || !lastDiagnosis) return
@@ -59,76 +61,98 @@ export const MedicalNFTMinter: React.FC<MedicalNFTMinterProps> = ({
     }
   }
 
+  // Don't render if no diagnosis has been completed
   if (!lastDiagnosis) {
-    return (
-      <div style={{
-        position: 'absolute',
-        bottom: '20px',
-        left: '20px',
-        zIndex: 1000,
-        background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(20, 20, 40, 0.9))',
-        border: '1px solid rgba(0, 212, 255, 0.2)',
-        padding: '20px',
-        borderRadius: '12px',
-        color: 'white',
-        fontSize: '13px',
-        minWidth: '250px',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
-        textAlign: 'center'
-      }}>
-        <div style={{ fontSize: '24px', marginBottom: '10px' }}>🏆</div>
-        <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#00d4ff' }}>
-          AI Achievement Ready
-        </div>
-        <div style={{ opacity: 0.8, lineHeight: '1.4' }}>
-          Complete a diagnosis to mint your verifiable AI performance certificate
-        </div>
-      </div>
-    )
+    return null
   }
 
   return (
     <div style={{
-      position: 'absolute',
+      position: 'fixed',
       bottom: '20px',
-      left: '20px',
+      right: '20px',
       zIndex: 1000,
       background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(20, 20, 40, 0.95))',
       border: '1px solid rgba(231, 76, 60, 0.3)',
-      padding: '25px',
       borderRadius: '15px',
       color: 'white',
       fontSize: '14px',
-      minWidth: '320px',
-      boxShadow: '0 15px 35px rgba(0, 0, 0, 0.4), 0 0 25px rgba(231, 76, 60, 0.1)'
+      width: isCollapsed ? '60px' : '340px',
+      boxShadow: '0 15px 35px rgba(0, 0, 0, 0.4), 0 0 25px rgba(231, 76, 60, 0.1)',
+      transition: 'width 0.3s ease, transform 0.3s ease',
+      overflow: 'hidden',
+      backdropFilter: 'blur(10px)'
     }}>
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <div style={{ fontSize: '32px', marginBottom: '10px' }}>🏆</div>
-        <h3 style={{
-          margin: '0 0 8px 0',
-          fontSize: '18px',
-          color: '#e74c3c',
-          fontWeight: 'bold'
-        }}>
-          AI Performance Certificate
-        </h3>
-        <p style={{
-          margin: '0',
-          fontSize: '13px',
-          opacity: 0.8,
-          lineHeight: '1.4'
-        }}>
-          Mint a verifiable NFT celebrating your AI diagnostic achievements
-        </p>
+      {/* Header with collapse toggle */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '15px',
+        borderBottom: isCollapsed ? 'none' : '1px solid rgba(231, 76, 60, 0.2)',
+        cursor: 'pointer'
+      }} onClick={() => setIsCollapsed(!isCollapsed)}>
+        <div style={{
+          fontSize: '24px',
+          transition: 'transform 0.3s ease'
+        }}>🏆</div>
+        {!isCollapsed && (
+          <h3 style={{
+            margin: '0',
+            fontSize: '16px',
+            color: '#e74c3c',
+            fontWeight: 'bold',
+            flex: 1,
+            marginLeft: '10px'
+          }}>
+            AI Certificate
+          </h3>
+        )}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsCollapsed(!isCollapsed)
+          }}
+          style={{
+            background: 'rgba(231, 76, 60, 0.2)',
+            color: '#e74c3c',
+            border: '1px solid rgba(231, 76, 60, 0.3)',
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          {isCollapsed ? '◀' : '▶'}
+        </button>
       </div>
 
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: '10px',
-        padding: '15px',
-        marginBottom: '20px',
-        border: '1px solid rgba(255, 255, 255, 0.1)'
-      }}>
+      {/* Content - hidden when collapsed */}
+      {!isCollapsed && (
+        <div style={{ padding: '20px 15px 15px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <p style={{
+              margin: '0',
+              fontSize: '13px',
+              opacity: 0.8,
+              lineHeight: '1.4'
+            }}>
+              Mint a verifiable NFT celebrating your AI diagnostic achievements
+            </p>
+          </div>
+
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '10px',
+            padding: '15px',
+            marginBottom: '20px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -149,7 +173,7 @@ export const MedicalNFTMinter: React.FC<MedicalNFTMinterProps> = ({
         </div>
       </div>
 
-      {error && (
+          {error && (
         <div style={{
           color: '#ff6b6b',
           marginBottom: '15px',
@@ -164,7 +188,7 @@ export const MedicalNFTMinter: React.FC<MedicalNFTMinterProps> = ({
         </div>
       )}
 
-      {success && (
+          {success && (
         <div style={{
           color: '#4ecdc4',
           marginBottom: '15px',
@@ -179,7 +203,7 @@ export const MedicalNFTMinter: React.FC<MedicalNFTMinterProps> = ({
         </div>
       )}
 
-      {!walletAddress && (
+          {!walletAddress && (
         <div style={{
           color: '#ff6b6b',
           fontSize: '13px',
@@ -190,11 +214,11 @@ export const MedicalNFTMinter: React.FC<MedicalNFTMinterProps> = ({
           borderRadius: '8px',
           border: '1px solid rgba(255, 107, 107, 0.3)'
         }}>
-          🔗 Connect MetaMask to mint your achievement certificate
+          🔗 Connect wallet to save your achievement certificate
         </div>
       )}
 
-      {walletAddress && (
+          {walletAddress && (
         <button
           onClick={handleMintCertificate}
           disabled={isMinting}
@@ -214,24 +238,26 @@ export const MedicalNFTMinter: React.FC<MedicalNFTMinterProps> = ({
             letterSpacing: '1px'
           }}
         >
-          {isMinting ? '🔄 Minting Certificate...' : '🏆 Mint Achievement NFT'}
+          {isMinting ? '🔄 Saving Certificate...' : '🏆 Save Achievement Certificate'}
         </button>
       )}
 
-      <div style={{
-        marginTop: '15px',
-        fontSize: '11px',
-        opacity: 0.6,
-        textAlign: 'center',
-        lineHeight: '1.3'
-      }}>
-        <div style={{ marginBottom: '4px' }}>
-          🔒 <strong>Onchain Verification:</strong> Immutable proof of AI diagnostic skill
+          <div style={{
+            marginTop: '15px',
+            fontSize: '11px',
+            opacity: 0.6,
+            textAlign: 'center',
+            lineHeight: '1.3'
+          }}>
+            <div style={{ marginBottom: '4px' }}>
+              🔒 <strong>Secure Verification:</strong> Permanent proof of your diagnostic skills
+            </div>
+            <div>
+              📈 <strong>Progress Tracking:</strong> Build your medical achievement history
+            </div>
+          </div>
         </div>
-        <div>
-          📈 <strong>Performance Tracking:</strong> Build your medical AI achievement history
-        </div>
-      </div>
+      )}
     </div>
   )
 }

@@ -29,7 +29,7 @@ export class DiagnosisSubmissionSection {
     this.element.id = 'diagnosis-submission'
     this.element.style.cssText = `
       margin-top: ${spacing.base}; 
-      display: none;
+      display: block;
     `
     
     this.element.innerHTML = this.generateHTML()
@@ -177,6 +177,11 @@ export class DiagnosisSubmissionSection {
       this.data.onError('Please select at least one condition for your diagnosis.')
       return
     }
+
+    // ENHANCEMENT FIRST: Dispatch browser event for NFT panel
+    window.dispatchEvent(new CustomEvent('diagnosis-complete', {
+      detail: { selectedConditions }
+    }))
 
     this.data.onSubmit(selectedConditions)
   }

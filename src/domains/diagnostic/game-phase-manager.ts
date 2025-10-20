@@ -20,6 +20,7 @@ export enum GamePhase {
 export class GamePhaseManager {
   private currentPhase: GamePhase = GamePhase.WELCOME
   private listeners: Map<GamePhase, (() => void)[]> = new Map()
+  private eventListeners: Map<string, Function[]> = new Map()
   private gameManager: GameManager
   private diagnosticUIManager: DiagnosticUIManager | null = null;
   private audioManager: AudioManager | null = null;
@@ -100,6 +101,9 @@ export class GamePhaseManager {
     await this.animatePhaseTransition(newPhase, previousPhase);
 
     this.currentPhase = newPhase
+
+    // Emit phase change event
+    this.emit('phaseChanged', { newPhase, previousPhase })
 
     // Update phase in GameManager if available
     if (this.gameManager) {
@@ -183,6 +187,28 @@ export class GamePhaseManager {
         listeners.splice(index, 1)
       }
     }
+  }
+
+  // Event system for general events
+  on(event: string, callback: Function): () => void {
+    if (!this.eventListeners.has(event)) {
+      this.eventListeners.set(event, [])
+    }
+    this.eventListeners.get(event)!.push(callback)
+
+    // Return unsubscribe function
+    return () => {
+      const listeners = this.eventListeners.get(event) || []
+      const index = listeners.indexOf(callback)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }
+
+  private emit(event: string, data?: any): void {
+    const listeners = this.eventListeners.get(event) || []
+    listeners.forEach(callback => callback(data))
   }
 
   // CLEAN: Simplified API - state management delegated to GameManager

@@ -22,6 +22,18 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
   React.useEffect(() => {
     if (isConnected && address) {
       onConnected(address)
+      
+      // ENHANCEMENT FIRST: Dispatch wallet connection event for tier system
+      const event = new CustomEvent('walletConnected', {
+        detail: { address, isConnected: true }
+      })
+      document.dispatchEvent(event)
+    } else if (!isConnected) {
+      // Dispatch disconnection event
+      const event = new CustomEvent('walletDisconnected', {
+        detail: { isConnected: false }
+      })
+      document.dispatchEvent(event)
     }
   }, [isConnected, address, onConnected])
 
@@ -39,7 +51,7 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
       minWidth: '280px'
     }}>
       <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        🔐 Web3 Connection
+        🔐 Wallet
         {isConnected && <span style={{ color: '#4ecdc4', fontSize: '12px' }}>●</span>}
       </h3>
 
@@ -122,14 +134,14 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
             boxShadow: isConnecting ? 'none' : '0 4px 15px rgba(78, 205, 196, 0.3)'
           }}
         >
-          {isConnecting ? '🔄 Creating Smart Account...' : '🚀 Connect MetaMask'}
+          {isConnecting ? '🔄 Connecting...' : '🔗 Connect'}
         </button>
       )}
 
       <div style={{ marginTop: '15px', fontSize: '11px', opacity: 0.7, lineHeight: '1.4' }}>
         {isConnected
-          ? 'Smart account active - AI consultations are now gasless!'
-          : 'Connect to enable ERC-4337 smart accounts & ERC-7710 delegation for AI-powered medical consultations'
+          ? 'Connected - Free AI consultations enabled! No transaction fees required.'
+          : 'Connect to unlock free AI medical consultations (no gas fees)'
         }
       </div>
     </div>

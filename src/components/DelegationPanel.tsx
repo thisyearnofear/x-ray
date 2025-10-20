@@ -25,7 +25,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
 
     try {
       await createMedicalConsultationDelegation(delegateAddress as `0x${string}`)
-      setSuccess('🎙️ AI Consultation delegation enabled! Voice AI can now operate gaslessly.')
+      setSuccess('🎙️ AI Consultation access enabled! Voice AI can now assist you.')
       setDelegateAddress('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to enable delegation')
@@ -43,7 +43,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
 
     try {
       await createDataSharingDelegation(delegateAddress as `0x${string}`, ['diagnosis', 'treatment', 'progress', 'ai-insights'])
-      setSuccess('📊 Medical AI data sharing delegation enabled! Diagnostic history accessible.')
+      setSuccess('📊 Medical AI data sharing enabled! Your diagnostic history is now accessible.')
       setDelegateAddress('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to share medical data')
@@ -73,7 +73,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
         🔐 AI Consultation Permissions
       </h3>
       <p style={{ margin: '0 0 25px 0', fontSize: '13px', opacity: 0.8, textAlign: 'center', lineHeight: '1.4' }}>
-        Grant AI assistants permission to provide gasless medical consultations
+        Grant AI assistants permission to provide medical consultations
       </p>
 
       {!walletAddress && (
@@ -87,7 +87,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
           borderRadius: '8px',
           border: '1px solid rgba(255, 107, 107, 0.3)'
         }}>
-          🔗 Please connect your MetaMask wallet first
+          🔗 Please connect your wallet first
         </div>
       )}
 

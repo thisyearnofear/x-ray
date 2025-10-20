@@ -13,9 +13,28 @@ const CanvasComponent = () => {
   const [loadingMessage, setLoadingMessage] = useState('Loading X-RAI...');
   const initializingRef = useRef(false);
   const canvasInstanceRef = useRef<any>(null);
+  const [diagnosisCompleted, setDiagnosisCompleted] = useState(false);
+  const [lastDiagnosis, setLastDiagnosis] = useState<{conditions: string[], accuracy: number} | null>(null);
 
   // Web3 integration
   const { isConnected, address: walletAddress } = useWeb3();
+
+  // Listen for diagnosis completion events
+  useEffect(() => {
+    const handleDiagnosisComplete = (event: CustomEvent) => {
+      setDiagnosisCompleted(true);
+      setLastDiagnosis({
+        conditions: event.detail.conditions || [],
+        accuracy: event.detail.accuracy || 0
+      });
+    };
+
+    window.addEventListener('diagnosis-complete' as any, handleDiagnosisComplete);
+    
+    return () => {
+      window.removeEventListener('diagnosis-complete' as any, handleDiagnosisComplete);
+    };
+  }, []);
 
   useEffect(() => {
     let disposed = false;
@@ -100,13 +119,12 @@ const CanvasComponent = () => {
           <DelegationPanel
             walletAddress={walletAddress || null}
           />
-          <MedicalNFTMinter
-            walletAddress={walletAddress || null}
-            lastDiagnosis={{
-              conditions: ['Sample Condition'],
-              accuracy: 85
-            }}
-          />
+          {diagnosisCompleted && (
+            <MedicalNFTMinter
+              walletAddress={walletAddress || null}
+              lastDiagnosis={lastDiagnosis}
+            />
+          )}
         </>
       )}
     </>

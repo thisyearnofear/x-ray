@@ -299,6 +299,20 @@ export class EnhancedGameIntegration {
         console.error('Error in UI callback:', error)
       }
     })
+
+    // Dispatch browser custom event for diagnosis completion
+    if (eventType === 'diagnosis_completed' && typeof window !== 'undefined') {
+      const event = new CustomEvent('diagnosis-complete', {
+        detail: {
+          conditions: data.selectedConditions || [],
+          accuracy: Math.round((data.accuracy || 0) * 100),
+          timeEfficiency: data.timeEfficiency,
+          correctConditions: data.correctConditions
+        }
+      })
+      window.dispatchEvent(event)
+      console.log('🏆 Diagnosis completion event dispatched to browser')
+    }
   }
 
   /**

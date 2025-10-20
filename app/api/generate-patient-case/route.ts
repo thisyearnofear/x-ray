@@ -1,3 +1,10 @@
+/**
+ * AI Patient Case Generation API
+ * ENHANCEMENT FIRST: Leverages existing medical-analysis API patterns
+ * MONETIZABLE: Premium-only endpoint for AI case generation
+ * PERFORMANT: Efficient AI inference with cost tracking
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 
 interface GeneratedPatientCase {
@@ -43,7 +50,24 @@ interface GeneratedPatientCase {
 
 export async function POST(request: NextRequest) {
     try {
-        const { model, difficulty = 'medium', specialty, caseNumber = 1 } = await request.json();
+        const body = await request.json();
+        const { 
+            model, 
+            difficulty = 'medium', 
+            specialty, 
+            caseNumber = 1,
+            smartAccount,
+            delegationEnabled,
+            userPreferences
+        } = body;
+
+        // MONETIZABLE: Verify this is a premium request
+        if (!smartAccount) {
+            return NextResponse.json(
+                { error: 'Smart account required for AI case generation' },
+                { status: 401 }
+            );
+        }
 
         if (!model) {
             return NextResponse.json(

@@ -18,6 +18,7 @@ import { MedicalServiceFacade } from "./domains/medical/MedicalServiceFacade"
 import { MedicalCase } from "./domains/medical/types"
 import { TutorialFacade } from "./domains/tutorial/TutorialFacade"
 import { VoiceConsultationManager } from "./domains/voice/VoiceConsultationManager"
+import { NurseAmyNudgeSystem } from "./domains/diagnostic/NurseAmyNudgeSystem"
 
 export default class Canvas {
   element: HTMLCanvasElement
@@ -56,6 +57,7 @@ export default class Canvas {
   // ENHANCEMENT FIRST: Tutorial and voice systems
   tutorial: TutorialFacade | null = null
   voiceConsultation: VoiceConsultationManager | null = null
+  nurseAmyNudges: NurseAmyNudgeSystem | null = null
 
   // Control RAF and listeners
   private _rafId: number | null = null
@@ -364,6 +366,36 @@ export default class Canvas {
       // Update the GameManager with the UI manager if it wasn't set before
       this.gameManager.diagnosticUIManager = this.diagnosticUI.getUIManager();
     }
+
+    // ENHANCEMENT FIRST: Initialize Nurse Amy Nudge System
+    this.nurseAmyNudges = new NurseAmyNudgeSystem(
+      this.voiceConsultation || undefined,
+      this.diagnosticUI?.getUIManager()?.getAIPanel() || undefined,
+      this.diagnosticUI?.getGamePhaseManager()
+    )
+
+    // MODULAR: Connect timer events to Nurse Amy nudges and UI
+    this.gameManager.on('timer_update', (data: any) => {
+      const gameState = this.gameManager?.getGameState()
+      if (gameState && this.nurseAmyNudges) {
+        this.nurseAmyNudges.evaluateNudgeNeeds(gameState)
+      }
+      
+      // ENHANCEMENT FIRST: Update timer display in UI
+      if (this.diagnosticUI && data.timeRemaining !== undefined) {
+        this.diagnosticUI.getUIManager()?.updateTimer(data.timeRemaining, data.urgency || 'normal')
+      }
+    })
+
+    // MODULAR: Connect condition discoveries to Nurse Amy
+    this.gameManager.on('pointsAwarded', (data: any) => {
+      if (data.reason === 'condition_discovered' && data.metadata?.conditionId) {
+        const gameState = this.gameManager?.getGameState()
+        if (gameState && this.nurseAmyNudges) {
+          this.nurseAmyNudges.triggerConditionFoundNudge(data.metadata.conditionId, gameState)
+        }
+      }
+    })
 
     this.gameManager.on('gameStateUpdated', (gameState: GameState) => {
       if (this.diagnosticUI) {

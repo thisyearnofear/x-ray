@@ -1,10 +1,12 @@
 import { MedicalDataService } from './services/MedicalDataService';
 import { AIAnalysisService } from './services/AIAnalysisService';
 import { MedicalCase } from './types';
+import { CaseAccessManager } from './CaseAccessManager';
 
 export class MedicalServiceFacade {
   private medicalDataService: MedicalDataService;
   private aiAnalysisService: AIAnalysisService;
+  private accessManager: CaseAccessManager;
 
   // ENHANCED: Onchain features
   private smartAccount: any = null;
@@ -13,6 +15,7 @@ export class MedicalServiceFacade {
   constructor() {
     this.medicalDataService = new MedicalDataService();
     this.aiAnalysisService = new AIAnalysisService();
+    this.accessManager = CaseAccessManager.getInstance();
   }
 
   // ENHANCED: Configure onchain features
@@ -21,7 +24,16 @@ export class MedicalServiceFacade {
     this.delegationEnabled = delegationEnabled;
   }
 
+  // ENHANCED: Tier-aware case access
   public getCase(caseId: string): MedicalCase | undefined {
+    // For static cases (like case-x487), check access
+    if (caseId === 'case-x487') {
+      if (!this.accessManager.canAccessCaseType('static')) {
+        throw new Error('Daily case limit reached. Please upgrade to premium for unlimited access.');
+      }
+      this.accessManager.recordCaseUsage('static');
+    }
+    
     return this.medicalDataService.getCase(caseId);
   }
 
@@ -51,12 +63,108 @@ export class MedicalServiceFacade {
     return this.delegationEnabled && !!this.smartAccount;
   }
 
+  // ENHANCED: AI-powered case generation for premium users
+  public async generateAICase(difficulty: 'easy' | 'medium' | 'hard' = 'medium'): Promise<MedicalCase> {
+    // Check premium access
+    if (!this.accessManager.canAccessCaseType('ai_generated')) {
+      throw new Error('AI case generation requires premium access. Please connect your wallet and upgrade.');
+    }
+
+    // Record usage
+    this.accessManager.recordCaseUsage('ai_generated');
+
+    try {
+      const response = await fetch('/api/generate-patient-case', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          difficulty,
+          smartAccount: this.smartAccount?.address,
+          delegationEnabled: this.delegationEnabled,
+          userPreferences: this.getUserPreferences()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI case generation failed: ${response.statusText}`);
+      }
+
+      const aiCase = await response.json();
+      
+      // Enhance with access-aware features
+      const enhancedCase: MedicalCase = {
+        ...aiCase,
+        id: `ai_case_${Date.now()}`,
+        isAIGenerated: true,
+        generatedAt: Date.now(),
+        difficulty,
+        smartAccountAddress: this.smartAccount?.address
+      };
+
+      return enhancedCase;
+    } catch (error) {
+      console.error('AI case generation failed:', error);
+      // Fallback to static case with upgrade prompt
+      throw new Error('AI case generation temporarily unavailable. Please try again or use the free static case.');
+    }
+  }
+
+  // ENHANCED: Get appropriate case based on user tier
+  public async getRecommendedCase(): Promise<MedicalCase> {
+    const userStatus = this.accessManager.getUserStatus();
+    
+    if (userStatus.currentTier === 'premium' && userStatus.canAccessAICases) {
+      // Generate AI case for premium users
+      return await this.generateAICase();
+    } else {
+      // Return static case for free users
+      const staticCase = this.getCase('case-x487');
+      if (!staticCase) {
+        throw new Error('Static case not available');
+      }
+      return staticCase;
+    }
+  }
+
+  // ENHANCED: Update authentication status
+  public updateAuthStatus(isAuthenticated: boolean, walletAddress?: string): void {
+    this.accessManager.updateAuthStatus(isAuthenticated, walletAddress);
+    
+    // Update onchain features
+    if (isAuthenticated && walletAddress) {
+      this.smartAccount = { address: walletAddress };
+      this.delegationEnabled = true;
+    } else {
+      this.smartAccount = null;
+      this.delegationEnabled = false;
+    }
+  }
+
+  // ENHANCED: Get user preferences for AI generation
+  private getUserPreferences() {
+    return {
+      specialties: ['general_medicine', 'radiology'],
+      complexity: 'adaptive',
+      focusAreas: ['diagnostic_reasoning', 'pattern_recognition']
+    };
+  }
+
+  // ENHANCED: Get access manager for UI integration
+  public getAccessManager(): CaseAccessManager {
+    return this.accessManager;
+  }
+
   // ENHANCED: Get onchain performance metrics
   public getPerformanceMetrics() {
+    const accessSummary = this.accessManager.getAccessSummary();
+    
     return {
       smartAccountConnected: !!this.smartAccount,
       delegationEnabled: this.delegationEnabled,
-      aiServiceConfigured: true
+      aiServiceConfigured: true,
+      currentTier: accessSummary.tier,
+      casesRemaining: accessSummary.casesRemaining,
+      canAccessAI: this.accessManager.canAccessCaseType('ai_generated')
     };
   }
 }

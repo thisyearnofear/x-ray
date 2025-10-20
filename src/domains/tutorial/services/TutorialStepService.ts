@@ -31,23 +31,25 @@ export class TutorialStepService {
       {
         id: 'welcome',
         title: 'Welcome to X-RAI Medical Simulator',
-        description: 'Advanced AI-powered medical diagnostic training system',
+        description: 'AI-powered medical diagnostic training with Web3 achievements',
         action: 'start-experience',
         autoProgress: false,
         duration: 3000
       },
       {
-        id: 'mouse-movement',
-        title: 'Mouse Movement',
-        description: 'Move your mouse to explore the interface',
-        action: 'mousemove',
-        autoProgress: true,
-        duration: 2000
+        id: 'wallet-connection',
+        title: 'Connect Your Wallet',
+        description: 'Connect your wallet to save achievements and access AI consultations',
+        action: 'wallet-connect',
+        targetElement: '.wallet-connection-panel',
+        tooltipMessage: 'Click "Connect" to enable all features',
+        autoProgress: false,
+        duration: 5000
       },
       {
         id: 'camera-controls',
         title: 'Camera Controls',
-        description: 'Click and drag to rotate the 3D model',
+        description: 'Click and drag to rotate the 3D patient model',
         action: 'camera-move',
         autoProgress: true,
         duration: 3000
@@ -76,6 +78,36 @@ export class TutorialStepService {
         action: 'scan-progress-100',
         autoProgress: false,
         duration: 5000
+      },
+      {
+        id: 'investigation-tools',
+        title: 'Investigation Tools',
+        description: 'Use medical tools like palpation, auscultation, and percussion for detailed examination',
+        action: 'use-investigation-tool',
+        targetElement: '.investigation-toolkit',
+        tooltipMessage: 'Click investigation tools for detailed analysis',
+        autoProgress: false,
+        duration: 4000
+      },
+      {
+        id: 'voice-consultation',
+        title: 'AI Voice Consultation',
+        description: 'Press "V" or click the consultation button to get AI medical advice',
+        action: 'voice-consultation',
+        targetElement: '.ai-consultation-button',
+        tooltipMessage: 'Get expert AI guidance during diagnosis',
+        autoProgress: false,
+        duration: 4000
+      },
+      {
+        id: 'diagnosis-submission',
+        title: 'Submit Diagnosis',
+        description: 'When ready, submit your diagnosis to complete the case and earn achievements',
+        action: 'diagnosis-submit',
+        targetElement: '.diagnosis-submission-section',
+        tooltipMessage: 'Submit when you have enough evidence',
+        autoProgress: false,
+        duration: 4000
       },
       {
         id: 'condition-discovery',
