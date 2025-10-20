@@ -1,0 +1,46 @@
+{
+  "name": "x-ray-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for X-RAY Medical Diagnostics on Monad testnet",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy": "hardhat run scripts/deploy.ts --network monadTestnet",
+    "verify": "hardhat verify",
+    "clean": "hardhat clean",
+    "lint": "solhint 'contracts/**/*.sol'",
+    "format": "prettier --write 'contracts/**/*.sol' 'test/**/*.ts' 'scripts/**/*.ts'",
+    "gas-report": "REPORT_GAS=true hardhat test"
+  },
+  "devDependencies": {
+    "@account-abstraction/contracts": "^0.7.0",
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "@types/node": "^20.0.0",
+    "dotenv": "^16.0.0",
+    "hardhat": "^2.19.0",
+    "prettier": "^3.0.0",
+    "solhint": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "blockchain",
+    "ethereum",
+    "smart-contracts",
+    "medical",
+    "diagnostics",
+    "nft",
+    "erc-4337",
+    "paymaster",
+    "monad",
+    "web3"
+  ],
+  "author": "X-RAY Medical Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thisyearnofear/x-ray"
+  }
+}

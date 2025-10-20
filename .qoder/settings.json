@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "ask": [
+      "Read(!/Users/udingethe/dev/x-ray/**)",
+      "Edit(!/Users/udingethe/dev/x-ray/**)"
+    ],
+    "allow": [
+      "Read(/Users/udingethe/dev/x-ray/**)",
+      "Edit(/Users/udingethe/dev/x-ray/**)"
+    ]
+  },
+  "memoryImport": {},
+  "monitoring": {}
+}
