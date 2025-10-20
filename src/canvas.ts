@@ -68,6 +68,9 @@ export default class Canvas {
     this.time = 0
     this.isMobile = window.innerWidth < 768
 
+    // Create loading screen before initializing components
+    this.createLoadingScreen()
+    
     this.createClock()
     this.createScene()
     this.createCamera()
@@ -87,7 +90,119 @@ export default class Canvas {
     this.createTutorialAndVoice()
     this.setupKeyboardShortcuts() // ENHANCEMENT: Minimal keyboard support
     this.createMobileComponents()
-    this.render()
+    
+    // Remove loading screen and start render after a brief delay to ensure everything is initialized
+    setTimeout(() => {
+      this.removeLoadingScreen()
+      this.render()
+    }, 500)
+  }
+  
+  private createLoadingScreen(): void {
+    // Create a stylish loading overlay
+    const loadingScreen = document.createElement('div')
+    loadingScreen.id = 'loading-screen'
+    loadingScreen.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      color: white;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+      transition: opacity 0.5s ease;
+    `
+    
+    loadingScreen.innerHTML = `
+      <div style="
+        text-align: center;
+        max-width: 500px;
+        padding: 30px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      ">
+        <div style="
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 20px;
+          background: linear-gradient(90deg, #00d4ff, #0099cc);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          text-fill-color: transparent;
+        ">X-RAY DIAGNOSTIC</div>
+        <div style="
+          font-size: 16px;
+          margin-bottom: 30px;
+          color: rgba(255, 255, 255, 0.7);
+        ">Initializing medical visualization platform</div>
+        <div style="
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 20px;
+        ">
+          <div class="loading-dot" style="
+            width: 12px;
+            height: 12px;
+            background: #00d4ff;
+            border-radius: 50%;
+            animation: pulse 1.4s infinite both;
+            animation-delay: 0s;
+          "></div>
+          <div class="loading-dot" style="
+            width: 12px;
+            height: 12px;
+            background: #00d4ff;
+            border-radius: 50%;
+            animation: pulse 1.4s infinite both;
+            animation-delay: 0.2s;
+          "></div>
+          <div class="loading-dot" style="
+            width: 12px;
+            height: 12px;
+            background: #00d4ff;
+            border-radius: 50%;
+            animation: pulse 1.4s infinite both;
+            animation-delay: 0.4s;
+          "></div>
+        </div>
+        <div style="
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.5);
+        ">Preparing diagnostic environment...</div>
+      </div>
+      
+      <style>
+        @keyframes pulse {
+          0%, 80%, 100% { transform: scale(0.8); opacity: 0.7; }
+          40% { transform: scale(1.2); opacity: 1; }
+        }
+      </style>
+    `
+    
+    document.body.appendChild(loadingScreen)
+  }
+  
+  private removeLoadingScreen(): void {
+    const loadingScreen = document.getElementById('loading-screen')
+    if (loadingScreen) {
+      loadingScreen.style.opacity = '0'
+      setTimeout(() => {
+        if (loadingScreen.parentElement) {
+          loadingScreen.parentElement.removeChild(loadingScreen)
+        }
+      }, 500)
+    }
   }
 
   createScene() {

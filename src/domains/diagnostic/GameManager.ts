@@ -127,21 +127,59 @@ export class GameManager {
             this.gameState.timeRemaining -= 1
 
             // Emit timer events for UI updates
-            this.emit('timer_update', {
+            const timerEvent = {
                 timeRemaining: this.gameState.timeRemaining,
-                urgency: this.getTimerUrgency()
-            })
+                urgency: this.getTimerUrgency(),
+                percentage: this.getTimePercentage()
+            };
+            
+            this.emit('timer_update', timerEvent)
 
-            // Critical time warnings
+            // Critical time warnings with enhanced feedback
             if (this.gameState.timeRemaining === 60) {
-                this.emit('timer_warning', { message: '⚠️ 1 minute remaining!' })
+                this.emit('timer_warning', { 
+                    message: '⚠️ 1 minute remaining!', 
+                    urgency: 'warning',
+                    audio: 'warning_beep'
+                })
+                
+                // Show visual feedback for warning
+                if (this.diagnosticUIManager) {
+                    this.diagnosticUIManager.showTimerWarning(60);
+                }
             } else if (this.gameState.timeRemaining === 30) {
-                this.emit('timer_critical', { message: '🚨 30 seconds left!' })
+                this.emit('timer_critical', { 
+                    message: '🚨 30 seconds left!', 
+                    urgency: 'critical',
+                    audio: 'urgent_beep'
+                })
+                
+                // Show enhanced visual feedback for critical time
+                if (this.diagnosticUIManager) {
+                    this.diagnosticUIManager.showTimerCritical(30);
+                }
+            } else if (this.gameState.timeRemaining <= 10 && this.gameState.timeRemaining > 0) {
+                // Visual and audio feedback for last 10 seconds
+                this.emit('timer_final_seconds', { 
+                    seconds: this.gameState.timeRemaining,
+                    audio: 'countdown_beep'
+                })
+                
+                if (this.diagnosticUIManager) {
+                    this.diagnosticUIManager.showTimerFinalSeconds(this.gameState.timeRemaining);
+                }
             }
 
             if (this.gameState.timeRemaining <= 0) {
                 clearInterval(timerInterval)
-                this.emit('timer_expired', { finalScore: this.gameState.score })
+                this.emit('timer_expired', { 
+                    finalScore: this.gameState.score,
+                    message: '⏰ Time\'s up! Great effort!'
+                })
+                
+                if (this.diagnosticUIManager) {
+                    this.diagnosticUIManager.showTimerExpired();
+                }
             }
         }, 1000)
     }
@@ -150,6 +188,11 @@ export class GameManager {
         if (this.gameState.timeRemaining <= 30) return 'critical'
         if (this.gameState.timeRemaining <= 60) return 'warning'
         return 'normal'
+    }
+    
+    private getTimePercentage(): number {
+        const initialTime = this.gameState.patientCase?.estimatedCaseLength || 300; // Default to 5 mins
+        return Math.max(0, (this.gameState.timeRemaining / initialTime) * 100);
     }
 
     // MODULAR: Sophisticated scoring system

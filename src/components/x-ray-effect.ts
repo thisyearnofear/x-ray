@@ -738,7 +738,9 @@ export default class XRayEffect {
       color: 0x00ffff, 
       transparent: true, 
       opacity: 0.7,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
+      emissive: 0x004444,  // Add subtle glow
+      emissiveIntensity: 0.5
     });
     
     const ring = new THREE.Mesh(geometry, material);
@@ -755,6 +757,14 @@ export default class XRayEffect {
         yoyo: true,
         ease: "power2.inOut"
       });
+      
+      // Add rotation animation for added visual interest
+      gsap.to(ring.rotation, {
+        z: Math.PI * 2,
+        duration: 4,
+        repeat: -1,
+        ease: "none"
+      });
     }
     
     this.scene.add(ring);
@@ -769,7 +779,9 @@ export default class XRayEffect {
       color: 0x00ff00,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.6
+      opacity: 0.6,
+      emissive: 0x004400,  // Add subtle glow
+      emissiveIntensity: 0.3
     });
     
     const ring = new THREE.Mesh(geometry, material);
@@ -790,13 +802,37 @@ export default class XRayEffect {
       // Change color based on progress
       if (progress < 0.33) {
         material.color.setHex(0xffff00); // Yellow for low progress
+        material.emissive.setHex(0x444400); // Add glow
       } else if (progress < 0.66) {
         material.color.setHex(0xffaa00); // Orange for medium progress
+        material.emissive.setHex(0x442200); // Add glow
       } else {
         material.color.setHex(0x00ff00); // Green for high progress
+        material.emissive.setHex(0x004400); // Add glow
       }
       
       material.opacity = 0.6;
+      
+      // Update to show partial ring based on progress
+      // We'll recreate the ring geometry to show partial progress
+      const ringObj = ring as THREE.Mesh;
+      if (ringObj.parent) {
+        const position = ringObj.position.clone();
+        const rotation = ringObj.rotation.clone();
+        
+        // Remove the old ring
+        ringObj.parent.remove(ringObj);
+        
+        // Create new partial ring based on progress
+        const newGeometry = new THREE.RingGeometry(0.05, 0.07, 32, 1, 0, progress * Math.PI * 2);
+        const newRing = new THREE.Mesh(newGeometry, (ringObj.material as THREE.MeshBasicMaterial).clone());
+        newRing.position.copy(position);
+        newRing.rotation.copy(rotation);
+        
+        // Store the new ring in the map
+        this.scene.add(newRing);
+        this.progressRings.set(conditionId, newRing);
+      }
     }
   }
 

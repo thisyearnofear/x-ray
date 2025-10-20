@@ -311,23 +311,48 @@ export class AudioManager {
     }
     this.playSound(soundMap[type])
 
-    // Simple toast notification
+    // Create enhanced feedback UI
     const toast = document.createElement('div')
     toast.style.cssText = `
       position: fixed; top: 20px; right: 20px; z-index: 10000;
-      background: ${type === 'success' ? '#00d4ff' : type === 'error' ? '#ff4444' : '#6c5ce7'};
-      color: white; padding: 12px 20px; border-radius: 8px;
-      font-family: system-ui; font-size: 14px; font-weight: 500;
-      transform: translateX(100%); transition: transform 0.3s ease;
+      background: ${type === 'success' 
+        ? 'linear-gradient(135deg, #00d4ff, #0099cc)' 
+        : type === 'error' 
+          ? 'linear-gradient(135deg, #ff4444, #cc0000)' 
+          : type === 'warning'
+            ? 'linear-gradient(135deg, #ffaa00, #ff8800)'
+            : 'linear-gradient(135deg, #6c5ce7, #341f97)'};
+      color: white; padding: 16px 24px; border-radius: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px; font-weight: 500; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+      transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; gap: 12px;
     `
-    toast.textContent = message
+    
+    // Add appropriate icon based on type
+    const iconMap = {
+      success: '✅',
+      warning: '⚠️',
+      error: '❌',
+      info: 'ℹ️'
+    }
+    
+    toast.innerHTML = `
+      <span style="font-size: 18px;">${iconMap[type]}</span>
+      <span>${message}</span>
+    `
+    
     document.body.appendChild(toast)
 
+    // Animate in
     requestAnimationFrame(() => toast.style.transform = 'translateX(0)')
+
+    // Animate out after delay
     setTimeout(() => {
       toast.style.transform = 'translateX(100%)'
-      setTimeout(() => toast.remove(), 300)
-    }, 3000)
+      setTimeout(() => toast.remove(), 400)
+    }, 4000)
   }
 
   // ENHANCEMENT: Add progressive beep method for scan feedback

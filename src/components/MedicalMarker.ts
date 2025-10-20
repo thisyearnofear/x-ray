@@ -58,7 +58,15 @@ export class MedicalMarker {
         duration: 2,
         repeat: -1,
         yoyo: true,
-        ease: "power2.inOut"
+        ease: "power2.inOut",
+        // Add more visible pulsing effect
+        onUpdate: () => {
+          const progress = (Date.now() / 2000) % 1;
+          // Add color variation during pulse
+          const material = this.marker.material as THREE.MeshStandardMaterial;
+          const intensity = 0.1 + 0.1 * Math.sin(progress * Math.PI * 2);
+          material.emissiveIntensity = 0.2 + intensity;
+        }
       })
     }
   }
