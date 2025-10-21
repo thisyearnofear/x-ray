@@ -87,19 +87,18 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     id: 'myocardial_infarction',
     name: 'Acute Myocardial Infarction',
     description: 'Heart attack due to blocked coronary artery',
-    position: { x: -0.05, y: 0.05, z: 0.1 },
+    position: { x: 0, y: 0.05, z: 0.1 },  // Central chest location
     severity: 'high',
     symptoms: ['Chest pain', 'Shortness of breath', 'Nausea', 'Sweating', 'Left arm pain'],
     treatment: ['Emergency PCI', 'Thrombolytics', 'Antiplatelet therapy', 'Beta blockers'],
     requiredModel: 'torso',
-    visibleIn: ['torso', 'heart', 'cardiovascular', 'emergency'],
-    scanTimeRequired: 45
+    visibleIn: ['torso', 'heart', 'cardiovascular', 'emergency']
   },
   {
     id: 'pericarditis',
     name: 'Acute Pericarditis',
     description: 'Inflammation of the pericardial sac around the heart',
-    position: { x: -0.03, y: 0.08, z: 0.12 },
+    position: { x: 0, y: 0.08, z: 0.1 },  // Central chest location
     severity: 'medium',
     symptoms: ['Sharp chest pain', 'Pain worse when lying down', 'Pericardial friction rub', 'Fever'],
     treatment: ['NSAIDs', 'Colchicine', 'Corticosteroids', 'Activity restriction'],
@@ -110,12 +109,12 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     id: 'aortic_dissection',
     name: 'Aortic Dissection',
     description: 'Tear in the inner layer of the aorta',
-    position: { x: 0, y: 0.1, z: -0.05 },
+    position: { x: 0, y: 0.05, z: 0 },  // Central chest location
     severity: 'high',
     symptoms: ['Tearing chest pain', 'Back pain', 'Pulse differences', 'Neurological deficits'],
     treatment: ['Emergency surgery', 'Blood pressure control', 'Pain management', 'Imaging monitoring'],
     requiredModel: 'torso',
-    visibleIn: ['torso', 'aorta', 'cardiovascular', 'emergency', 'vascular']
+    visibleIn: ['torso', 'aorta', 'cardiovascular', 'emergency']
   },
   
   // RESPIRATORY CONDITIONS - Showcase AI diagnostic reasoning
@@ -123,7 +122,7 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     id: 'pneumonia',
     name: 'Community-Acquired Pneumonia',
     description: 'Infection of the lung parenchyma',
-    position: { x: -0.15, y: 0.02, z: 0.08 },
+    position: { x: -0.1, y: 0.05, z: 0.08 },  // Adjusted to be more central in torso
     severity: 'high',
     symptoms: ['Productive cough', 'Fever', 'Shortness of breath', 'Chest pain', 'Fatigue'],
     treatment: ['Antibiotics', 'Supportive care', 'Oxygen therapy', 'Hydration'],
@@ -134,29 +133,29 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     id: 'pneumothorax',
     name: 'Spontaneous Pneumothorax',
     description: 'Collapsed lung due to air in pleural space',
-    position: { x: 0.18, y: 0.05, z: 0.1 },
+    position: { x: 0.15, y: 0.05, z: 0.1 },  // Adjusted to be more visible
     severity: 'high',
     symptoms: ['Sudden chest pain', 'Shortness of breath', 'Reduced breath sounds', 'Chest tightness'],
     treatment: ['Chest tube insertion', 'Needle decompression', 'Observation', 'Pleurodesis'],
     requiredModel: 'torso',
-    visibleIn: ['torso', 'lungs', 'respiratory', 'emergency', 'pleural']
+    visibleIn: ['torso', 'lungs', 'respiratory', 'emergency']
   },
   {
     id: 'pulmonary_embolism',
     name: 'Pulmonary Embolism',
     description: 'Blood clot blocking pulmonary arteries',
-    position: { x: 0.1, y: 0.08, z: 0.05 },
+    position: { x: 0.05, y: 0.05, z: 0.05 },  // Central chest location
     severity: 'high',
     symptoms: ['Sudden shortness of breath', 'Chest pain', 'Hemoptysis', 'Tachycardia', 'Anxiety'],
     treatment: ['Anticoagulation', 'Thrombolytics', 'Embolectomy', 'IVC filter'],
     requiredModel: 'torso',
-    visibleIn: ['torso', 'lungs', 'cardiovascular', 'emergency', 'vascular']
+    visibleIn: ['torso', 'lungs', 'cardiovascular', 'emergency']
   },
   {
     id: 'asthma_exacerbation',
     name: 'Acute Asthma Exacerbation',
     description: 'Severe worsening of asthma symptoms',
-    position: { x: 0, y: 0, z: 0.15 },
+    position: { x: 0, y: 0.05, z: 0.1 },  // Central chest location
     severity: 'medium',
     symptoms: ['Wheezing', 'Shortness of breath', 'Chest tightness', 'Cough', 'Peak flow reduction'],
     treatment: ['Bronchodilators', 'Corticosteroids', 'Oxygen therapy', 'Magnesium sulfate'],
@@ -180,12 +179,12 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     id: 'lumbar_strain',
     name: 'Lumbar Muscle Strain',
     description: 'Lower back muscle strain from lifting or sudden movement',
-    position: { x: 0, y: -0.2, z: -0.1 },
+    position: { x: 0, y: 0, z: -0.1 },  // Moved up to be visible in torso model
     severity: 'high',
     symptoms: ['Lower back pain', 'Muscle spasms', 'Pain with bending', 'Stiffness'],
     treatment: ['Rest', 'Physical therapy', 'Core strengthening', 'Ergonomic adjustments'],
-    requiredModel: 'fullbody',
-    visibleIn: ['fullbody', 'back', 'lumbar', 'spine']
+    requiredModel: 'torso',
+    visibleIn: ['torso', 'back', 'spine']
   },
   {
     id: 'rotator_cuff_tear',
@@ -202,45 +201,45 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     id: 'carpal_tunnel',
     name: 'Carpal Tunnel Syndrome',
     description: 'Compression of the median nerve in the wrist',
-    position: { x: 0.35, y: -0.1, z: 0.1 },
+    position: { x: 0.2, y: 0.05, z: 0.1 },  // Moved up closer to shoulder for visibility
     severity: 'medium',
     symptoms: ['Hand numbness', 'Tingling', 'Weakness', 'Night symptoms'],
     treatment: ['Wrist splints', 'Ergonomic modifications', 'Steroid injections', 'Surgery'],
-    requiredModel: 'fullbody',
-    visibleIn: ['fullbody', 'wrist', 'hand', 'nerve']
+    requiredModel: 'torso',
+    visibleIn: ['torso', 'arm', 'nerve']
   },
   {
     id: 'herniated_disc',
     name: 'Herniated Lumbar Disc',
     description: 'Displacement of disc material causing nerve compression',
-    position: { x: 0.05, y: -0.15, z: -0.08 },
+    position: { x: 0, y: 0.05, z: -0.08 },  // Moved up to be visible in torso model
     severity: 'high',
     symptoms: ['Radiating leg pain', 'Numbness', 'Weakness', 'Back pain'],
     treatment: ['Conservative management', 'Epidural injections', 'Physical therapy', 'Surgery'],
-    requiredModel: 'fullbody',
-    visibleIn: ['fullbody', 'spine', 'nerve', 'disc']
+    requiredModel: 'torso',
+    visibleIn: ['torso', 'spine', 'nerve']
   },
   {
     id: 'osteoarthritis_knee',
     name: 'Knee Osteoarthritis',
     description: 'Degenerative joint disease affecting the knee',
-    position: { x: 0.15, y: -0.4, z: 0.05 },
+    position: { x: 0, y: 0, z: 0 },
     severity: 'medium',
     symptoms: ['Knee pain', 'Stiffness', 'Swelling', 'Reduced mobility', 'Crepitus'],
     treatment: ['Weight management', 'Physical therapy', 'NSAIDs', 'Intra-articular injections'],
-    requiredModel: 'fullbody',
-    visibleIn: ['fullbody', 'knee', 'joint', 'degenerative']
+    requiredModel: 'head',  // Will be excluded from torso/visible models
+    visibleIn: ['systemic', 'joint', 'degenerative']
   },
   {
     id: 'achilles_tendinopathy',
     name: 'Achilles Tendinopathy',
     description: 'Overuse injury of the Achilles tendon',
-    position: { x: 0.08, y: -0.6, z: -0.05 },
+    position: { x: 0, y: 0, z: 0 },
     severity: 'medium',
     symptoms: ['Heel pain', 'Morning stiffness', 'Tendon thickening', 'Pain with activity'],
     treatment: ['Eccentric exercises', 'Load management', 'Physiotherapy', 'Shockwave therapy'],
-    requiredModel: 'fullbody',
-    visibleIn: ['fullbody', 'ankle', 'tendon', 'overuse']
+    requiredModel: 'head',  // Will be excluded from torso/visible models
+    visibleIn: ['systemic', 'tendon', 'overuse']
   },
   
   // GASTROINTESTINAL CONDITIONS - Advanced diagnostic scenarios
@@ -248,34 +247,34 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     id: 'appendicitis',
     name: 'Acute Appendicitis',
     description: 'Inflammation of the vermiform appendix',
-    position: { x: 0.12, y: -0.1, z: 0.08 },
+    position: { x: 0, y: 0, z: 0 },  // Not visible in head/torso models
     severity: 'high',
     symptoms: ['Right lower quadrant pain', 'Nausea', 'Vomiting', 'Fever', 'Rebound tenderness'],
     treatment: ['Appendectomy', 'Antibiotics', 'IV fluids', 'Pain management'],
-    requiredModel: 'torso',
-    visibleIn: ['torso', 'abdomen', 'gastrointestinal', 'emergency']
+    requiredModel: 'head',  // Will be excluded from torso models
+    visibleIn: ['systemic', 'gastrointestinal', 'emergency']
   },
   {
     id: 'cholecystitis',
     name: 'Acute Cholecystitis',
     description: 'Inflammation of the gallbladder',
-    position: { x: 0.08, y: 0.02, z: 0.12 },
+    position: { x: 0, y: 0, z: 0 },  // Not visible in head/torso models
     severity: 'high',
     symptoms: ['Right upper quadrant pain', 'Nausea', 'Vomiting', 'Fever', 'Murphy\'s sign'],
     treatment: ['Cholecystectomy', 'Antibiotics', 'Pain management', 'IV fluids'],
-    requiredModel: 'torso',
-    visibleIn: ['torso', 'abdomen', 'gallbladder', 'gastrointestinal']
+    requiredModel: 'head',  // Will be excluded from torso models
+    visibleIn: ['systemic', 'gastrointestinal']
   },
   {
     id: 'peptic_ulcer',
     name: 'Peptic Ulcer Disease',
     description: 'Ulceration of stomach or duodenal lining',
-    position: { x: -0.05, y: 0.05, z: 0.15 },
+    position: { x: 0, y: 0, z: 0 },  // Not visible in head/torso models
     severity: 'medium',
     symptoms: ['Epigastric pain', 'Heartburn', 'Nausea', 'Early satiety', 'GI bleeding'],
     treatment: ['Proton pump inhibitors', 'H. pylori eradication', 'Lifestyle modifications', 'Endoscopy'],
-    requiredModel: 'torso',
-    visibleIn: ['torso', 'stomach', 'gastrointestinal', 'ulcer']
+    requiredModel: 'head',  // Will be excluded from torso models
+    visibleIn: ['systemic', 'gastrointestinal', 'ulcer']
   },
   
   // COMPLEX CONDITIONS - Showcase AI diagnostic reasoning
@@ -283,12 +282,12 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     id: 'fibromyalgia',
     name: 'Fibromyalgia Syndrome',
     description: 'Chronic widespread musculoskeletal pain disorder',
-    position: { x: 0, y: 0, z: 0 },
+    position: { x: 0, y: 0.1, z: 0 },  // Upper body focus for torso model
     severity: 'medium',
     symptoms: ['Widespread pain', 'Fatigue', 'Sleep disturbances', 'Cognitive issues'],
     treatment: ['Medications', 'Exercise therapy', 'Stress management', 'Sleep hygiene'],
-    requiredModel: 'fullbody',
-    visibleIn: ['fullbody', 'systemic', 'chronic']
+    requiredModel: 'torso',
+    visibleIn: ['torso', 'systemic', 'chronic']
   },
   {
     id: 'multiple_sclerosis',
@@ -298,8 +297,8 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     severity: 'high',
     symptoms: ['Fatigue', 'Vision problems', 'Numbness', 'Weakness', 'Coordination issues'],
     treatment: ['Disease-modifying therapies', 'Corticosteroids', 'Symptom management', 'Rehabilitation'],
-    requiredModel: 'fullbody',
-    visibleIn: ['fullbody', 'neurological', 'autoimmune', 'chronic']
+    requiredModel: 'head',
+    visibleIn: ['head', 'neurological', 'autoimmune', 'chronic']
   },
   {
     id: 'systemic_lupus',
@@ -309,8 +308,8 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     severity: 'high',
     symptoms: ['Joint pain', 'Malar rash', 'Fatigue', 'Kidney involvement', 'Photosensitivity'],
     treatment: ['Immunosuppressants', 'Antimalarials', 'Corticosteroids', 'Biologics'],
-    requiredModel: 'fullbody',
-    visibleIn: ['fullbody', 'autoimmune', 'systemic', 'rheumatologic']
+    requiredModel: 'head',
+    visibleIn: ['head', 'autoimmune', 'systemic', 'rheumatologic']
   },
   
   // RARE CONDITIONS - Advanced AI diagnostic challenges
@@ -322,8 +321,8 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     severity: 'medium',
     symptoms: ['Tall stature', 'Aortic dilation', 'Lens dislocation', 'Joint hypermobility'],
     treatment: ['Cardiovascular monitoring', 'Activity restrictions', 'Genetic counseling', 'Surgical intervention'],
-    requiredModel: 'fullbody',
-    visibleIn: ['fullbody', 'genetic', 'connective tissue', 'cardiovascular']
+    requiredModel: 'head',
+    visibleIn: ['head', 'genetic', 'connective tissue', 'cardiovascular']
   },
   {
     id: 'ehlers_danlos',
@@ -333,8 +332,8 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     severity: 'medium',
     symptoms: ['Joint hypermobility', 'Skin hyperextensibility', 'Tissue fragility', 'Easy bruising'],
     treatment: ['Physical therapy', 'Joint protection', 'Pain management', 'Genetic counseling'],
-    requiredModel: 'fullbody',
-    visibleIn: ['fullbody', 'genetic', 'connective tissue', 'hypermobility']
+    requiredModel: 'head',
+    visibleIn: ['head', 'genetic', 'connective tissue', 'hypermobility']
   },
   {
     id: 'guillain_barre',
@@ -344,8 +343,8 @@ export const MEDICAL_CONDITIONS: MedicalCondition[] = [
     severity: 'high',
     symptoms: ['Progressive weakness', 'Areflexia', 'Sensory symptoms', 'Respiratory compromise'],
     treatment: ['IVIG', 'Plasmapheresis', 'Supportive care', 'Respiratory monitoring'],
-    requiredModel: 'fullbody',
-    visibleIn: ['fullbody', 'neurological', 'inflammatory', 'emergency']
+    requiredModel: 'head',
+    visibleIn: ['head', 'neurological', 'inflammatory', 'emergency']
   }
 ]
 
