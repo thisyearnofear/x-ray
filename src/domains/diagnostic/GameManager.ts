@@ -42,6 +42,7 @@ export class GameManager {
     private medicalService: MedicalServiceFacade;
     private achievementSystem: AchievementSystem;
     public diagnosticUIManager: any; // DiagnosticUIManager reference (public to allow updates)
+    private smartAccount: any = null; // For wallet address tracking
 
     constructor(config?: GameManagerConfig) {
         this.medicalService = new MedicalServiceFacade();
@@ -682,7 +683,8 @@ export class GameManager {
     public recordHighScore(): void {
         const currentScore = this.gameState.score;
         const currentCase = this.gameState.patientCase?.id || 'unknown';
-        const currentCaseTitle = this.gameState.patientCase?.title || 'Unknown Case';
+        // Use chiefComplaint as the title since PatientCase doesn't have a title field
+        const currentCaseTitle = this.gameState.patientCase?.chiefComplaint || 'Unknown Case';
         const sessionTime = Date.now() - this.gameState.sessionStartTime;
         const conditionsFound = this.gameState.discoveredConditions.size;
         const timeRemaining = this.gameState.timeRemaining;

@@ -33,7 +33,10 @@ export enum SoundType {
   TUTORIAL_SUCCESS = 'tutorial_success',
   PRE_DISCOVERY = 'pre_discovery',
   // ENHANCEMENT: New sound for AI case introduction
-  AI_CASE_INTRO = 'ai_case_intro'
+  AI_CASE_INTRO = 'ai_case_intro',
+  // ENHANCEMENT: Additional scan feedback sounds
+  DISCOVERY_HIGHLIGHT = 'discovery_highlight',
+  SCAN_PROGRESS = 'scan_progress'
 }
 
 export class AudioManager {
@@ -122,6 +125,8 @@ export class AudioManager {
     this.soundMap.set(SoundType.AI_PROCESSING, this.createAIProcessingSound());
     this.soundMap.set(SoundType.CEREBRAS_INFERENCE, this.createCerebrasInferenceSound());
     this.soundMap.set(SoundType.PRE_DISCOVERY, this.createProceduralSound(0.5, 600, 1000, 'sine', 0.2));
+    this.soundMap.set(SoundType.DISCOVERY_HIGHLIGHT, this.createProceduralSound(0.6, 700, 1100, 'sine', 0.25));
+    this.soundMap.set(SoundType.SCAN_PROGRESS, this.createProceduralSound(0.2, 300, 500, 'square', 0.1));
     this.soundMap.set(SoundType.AI_CASE_INTRO, this.createProceduralSound(0.8, 300, 1500, 'sawtooth', 0.3));
   }
 

@@ -30,6 +30,16 @@ export interface MedicalCase {
   isAIGenerated?: boolean;
   generatedAt?: number;
   smartAccountAddress?: string;
+  
+  // Case generation context
+  caseGenerationContext?: {
+    originalDifficulty?: 'easy' | 'medium' | 'hard';
+    generationTimestamp?: number;
+    generatedByAI?: boolean;
+    generationFailed?: boolean;
+    fallbackUsed?: boolean;
+    userWallet?: string;
+  };
 }
 
 /**

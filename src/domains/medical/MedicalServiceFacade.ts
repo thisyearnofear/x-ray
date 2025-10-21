@@ -197,8 +197,12 @@ export class MedicalServiceFacade {
   }
 
   // ENHANCED: Update authentication status
-  public updateAuthStatus(isAuthenticated: boolean, walletAddress?: string): void {
-    this.accessManager.updateAuthStatus(isAuthenticated, walletAddress);
+  public updateAuthStatus(
+    isAuthenticated: boolean, 
+    walletAddress?: string,
+    preferredDifficulty?: 'easy' | 'medium' | 'hard'
+  ): void {
+    this.accessManager.updateAuthStatus(isAuthenticated, walletAddress, preferredDifficulty);
     
     // Update onchain features
     if (isAuthenticated && walletAddress) {
