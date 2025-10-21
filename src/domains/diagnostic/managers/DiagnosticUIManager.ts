@@ -9,7 +9,7 @@
 import { SoundType } from '../../../components/AudioManager'
 import { PatientInfoSection, type PatientInfo } from '../ui/PatientInfoSection'
 import { AIPanel, type AIInsight } from '../ui/AIPanel'
-import { MedicalCase } from '../../medical/types'
+import { MedicalCase, PatientCase } from '../../medical/types'
 import { colors, spacing, typography, borders, effects, zIndex } from '../../../styles/design-tokens'
 import { TierStatusIndicator } from '../../medical/ui/TierStatusIndicator'
 import { UpgradePrompt } from '../../medical/ui/UpgradePrompt'
@@ -33,7 +33,7 @@ export class DiagnosticUIManager {
   private patientInfoSection: PatientInfoSection | null = null
   private aiPanel: AIPanel | null = null
   private audioEnabled: boolean = false // Track audio state
-  private currentPatientCase: MedicalCase | null = null // Store current patient case
+  private currentPatientCase: MedicalCase | PatientCase | null = null // Store current patient case
   private accessManager: CaseAccessManager
   private tierIndicator: any = null // TierStatusIndicator instance
   private upgradePrompt: any = null // UpgradePrompt instance
@@ -1233,7 +1233,7 @@ export class DiagnosticUIManager {
     }
   }
 
-  public updateCaseInfo(patientCase: MedicalCase | null): void {
+  public updateCaseInfo(patientCase: MedicalCase | PatientCase | null): void {
     const caseInfoContainer = document.getElementById('case-info-container');
     if (!caseInfoContainer) return;
 
@@ -1267,7 +1267,7 @@ export class DiagnosticUIManager {
     }
   }
 
-  updatePatientInfo(patientCase: MedicalCase | null): void {
+  updatePatientInfo(patientCase: MedicalCase | PatientCase | null): void {
     // Store the current patient case for use in other methods
     this.currentPatientCase = patientCase;
     
