@@ -51,7 +51,7 @@ export class AIPanel {
       width: '320px',
       height: 'auto',
       maxWidth: '500px',
-      maxHeight: '60vh',
+      maxHeight: '55vh',
       ...config
     }
   }
@@ -148,7 +148,8 @@ export class AIPanel {
 
     this.setupFunctionality()
     this.addStyles()
-    
+    this.makeDraggable()
+
     return this.panel
   }
 
@@ -186,12 +187,12 @@ export class AIPanel {
   // Voice integration methods
   registerVoiceCallbacks(callbacks: VoiceCallback): void {
     this.voiceCallbacks = callbacks
-    
+
     // Register internal callbacks for voice events
     callbacks.onResult((text: string) => {
       this.handleVoiceResult(text)
     })
-    
+
     callbacks.onError((error: any) => {
       this.handleVoiceError(error)
     })
@@ -211,7 +212,7 @@ export class AIPanel {
       this.isVoiceActive = false
       voiceToggleBtn.textContent = '🎤 Activate'
       voiceToggleBtn.style.background = colors.accent.base
-      
+
       // Add visual feedback that voice has stopped
       this.addInsight({
         id: `voice_end_${Date.now()}`,
@@ -220,7 +221,7 @@ export class AIPanel {
         type: 'voice',
         confidence: 0.7
       })
-      
+
       // Clear any existing silence timers
       if (this.voiceSilenceTimer) {
         clearTimeout(this.voiceSilenceTimer)
@@ -231,7 +232,7 @@ export class AIPanel {
       this.isVoiceActive = true
       voiceToggleBtn.textContent = '🔴 Listening...'
       voiceToggleBtn.style.background = colors.error.base
-      
+
       // Add visual feedback that voice has started
       this.addInsight({
         id: `voice_start_${Date.now()}`,
@@ -240,7 +241,7 @@ export class AIPanel {
         type: 'voice',
         confidence: 0.9
       })
-      
+
       // Set up automatic stopping after 10 seconds of silence
       this.voiceSilenceTimer = setTimeout(() => {
         if (this.isVoiceActive) {
@@ -250,7 +251,7 @@ export class AIPanel {
             voiceToggleBtn.textContent = '🎤 Activate'
             voiceToggleBtn.style.background = colors.accent.base
           }
-          
+
           // Add timeout insight to AI panel
           this.addInsight({
             id: `timeout_${Date.now()}`,
@@ -276,7 +277,7 @@ export class AIPanel {
 
     // Trigger any registered callbacks
     this.onVoiceResultCallbacks.forEach(callback => callback(text))
-    
+
     // Automatically stop listening after processing the voice input
     if (this.voiceCallbacks && this.voiceCallbacks.isListening()) {
       // Brief pause to allow for natural conversation flow
@@ -288,7 +289,7 @@ export class AIPanel {
           if (voiceToggleBtn) {
             voiceToggleBtn.textContent = '🎤 Activate'
             voiceToggleBtn.style.background = colors.accent.base
-            
+
             // Add confirmation that voice session ended
             this.addInsight({
               id: `voice_confirmation_${Date.now()}`,
@@ -370,7 +371,7 @@ export class AIPanel {
 
   private renderInsight(insight: AIInsight): string {
     const typeStyles = this.getInsightTypeStyles(insight.type)
-    
+
     return `
       <div class="ai-insight" style="
         background: ${typeStyles.bg};
@@ -472,6 +473,7 @@ export class AIPanel {
 
     const content = this.panel.querySelector('.panel-content') as HTMLElement
     const toggle = this.panel.querySelector('#expand-toggle') as HTMLElement
+    const titleSection = this.panel.querySelector('.panel-title-section') as HTMLElement
 
     if (content) {
       content.style.display = this.isExpanded ? 'block' : 'none'
@@ -480,6 +482,24 @@ export class AIPanel {
     if (toggle) {
       toggle.textContent = this.isExpanded ? '▲' : '▼'
     }
+
+    // Compact the entire panel when collapsed
+    if (this.isExpanded) {
+      // Expanded state - restore original styles
+      this.panel.style.maxHeight = this.config.maxHeight || '60vh'
+      if (titleSection) {
+        titleSection.style.marginBottom = ''
+      }
+    } else {
+      // Collapsed state - compact the panel
+      this.panel.style.maxHeight = '70px'
+      if (titleSection) {
+        titleSection.style.marginBottom = '0'
+      }
+    }
+
+    // Save the new state
+    this.savePosition();
   }
 
   show(): void {
@@ -498,13 +518,13 @@ export class AIPanel {
     if (this.panel && this.panel.parentNode) {
       this.panel.parentNode.removeChild(this.panel)
     }
-    
+
     // Clean up voice silence timer
     if (this.voiceSilenceTimer) {
       clearTimeout(this.voiceSilenceTimer)
       this.voiceSilenceTimer = null
     }
-    
+
     this.panel = null
     this.insightContainer = null
     this.voiceContainer = null
@@ -513,7 +533,6 @@ export class AIPanel {
   private getPanelStyles(): string {
     const position = this.getPositionStyles()
     return `
-      position: fixed; 
       ${position}
       width: ${this.config.width}; 
       height: ${this.config.height};
@@ -528,21 +547,23 @@ export class AIPanel {
       box-shadow: ${effects.shadow.md}, ${effects.shadow.primaryGlow};
       backdrop-filter: ${effects.blur.lg};
       ${effects.inset.medium}
+      cursor: move;
     `
   }
 
   private getPositionStyles(): string {
     switch (this.config.position) {
       case 'left':
-        return 'top: 2rem; left: 2rem;'
+        return 'position: fixed; top: 2rem; left: 2rem;'
       case 'right':
-        return 'top: 2rem; right: 2rem;'
+        // Start position further down to avoid wallet panel
+        return 'position: fixed; top: 270px; right: 2rem;'
       case 'bottom':
-        return 'bottom: 2rem; left: 2rem; right: 2rem; width: auto; max-width: 500px;'
+        return 'position: fixed; bottom: 2rem; left: 2rem;'
       case 'top':
-        return 'top: 2rem; left: 2rem; right: 2rem; width: auto; max-width: 500px;'
+        return 'position: fixed; top: 2rem; left: 2rem;'
       default:
-        return 'bottom: 2rem; right: 2rem;'
+        return 'position: fixed; top: 270px; right: 2rem;'
     }
   }
 
@@ -573,6 +594,8 @@ export class AIPanel {
     style.textContent = `
       .ai-panel {
         font-family: ${typography.fontFamily.primary};
+        cursor: move;
+        user-select: none;
       }
 
       .panel-title {
@@ -612,8 +635,155 @@ export class AIPanel {
           max-width: none !important;
           max-height: 40vh !important;
         }
+        
+        .ai-panel:not(.expanded) {
+          max-height: 70px !important;
+        }
+      }
+      
+      .ai-panel:not(.expanded) {
+        max-height: 70px !important;
       }
     `
     document.head.appendChild(style)
+  }
+
+  // Make the panel draggable
+  private makeDraggable(): void {
+    if (!this.panel) return;
+
+    let isDragging = false;
+    let initialX: number;
+    let initialY: number;
+    let currentX = 0;
+    let currentY = 0;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    // Load saved position if available
+    this.loadSavedPosition();
+
+    const dragStart = (e: MouseEvent | TouchEvent) => {
+      // Don't drag when clicking on interactive elements
+      if (e.target instanceof HTMLElement) {
+        const target = e.target as HTMLElement;
+        if (target.closest('.expand-toggle') || target.closest('#voice-toggle-btn') ||
+          target.closest('.ai-insight') || target.closest('button')) {
+          return;
+        }
+      }
+
+      isDragging = true;
+
+      if (e instanceof MouseEvent) {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+      } else if (e instanceof TouchEvent) {
+        initialX = e.touches[0].clientX - xOffset;
+        initialY = e.touches[0].clientY - yOffset;
+      }
+
+      // Add dragging class for visual feedback
+      if (this.panel) {
+        this.panel.style.cursor = 'grabbing';
+      }
+    };
+
+    const dragEnd = () => {
+      if (!isDragging) return;
+
+      initialX = currentX;
+      initialY = currentY;
+
+      isDragging = false;
+
+      // Remove dragging class
+      if (this.panel) {
+        this.panel.style.cursor = 'move';
+      }
+
+      // Save the new position
+      this.savePosition();
+    };
+
+    const drag = (e: MouseEvent | TouchEvent) => {
+      if (isDragging) {
+        e.preventDefault();
+
+        if (e instanceof MouseEvent) {
+          currentX = e.clientX - initialX;
+          currentY = e.clientY - initialY;
+        } else if (e instanceof TouchEvent) {
+          currentX = e.touches[0].clientX - initialX;
+          currentY = e.touches[0].clientY - initialY;
+        }
+
+        xOffset = currentX;
+        yOffset = currentY;
+
+        this.setPosition(currentX, currentY);
+      }
+    };
+
+    // Mouse events
+    this.panel.addEventListener('mousedown', dragStart);
+    window.addEventListener('mouseup', dragEnd);
+    window.addEventListener('mousemove', drag);
+
+    // Touch events for mobile
+    this.panel.addEventListener('touchstart', dragStart);
+    window.addEventListener('touchend', dragEnd);
+    window.addEventListener('touchmove', drag, { passive: false });
+
+    // Prevent text selection while dragging
+    this.panel.addEventListener('selectstart', (e) => {
+      if (isDragging) {
+        e.preventDefault();
+      }
+    });
+  }
+
+  private setPosition(x: number, y: number): void {
+    if (!this.panel) return;
+
+    // Use transform for smooth dragging
+    this.panel.style.transform = `translate(${x}px, ${y}px)`;
+
+    // Ensure the panel stays visible
+    this.panel.style.position = 'fixed';
+  }
+
+  private savePosition(): void {
+    if (!this.panel) return;
+
+    // Get the current transform values
+    const transform = this.panel.style.transform;
+    if (transform && transform.includes('translate')) {
+      const match = transform.match(/translate\(([^,]+)px, ([^,]+)px\)/);
+      if (match) {
+        const position = {
+          x: parseFloat(match[1]),
+          y: parseFloat(match[2])
+        };
+
+        try {
+          localStorage.setItem('aiPanelPosition', JSON.stringify(position));
+        } catch (e) {
+          console.warn('Could not save panel position to localStorage');
+        }
+      }
+    }
+  }
+
+  private loadSavedPosition(): void {
+    try {
+      const savedPosition = localStorage.getItem('aiPanelPosition');
+      if (savedPosition) {
+        const position = JSON.parse(savedPosition);
+        this.setPosition(position.x, position.y);
+      }
+    } catch (e) {
+      console.warn('Could not load saved panel position');
+    }
   }
 }

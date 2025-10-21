@@ -366,8 +366,8 @@ export class DiagnosticUIManager {
   // Create dedicated AI panel
   private createAIPanel(): void {
     this.aiPanel = new AIPanel({
-      title: 'AI Consultation Panel',
-      position: 'bottom' // Move to bottom to avoid blocking X-ray panel
+      title: 'AI Consultation Panel'
+      // Using default 'right' position
     })
 
     const aiPanelElement = this.aiPanel.create()
