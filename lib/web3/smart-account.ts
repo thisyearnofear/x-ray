@@ -40,22 +40,27 @@ export class SmartAccountService {
         await this.initializeWalletClient()
       }
 
+      // Get addresses from wallet client
+      const addresses = await this.walletClient.getAddresses()
+      const owner = addresses[0]
+
       // Create actual MetaMask smart account using the delegation toolkit
-      const account = await toMetaMaskSmartAccount({
+      // Following the correct pattern from MetaMask documentation
+      const smartAccount = await toMetaMaskSmartAccount({
         client: this.publicClient,
-        signer: this.walletClient,
-        implementation: Implementation.Hybrid, // Specify implementation directly
+        implementation: Implementation.Hybrid,
+        deployParams: [owner, [], [], []], // [owner, keyIds, pubKeyX, pubKeyY] for Hybrid
         deploySalt: `0x${Date.now().toString(16).padStart(64, '0')}` as `0x${string}`,
-        deployParams: {} as any // Temporary workaround to pass type check
+        signer: { walletClient: this.walletClient }
       })
 
       console.log('Created MetaMask smart account:', {
-        address: account.address,
+        address: smartAccount.address,
         implementation,
-        owner: ownerAddress
+        owner: owner
       })
       
-      return account
+      return smartAccount
     } catch (error) {
       console.error('Failed to create MetaMask smart account:', error)
       throw error

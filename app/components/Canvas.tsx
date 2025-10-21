@@ -15,6 +15,7 @@ const CanvasComponent = () => {
   const canvasInstanceRef = useRef<any>(null);
   const [diagnosisCompleted, setDiagnosisCompleted] = useState(false);
   const [lastDiagnosis, setLastDiagnosis] = useState<{conditions: string[], accuracy: number} | null>(null);
+  const [showDelegationPanel, setShowDelegationPanel] = useState(false);
 
   // Web3 integration
   const { isConnected, address: walletAddress } = useWeb3();
@@ -29,10 +30,16 @@ const CanvasComponent = () => {
       });
     };
 
+    const handleShowDelegationPanel = () => {
+      setShowDelegationPanel(true);
+    };
+
     window.addEventListener('diagnosis-complete' as any, handleDiagnosisComplete);
+    document.addEventListener('showDelegationPanel', handleShowDelegationPanel);
     
     return () => {
       window.removeEventListener('diagnosis-complete' as any, handleDiagnosisComplete);
+      document.removeEventListener('showDelegationPanel', handleShowDelegationPanel);
     };
   }, []);
 
@@ -118,6 +125,8 @@ const CanvasComponent = () => {
           />
           <DelegationPanel
             walletAddress={walletAddress || null}
+            isVisible={showDelegationPanel}
+            onClose={() => setShowDelegationPanel(false)}
           />
           {diagnosisCompleted && (
             <MedicalNFTMinter

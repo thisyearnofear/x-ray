@@ -356,9 +356,9 @@ export class DiagnosticUIManager {
     tierContainer.id = 'tier-status-container'
     tierContainer.style.cssText = `
       position: fixed;
-      top: ${spacing.lg};
-      right: ${spacing.lg};
-      z-index: ${zIndex.panel};
+      top: 20px;
+      right: 20px;
+      z-index: ${zIndex.panel - 10}; // Lower z-index to avoid blocking main UI
     `
 
     // Create React component container
@@ -444,6 +444,21 @@ export class DiagnosticUIManager {
             color: ${accessSummary.casesRemaining === 0 ? '#ff6b6b' : getTierColor()};
           ">${getCasesDisplay()}</div>
         </div>
+
+        <!-- Smart Account Benefits (for non-connected users) -->
+        ${!userStatus.isAuthenticated ? `
+          <div style="
+            margin: 0.75rem 0;
+            padding: 0.5rem;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            font-size: 0.7rem;
+          ">
+            <div style="font-weight: bold; margin-bottom: 0.25rem; color: #00d4ff;">💡 Why connect?</div>
+            <div style="opacity: 0.8;">Earn NFT achievements • Track progress • Gasless AI</div>
+          </div>
+        ` : ''}
 
         <!-- Upgrade Button -->
         ${accessSummary.canUpgrade ? `
@@ -904,7 +919,15 @@ export class DiagnosticUIManager {
   }
 
   private showDelegationSetup(): void {
-    // Show simplified delegation permissions UI
+    // Dispatch event to show delegation panel
+    const event = new CustomEvent('showDelegationPanel', {
+      detail: {
+        message: '🔐 Smart Account Setup: Would you like to grant AI assistants permission to provide free medical consultations? You can change this anytime.'
+      }
+    });
+    document.dispatchEvent(event);
+    
+    // Also show in AI panel for context
     if (this.aiPanel) {
       this.aiPanel.addInsight({
         id: `delegation_setup_${Date.now()}`,

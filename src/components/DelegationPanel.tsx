@@ -5,16 +5,23 @@ import { useWeb3 } from '../../hooks/web3/useWeb3'
 
 interface DelegationPanelProps {
   walletAddress: string | null
+  isVisible: boolean
+  onClose: () => void
 }
 
 export const DelegationPanel: React.FC<DelegationPanelProps> = ({
-  walletAddress
+  walletAddress,
+  isVisible,
+  onClose
 }) => {
   const { createMedicalConsultationDelegation, createDataSharingDelegation, error: web3Error } = useWeb3()
   const [delegateAddress, setDelegateAddress] = useState('')
   const [isDelegating, setIsDelegating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  // Don't render if not visible
+  if (!isVisible) return null
 
   const handleEnableConsultationDelegation = async () => {
     if (!walletAddress || !delegateAddress) return
@@ -69,9 +76,35 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
       maxWidth: '500px',
       boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 212, 255, 0.1)'
     }}>
-      <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', textAlign: 'center', color: '#00d4ff' }}>
-        🔐 AI Consultation Permissions
-      </h3>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '20px'
+      }}>
+        <h3 style={{ margin: 0, fontSize: '18px', color: '#00d4ff' }}>
+          🔐 AI Consultation Permissions
+        </h3>
+        <button 
+          onClick={onClose}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: '#aaa',
+            fontSize: '20px',
+            cursor: 'pointer',
+            padding: '0',
+            width: '30px',
+            height: '30px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          ×
+        </button>
+      </div>
+      
       <p style={{ margin: '0 0 25px 0', fontSize: '13px', opacity: 0.8, textAlign: 'center', lineHeight: '1.4' }}>
         Grant AI assistants permission to provide medical consultations
       </p>
@@ -87,7 +120,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
           borderRadius: '8px',
           border: '1px solid rgba(255, 107, 107, 0.3)'
         }}>
-          🔗 Please connect your wallet first
+          🔗 Please connect your wallet first to enable onchain features
         </div>
       )}
 
@@ -213,7 +246,24 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
             </div>
           </div>
         </>
-        )}
-        </div>
-        )
+      )}
+      
+      <div style={{
+        marginTop: '20px',
+        padding: '15px',
+        background: 'rgba(0, 212, 255, 0.1)',
+        borderRadius: '8px',
+        border: '1px solid rgba(0, 212, 255, 0.2)',
+        fontSize: '12px'
+      }}>
+        <strong>Why connect your wallet?</strong>
+        <ul style={{ marginTop: '8px', paddingLeft: '15px', marginBottom: 0 }}>
+          <li>🏆 Earn NFT achievements for completed cases</li>
+          <li>📊 Track your diagnostic skills over time</li>
+          <li>🔮 Access AI-generated personalized cases</li>
+          <li>💸 Gasless transactions for all medical actions</li>
+        </ul>
+      </div>
+    </div>
+  )
 }

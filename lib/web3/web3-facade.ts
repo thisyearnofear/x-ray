@@ -36,11 +36,16 @@ export class Web3Facade {
   async connectWallet(): Promise<Web3State> {
     try {
       if (!window.ethereum) {
-        throw new Error('MetaMask not found')
+        throw new Error('MetaMask not found. Please install MetaMask to use onchain features.')
       }
 
+      // Request account access - this must be triggered by user interaction
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
       const address = accounts[0] as Address
+
+      if (!address) {
+        throw new Error('No wallet address found. Please unlock your wallet and try again.')
+      }
 
       // Initialize wallet client first
       await this.smartAccountService.initializeWalletClient()
@@ -66,9 +71,17 @@ export class Web3Facade {
       })
 
       return this.state
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to connect wallet:', error)
-      throw error
+      
+      // Provide user-friendly error messages
+      if (error.code === 4001) {
+        throw new Error('Wallet connection rejected by user. Please click "Connect Wallet" to try again.')
+      } else if (error.message?.includes('signMessage')) {
+        throw new Error('Wallet connection failed. Please ensure you have a compatible wallet installed and unlocked.')
+      } else {
+        throw new Error(`Wallet connection failed: ${error.message || 'Unknown error'}`)
+      }
     }
   }
 
