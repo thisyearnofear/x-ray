@@ -562,11 +562,8 @@ export default class Canvas {
       }
     }
 
-    // Auto-start tutorial for new users
-    const hasSeenTutorial = localStorage.getItem('xrai_tutorial_completed')
-    if (!hasSeenTutorial) {
-      setTimeout(() => this.tutorial?.start(), 2000) // Start after model loads
-    }
+    // Always show tutorial on page load
+    setTimeout(() => this.tutorial?.start(), 2000) // Start after model loads
 
     console.log('📚 Tutorial and Voice systems initialized')
   }

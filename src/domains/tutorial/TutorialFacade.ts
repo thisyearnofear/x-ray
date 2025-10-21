@@ -83,6 +83,8 @@ export class TutorialFacade {
   }
 
   skip(): void {
+    // Mark tutorial as completed so it won't show again until manually restarted
+    localStorage.setItem('xrai_tutorial_completed', 'true');
     this.complete()
   }
 
