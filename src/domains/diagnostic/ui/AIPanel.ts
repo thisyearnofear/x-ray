@@ -11,7 +11,7 @@ export interface AIInsight {
   id: string
   timestamp: number
   content: string
-  type: 'diagnostic' | 'procedural' | 'educational' | 'urgent' | 'voice'
+  type: 'diagnostic' | 'procedural' | 'educational' | 'urgent' | 'voice' | 'premium'
   confidence: number
 }
 
@@ -445,6 +445,13 @@ export class AIPanel {
           border: colors.border.primary,
           text: colors.primary.base,
           confidenceBg: colors.primary.base
+        }
+      case 'premium':
+        return {
+          bg: 'linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%)',
+          border: '#ff6b6b',
+          text: colors.neutral.black,
+          confidenceBg: '#ff6b6b'
         }
       case 'procedural':
       default:

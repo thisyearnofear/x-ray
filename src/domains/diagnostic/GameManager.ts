@@ -160,39 +160,29 @@ export class GameManager {
             
             this.emit('timer_update', timerEvent)
 
-            // Critical time warnings with enhanced feedback
-            if (this.gameState.timeRemaining === 60) {
-                this.emit('timer_warning', { 
-                    message: '⚠️ 1 minute remaining!', 
-                    urgency: 'warning',
-                    audio: 'warning_beep'
-                })
-                
-                // Show visual feedback for warning
-                if (this.diagnosticUIManager) {
-                    this.diagnosticUIManager.showTimerWarning(60);
-                }
-            } else if (this.gameState.timeRemaining === 30) {
-                this.emit('timer_critical', { 
-                    message: '🚨 30 seconds left!', 
-                    urgency: 'critical',
-                    audio: 'urgent_beep'
-                })
-                
-                // Show enhanced visual feedback for critical time
-                if (this.diagnosticUIManager) {
-                    this.diagnosticUIManager.showTimerCritical(30);
-                }
-            } else if (this.gameState.timeRemaining <= 10 && this.gameState.timeRemaining > 0) {
-                // Visual and audio feedback for last 10 seconds
-                this.emit('timer_final_seconds', { 
-                    seconds: this.gameState.timeRemaining,
-                    audio: 'countdown_beep'
-                })
-                
-                if (this.diagnosticUIManager) {
-                    this.diagnosticUIManager.showTimerFinalSeconds(this.gameState.timeRemaining);
-                }
+            // ENHANCED: Rich milestone events for immersive drama experience
+            const milestone = this.getTimerMilestone(this.gameState.timeRemaining);
+            if (milestone) {
+                this.emit('timer_milestone', {
+                    milestone: milestone.id,
+                    timeRemaining: this.gameState.timeRemaining,
+                    urgency: milestone.urgency,
+                    title: milestone.title,
+                    description: milestone.description,
+                    actions: milestone.actions,
+                    visualEffects: milestone.visualEffects,
+                    audioCue: milestone.audioCue,
+                    patientContext: this.getPatientContextForMilestone(milestone),
+                    gameState: {
+                        conditionsFound: this.gameState.discoveredConditions.size,
+                        investigationsUsed: this.getInvestigationCount(),
+                        accuracy: this.gameState.accuracy,
+                        phase: this.gameState.phase
+                    }
+                });
+
+                // Legacy compatibility - emit old events for existing listeners
+                this.emitLegacyTimerEvents(milestone, this.gameState.timeRemaining);
             }
 
             if (this.gameState.timeRemaining <= 0) {
@@ -218,6 +208,224 @@ export class GameManager {
     private getTimePercentage(): number {
         const initialTime = this.gameState.patientCase?.estimatedCaseLength || 300; // Default to 5 mins
         return Math.max(0, (this.gameState.timeRemaining / initialTime) * 100);
+    }
+
+    // ENHANCED: Rich milestone system for immersive timer drama
+    private getTimerMilestone(timeRemaining: number): any {
+        const milestones = {
+            240: { // 4:00 - Patient Arrival Drama
+                id: 'patient_arrival',
+                urgency: 'normal',
+                title: 'Patient Assessment Begins',
+                description: 'Patient has arrived and is ready for initial evaluation',
+                actions: ['unlock_patient_interview'],
+                visualEffects: ['panel_highlight', 'patient_info_glow'],
+                audioCue: 'patient_arrival'
+            },
+            225: { // 3:45 - Investigation Opportunity
+                id: 'investigation_unlock',
+                urgency: 'normal',
+                title: 'Investigation Tools Available',
+                description: 'Standard diagnostic investigations are now available',
+                actions: ['unlock_lab_orders', 'unlock_patient_interview'],
+                visualEffects: ['tool_unlock_animation', 'panel_expand'],
+                audioCue: 'tool_unlock'
+            },
+            210: { // 3:30 - Lab Results Reveal
+                id: 'lab_results_ready',
+                urgency: 'normal',
+                title: 'Laboratory Results Available',
+                description: 'Initial lab work has been processed and results are ready',
+                actions: ['show_lab_results', 'unlock_imaging'],
+                visualEffects: ['result_highlight', 'data_stream'],
+                audioCue: 'lab_results'
+            },
+            195: { // 3:15 - Imaging Findings
+                id: 'imaging_complete',
+                urgency: 'moderate',
+                title: 'Imaging Study Complete',
+                description: 'Radiological imaging has been reviewed and findings are available',
+                actions: ['show_imaging_results', 'unlock_consultation'],
+                visualEffects: ['discovery_spotlight', 'film_viewer_open'],
+                audioCue: 'imaging_complete'
+            },
+            165: { // 2:45 - Nurse Consult Escalation
+                id: 'consultation_escalation',
+                urgency: 'moderate',
+                title: 'Nurse Consultation Recommended',
+                description: 'Consider consulting with nursing staff for additional insights',
+                actions: ['unlock_nurse_consult', 'show_family_concerns'],
+                visualEffects: ['urgent_highlight', 'nurse_badge_glow'],
+                audioCue: 'consultation_alert'
+            },
+            150: { // 2:30 - Complication Discovery
+                id: 'complication_alert',
+                urgency: 'high',
+                title: 'Potential Complications Identified',
+                description: 'Additional findings suggest possible secondary conditions',
+                actions: ['show_complications', 'unlock_advanced_tools'],
+                visualEffects: ['warning_pulse', 'complexity_indicator'],
+                audioCue: 'complication_discovery'
+            },
+            120: { // 2:00 - Critical Decision Point
+                id: 'decision_critical',
+                urgency: 'high',
+                title: 'Critical Decision Required',
+                description: 'Time to formulate working diagnosis and treatment plan',
+                actions: ['show_decision_options', 'unlock_emergency_consult'],
+                visualEffects: ['decision_highlight', 'timer_emphasis'],
+                audioCue: 'decision_urgent'
+            },
+            90: { // 1:30 - Evidence Synthesis
+                id: 'evidence_synthesis',
+                urgency: 'high',
+                title: 'Evidence Synthesis Phase',
+                description: 'Correlate all findings and prepare comprehensive assessment',
+                actions: ['show_evidence_summary', 'unlock_final_tools'],
+                visualEffects: ['synthesis_animation', 'evidence_highlight'],
+                audioCue: 'evidence_ready'
+            },
+            60: { // 1:00 - Diagnosis Preparation
+                id: 'diagnosis_preparation',
+                urgency: 'critical',
+                title: 'Final Diagnosis Preparation',
+                description: 'Prepare comprehensive diagnosis for patient and family',
+                actions: ['show_diagnosis_options', 'unlock_family_brief'],
+                visualEffects: ['final_countdown', 'diagnosis_highlight'],
+                audioCue: 'diagnosis_urgent'
+            },
+            30: { // 0:30 - Emergency Escalation
+                id: 'emergency_escalation',
+                urgency: 'critical',
+                title: 'Emergency Escalation Required',
+                description: 'Immediate action required - patient condition may deteriorate',
+                actions: ['show_emergency_options', 'unlock_critical_care'],
+                visualEffects: ['emergency_pulse', 'crisis_indicators'],
+                audioCue: 'emergency_alert'
+            }
+        };
+
+        return (milestones as any)[timeRemaining] || null;
+    }
+
+    // ENHANCED: Provide patient-specific context for milestones
+    private getPatientContextForMilestone(milestone: any): any {
+        if (!this.gameState.patientCase) return {};
+
+        const patient = this.gameState.patientCase;
+        const contextMap = {
+            patient_arrival: {
+                greeting: `Dr. [Player], meet ${patient.patientName || 'the patient'}`,
+                concern: `${patient.patientName || 'The patient'} is anxious about their ${patient.chiefComplaint || 'symptoms'}`,
+                background: patient.patientName ? `${patient.patientName} works in ${this.inferOccupation(patient)}` : ''
+            },
+            investigation_unlock: {
+                tools: ['Patient interview', 'Lab orders', 'Vital signs'],
+                rationale: `Given ${patient.patientName || 'the patient'}'s ${patient.chiefComplaint || 'presentation'}, these investigations will help clarify the diagnosis`
+            },
+            lab_results_ready: {
+                expected: this.predictLabFindings(milestone),
+                correlation: `These results ${this.correlateWithSymptoms(milestone) ? 'support' : 'contradict'} the initial presentation`
+            },
+            imaging_complete: {
+                modality: this.suggestImagingModality(milestone),
+                findings: this.generateImagingFindings(milestone),
+                clinical_impact: this.assessImagingImpact(milestone)
+            }
+            // Additional milestone contexts can be added here
+        };
+
+        return (contextMap as any)[milestone.id] || {};
+    }
+
+    // Helper methods for contextual intelligence
+    private inferOccupation(patient: any): string {
+        // Simple inference based on available data
+        if (patient.patientName?.toLowerCase().includes('dr') || patient.patientName?.toLowerCase().includes('nurse')) {
+            return 'healthcare';
+        }
+        if (patient.patientStory?.toLowerCase().includes('work') || patient.patientStory?.toLowerCase().includes('job')) {
+            return 'professional work';
+        }
+        return 'daily activities'; // Default
+    }
+
+    private predictLabFindings(milestone: any): string[] {
+        // Context-aware lab prediction based on case type
+        const caseType = this.gameState.patientCase?.id || '';
+        if (caseType.includes('tmj') || caseType.includes('headache')) {
+            return ['CBC: Normal', 'ESR: Elevated', 'CRP: Mildly elevated'];
+        }
+        return ['Basic metabolic panel', 'Inflammatory markers'];
+    }
+
+    private correlateWithSymptoms(milestone: any): boolean {
+        // Simple correlation logic
+        return this.gameState.discoveredConditions.size > 0;
+    }
+
+    private suggestImagingModality(milestone: any): string {
+        const caseType = this.gameState.patientCase?.id || '';
+        if (caseType.includes('tmj') || caseType.includes('head') || caseType.includes('facial')) {
+            return 'Panoramic X-ray with TMJ views';
+        }
+        return 'Chest X-ray'; // Default
+    }
+
+    private generateImagingFindings(milestone: any): string[] {
+        // Generate contextually appropriate findings
+        const conditions = Array.from(this.gameState.discoveredConditions);
+        if (conditions.length > 0) {
+            return [`Evidence of ${conditions[0]}`, 'Joint space narrowing', 'Soft tissue changes'];
+        }
+        return ['No acute abnormalities', 'Consider additional views'];
+    }
+
+    private assessImagingImpact(milestone: any): string {
+        const conditions = this.gameState.discoveredConditions.size;
+        if (conditions > 1) {
+            return 'Multiple findings support complex diagnosis';
+        } else if (conditions === 1) {
+            return 'Key finding confirms working diagnosis';
+        }
+        return 'Further investigation recommended';
+    }
+
+    // Track investigation usage for milestone context
+    private getInvestigationCount(): number {
+        // This would be tracked by the UI system
+        // For now, return a simple count based on conditions found
+        return Math.max(1, this.gameState.discoveredConditions.size);
+    }
+
+    // Legacy compatibility for existing timer event listeners
+    private emitLegacyTimerEvents(milestone: any, timeRemaining: number): void {
+        switch (milestone.id) {
+            case 'diagnosis_preparation':
+                this.emit('timer_warning', {
+                    message: '⚠️ 1 minute remaining!',
+                    urgency: 'warning',
+                    audio: 'warning_beep'
+                });
+                break;
+            case 'emergency_escalation':
+                this.emit('timer_critical', {
+                    message: '🚨 30 seconds left!',
+                    urgency: 'critical',
+                    audio: 'urgent_beep'
+                });
+                break;
+            default:
+                // No legacy event for other milestones
+                break;
+        }
+
+        if (timeRemaining <= 10 && timeRemaining > 0) {
+            this.emit('timer_final_seconds', {
+                seconds: timeRemaining,
+                audio: 'countdown_beep'
+            });
+        }
     }
 
     // MODULAR: Sophisticated scoring system

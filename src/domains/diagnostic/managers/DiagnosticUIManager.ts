@@ -1064,25 +1064,38 @@ export class DiagnosticUIManager {
     })
   }
 
-  // NEW: Patient interview functionality
+  // NEW: Enhanced Patient interview functionality with immersive experience
   private showPatientInterview(): void {
     if (this.aiPanel) {
       this.aiPanel.addInsight({
         id: `interview_${Date.now()}`,
         timestamp: Date.now(),
-        content: "👩‍⚕️ Nurse Amy: Let's conduct a focused patient interview. Click on the symptoms below to ask about them:",
+        content: "👩‍⚕️ Nurse Amy: Initiating comprehensive patient interview...",
         type: 'voice',
         confidence: 0.9
       })
 
-      // Add symptom questions
+      // Show initial engagement
+      setTimeout(() => {
+        if (this.aiPanel) {
+          this.aiPanel.addInsight({
+            id: `interview_intro_${Date.now()}`,
+            timestamp: Date.now(),
+            content: "📋 <strong>Chief Complaint:</strong> Chronic headaches with jaw pain",
+            type: 'diagnostic',
+            confidence: 0.85
+          });
+        }
+      }, 600);
+
+      // Add symptom questions with enhanced interactivity
       const symptoms = [
-        "📍 Where exactly do you feel the pain?",
-        "⏱️ When did the headaches start?",
-        "🔄 Do the headaches come and go or are they constant?",
-        "🔥 Does anything make the pain better or worse?",
-        "😴 Are the headaches affecting your sleep?",
-        "🥱 Any associated jaw clicking or popping?"
+        { question: "📍 Where exactly do you feel the pain?", response: "The pain is mainly in my temples and jaw area. It feels like a constant dull ache that sometimes sharpens when I chew." },
+        { question: "⏱️ When did the headaches start?", response: "These headaches started about three weeks ago. They've been getting worse, especially in the mornings." },
+        { question: "🔄 Do the headaches come and go or are they constant?", response: "They're pretty constant now. I used to get occasional headaches, but this is different - much more persistent." },
+        { question: "🔥 Does anything make the pain better or worse?", response: "The pain gets worse when I'm stressed or chew hard foods. Warm compresses and rest help a little." },
+        { question: "😴 Are the headaches affecting your sleep?", response: "Yes, they're really affecting my sleep. I wake up with a stiff jaw and headache most mornings." },
+        { question: "🥱 Any associated jaw clicking or popping?", response: "Yes! There's definitely clicking when I open my mouth wide, especially when I yawn." }
       ]
 
       symptoms.forEach((symptom, index) => {
@@ -1091,120 +1104,357 @@ export class DiagnosticUIManager {
             this.aiPanel.addInsight({
               id: `symptom_${Date.now()}_${index}`,
               timestamp: Date.now(),
-              content: `❓ ${symptom}`,
-              type: 'educational',
+              content: `❓ <strong>${symptom.question}</strong>`,
+              type: 'diagnostic',
               confidence: 0.8
             })
-          }
-        }, index * 500)
-      })
-
-      // Add patient responses based on the current case
-      setTimeout(() => {
-        if (this.aiPanel && this.currentPatientCase) {
-          // Handle both MedicalCase and PatientCase types
-          let patientName = 'Patient';
-          if ('patientInfo' in this.currentPatientCase) {
-            patientName = (this.currentPatientCase as any).patientInfo.patientName;
-          } else if ('patientName' in this.currentPatientCase) {
-            patientName = (this.currentPatientCase as any).patientName;
-          }
-
-          const patientResponses = [
-            `🗣️ ${patientName}: \"The pain is mainly in my temples and jaw area. It feels like a constant dull ache that sometimes sharpens when I chew.\"`,
-            `🗣️ ${patientName}: \"These headaches started about three weeks ago. They've been getting worse, especially in the mornings.\"`,
-            `🗣️ ${patientName}: \"They're pretty constant now. I used to get occasional headaches, but this is different - much more persistent.\"`,
-            `🗣️ ${patientName}: \"The pain gets worse when I'm stressed or chew hard foods. Warm compresses and rest help a little.\"`,
-            `🗣️ ${patientName}: \"Yes, they're really affecting my sleep. I wake up with a stiff jaw and headache most mornings.\"`,
-            `🗣️ ${patientName}: \"Yes! There's definitely clicking when I open my mouth wide, especially when I yawn.\"`
-          ];
-
-          patientResponses.forEach((response, index) => {
+            
+            // Add the response after a delay
             setTimeout(() => {
               if (this.aiPanel) {
+                // Handle both MedicalCase and PatientCase types
+                let patientName = 'Patient';
+                if (this.currentPatientCase) {
+                  if ('patientInfo' in this.currentPatientCase) {
+                    patientName = (this.currentPatientCase as any).patientInfo.patientName;
+                  } else if ('patientName' in this.currentPatientCase) {
+                    patientName = (this.currentPatientCase as any).patientName;
+                  }
+                }
+                
                 this.aiPanel.addInsight({
                   id: `patient_response_${Date.now()}_${index}`,
                   timestamp: Date.now(),
-                  content: response,
+                  content: `🗣️ <strong>${patientName}:</strong> "${symptom.response}"`,
                   type: 'voice',
                   confidence: 0.95
                 })
               }
-            }, index * 600)
-          })
+            }, 1500);
+          }
+        }, index * 2200)
+      })
+
+      // Add conclusion and clinical correlation after interview completes
+      setTimeout(() => {
+        if (this.aiPanel) {
+          this.aiPanel.addInsight({
+            id: `interview_conclusion_${Date.now()}`,
+            timestamp: Date.now(),
+            content: "📋 <strong>Interview Summary:</strong> Patient reports chronic temporal and jaw pain, worse in mornings, associated with jaw clicking. Pattern suggests TMJ dysfunction.",
+            type: 'educational',
+            confidence: 0.9
+          });
+          
+          // Suggest next steps
+          setTimeout(() => {
+            if (this.aiPanel) {
+              this.aiPanel.addInsight({
+                id: `interview_next_${Date.now()}`,
+                timestamp: Date.now(),
+                content: "💡 <strong>Nurse Amy:</strong> Based on the history, I recommend physical examination focusing on TMJ and palpation. Consider imaging if conservative management fails.",
+                type: 'voice',
+                confidence: 0.85
+              });
+              
+              // Add AI case specific enhancement if this is an AI-generated case
+              if (this.currentPatientCase && ('isAIGenerated' in this.currentPatientCase && this.currentPatientCase.isAIGenerated)) {
+                setTimeout(() => {
+                  if (this.aiPanel) {
+                    this.aiPanel.addInsight({
+                      id: `ai_interview_enhancement_${Date.now()}`,
+                      timestamp: Date.now(),
+                      content: "🤖 <strong>AI Case Enhancement:</strong> This AI-generated case features adaptive interview patterns that respond to your questioning approach. Premium AI dynamically adjusts patient responses based on your clinical reasoning.",
+                      type: 'premium',
+                      confidence: 0.95
+                    });
+                  }
+                }, 1000);
+              }
+            }
+          }, 600);
         }
-      }, 3500) // Start responses after questions are shown
+      }, symptoms.length * 1200 + 600);
     }
   }
 
-  // NEW: Lab orders functionality
+  // NEW: Enhanced Lab orders functionality with realistic lab workflow
   private showLabOrders(): void {
     if (this.aiPanel) {
       this.aiPanel.addInsight({
         id: `lab_orders_${Date.now()}`,
         timestamp: Date.now(),
-        content: "🔬 Nurse Amy: Recommended laboratory investigations for this case:",
+        content: "🧪 <strong>Laboratory Orders:</strong> Initiating diagnostic laboratory workup...",
         type: 'diagnostic',
         confidence: 0.9
       })
 
-      // Add lab order options
+      // Simulate real lab ordering process with reduced timeouts
+      setTimeout(() => {
+        if (this.aiPanel) {
+          this.aiPanel.addInsight({
+            id: `lab_specimen_${Date.now()}`,
+            timestamp: Date.now(),
+            content: "📋 <strong>Specimen Collection:</strong> Requesting blood draw for ordered studies",
+            type: 'procedural',
+            confidence: 0.85
+          });
+        }
+      }, 500);
+
+      // Add lab order options with realistic turnarounds - batched for performance
       const labTests = [
-        { name: "Complete Blood Count (CBC)", rationale: "Rule out infection/inflammation", ordered: false },
-        { name: "Comprehensive Metabolic Panel (CMP)", rationale: "Assess organ function", ordered: false },
-        { name: "ESR/CRP", rationale: "Inflammatory markers", ordered: true },
-        { name: "Thyroid Function Tests", rationale: "Rule out endocrine causes", ordered: false }
+        { 
+          name: "Complete Blood Count (CBC)", 
+          rationale: "Rule out infection/inflammation", 
+          ordered: true, 
+          turnaround: "30 min", 
+          result: "WBC: 7.2, RBC: 4.5, Hgb: 14.2 (Normal)" 
+        },
+        { 
+          name: "Comprehensive Metabolic Panel (CMP)", 
+          rationale: "Assess organ function", 
+          ordered: true, 
+          turnaround: "45 min", 
+          result: "All values within normal limits" 
+        },
+        { 
+          name: "ESR", 
+          rationale: "Inflammatory marker", 
+          ordered: true, 
+          turnaround: "25 min", 
+          result: "18 mm/hr (Elevated)" 
+        },
+        { 
+          name: "CRP", 
+          rationale: "Acute inflammatory marker", 
+          ordered: true, 
+          turnaround: "20 min", 
+          result: "2.8 mg/L (Elevated)" 
+        }
       ]
 
-      labTests.forEach((test, index) => {
-        setTimeout(() => {
+      // Batch process lab tests to reduce timeout overhead
+      setTimeout(() => {
+        labTests.forEach((test, index) => {
           if (this.aiPanel) {
-            this.aiPanel.addInsight({
-              id: `lab_test_${Date.now()}_${index}`,
-              timestamp: Date.now(),
-              content: `${test.ordered ? '✅' : '📋'} ${test.name} - ${test.rationale}`,
-              type: test.ordered ? 'urgent' : 'procedural',
-              confidence: 0.8
-            })
+            // Order tests sequentially but with minimal delay
+            setTimeout(() => {
+              if (this.aiPanel) {
+                this.aiPanel.addInsight({
+                  id: `lab_test_ordered_${Date.now()}_${index}`,
+                  timestamp: Date.now(),
+                  content: `🧪 <strong>${test.name}</strong> - Ordered<br><em>${test.rationale}</em>`,
+                  type: 'procedural',
+                  confidence: 0.8
+                })
+                
+                // Process results with minimal delay
+                setTimeout(() => {
+                  if (this.aiPanel) {
+                    const resultStatus = test.result.includes("Elevated") ? "🚨" : "✅";
+                    this.aiPanel.addInsight({
+                      id: `lab_result_${Date.now()}_${index}`,
+                      timestamp: Date.now(),
+                      content: `${resultStatus} <strong>${test.name} Result:</strong> ${test.result}<br><span style="font-size: 0.9em; color: ${test.result.includes("Elevated") ? "#ff6b6b" : "#4ecdc4"};">(TAT: ${test.turnaround})</span>`,
+                      type: test.result.includes("Elevated") ? 'urgent' : 'diagnostic',
+                      confidence: 0.9
+                    })
+                  }
+                }, 800); // Reduced from random delay
+              }
+            }, index * 600); // Reduced interval
           }
-        }, index * 300)
-      })
+        });
+      }, 1000);
+
+      // Add interpretation after all labs are processed
+      setTimeout(() => {
+        if (this.aiPanel) {
+          this.aiPanel.addInsight({
+            id: `lab_interpretation_${Date.now()}`,
+            timestamp: Date.now(),
+            content: "📋 <strong>Lab Results Summary:</strong> Normal CBC and metabolic panel with elevated inflammatory markers (ESR/CRP). Suggests non-infectious inflammatory process.",
+            type: 'educational',
+            confidence: 0.85
+          });
+          
+          setTimeout(() => {
+            if (this.aiPanel) {
+              this.aiPanel.addInsight({
+                id: `lab_followup_${Date.now()}`,
+                timestamp: Date.now(),
+                content: "💡 <strong>Nurse Amy:</strong> Elevated inflammatory markers support inflammatory TMJ dysfunction. Consider anti-inflammatory therapy alongside jaw protection measures.",
+                type: 'voice',
+                confidence: 0.9
+              });
+              
+              // Add AI case specific enhancement if this is an AI-generated case
+              if (this.currentPatientCase && ('isAIGenerated' in this.currentPatientCase && this.currentPatientCase.isAIGenerated)) {
+                setTimeout(() => {
+                  if (this.aiPanel) {
+                    this.aiPanel.addInsight({
+                      id: `ai_lab_enhancement_${Date.now()}`,
+                      timestamp: Date.now(),
+                      content: "🤖 <strong>AI Case Enhancement:</strong> This AI-generated case includes dynamic laboratory patterns that adapt to your diagnostic approach. Premium AI continuously refines test selection based on your clinical reasoning.",
+                      type: 'premium',
+                      confidence: 0.95
+                    });
+                  }
+                }, 1500);
+              }
+              
+              // Clean up old insights to prevent bloat
+              this.cleanupOldInsights(15);
+            }
+          }, 800);
+        }
+      }, 5000); // Reduced from complex calculation
     }
   }
 
-  // NEW: Imaging options functionality
+  // NEW: Enhanced Imaging options functionality with realistic imaging workflow
   private showImagingOptions(): void {
     if (this.aiPanel) {
       this.aiPanel.addInsight({
         id: `imaging_${Date.now()}`,
         timestamp: Date.now(),
-        content: "📷 Nurse Amy: Recommended imaging studies for this case:",
+        content: "📷 <strong>Imaging Studies:</strong> Initiating diagnostic imaging protocol...",
         type: 'diagnostic',
         confidence: 0.9
       })
 
-      // Add imaging options
+      // Simulate imaging ordering and preparation with reduced timeouts
+      setTimeout(() => {
+        if (this.aiPanel) {
+          this.aiPanel.addInsight({
+            id: `imaging_preparation_${Date.now()}`,
+            timestamp: Date.now(),
+            content: "📋 <strong>Imaging Preparation:</strong> Patient positioned, safety screening completed",
+            type: 'procedural',
+            confidence: 0.85
+          });
+        }
+      }, 500);
+
+      // Add realistic imaging studies with actual medical findings - optimized for performance
       const imagingStudies = [
-        { name: "Panoramic X-ray", status: "ordered", finding: "TMJ degenerative changes" },
-        { name: "CT Head", status: "available", finding: "Sinus opacification noted" },
-        { name: "MRI Brain", status: "pending", finding: "Awaiting neurology consult" }
+        { 
+          name: "Panoramic X-ray", 
+          status: "in_progress", 
+          finding: "Initial views obtained", 
+          details: "Panoramic radiograph showing bilateral TMJ architecture",
+          duration: "5 min"
+        },
+        { 
+          name: "TMJ Series", 
+          status: "completed", 
+          finding: "Bilateral TMJ degenerative changes", 
+          details: "Narrowing of TMJ spaces, subchondral sclerosis, possible osteophytes",
+          duration: "10 min" 
+        },
+        { 
+          name: "Soft Tissue Lateral C-spine", 
+          status: "completed", 
+          finding: "Preserved cervical lordosis", 
+          details: "Cervical spine alignment and soft tissues unremarkable",
+          duration: "3 min" 
+        }
       ]
 
-      imagingStudies.forEach((study, index) => {
-        setTimeout(() => {
+      // Batch process imaging studies to reduce timeout overhead
+      setTimeout(() => {
+        imagingStudies.forEach((study, index) => {
           if (this.aiPanel) {
-            const statusEmoji = study.status === 'ordered' ? '✅' : study.status === 'available' ? '🔍' : '⏳'
-            const findingText = study.finding ? `- ${study.finding}` : ''
-            this.aiPanel.addInsight({
-              id: `imaging_study_${Date.now()}_${index}`,
-              timestamp: Date.now(),
-              content: `${statusEmoji} ${study.name} ${findingText}`,
-              type: study.status === 'ordered' ? 'urgent' : study.status === 'available' ? 'diagnostic' : 'procedural',
-              confidence: 0.85
-            })
+            // Process studies sequentially but with minimal delay
+            setTimeout(() => {
+              if (this.aiPanel) {
+                let statusEmoji = "⏳";
+                if (study.status === 'completed') statusEmoji = "✅";
+                else if (study.status === 'in_progress') statusEmoji = "📷";
+                
+                this.aiPanel.addInsight({
+                  id: `imaging_study_${Date.now()}_${index}`,
+                  timestamp: Date.now(),
+                  content: `${statusEmoji} <strong>${study.name}</strong> (${study.duration})<br><em>Procedure: ${study.details}</em>`,
+                  type: study.status === 'in_progress' ? 'procedural' : 'diagnostic',
+                  confidence: 0.85
+                })
+                
+                // Add findings with minimal delay
+                setTimeout(() => {
+                  if (this.aiPanel) {
+                    const findingColor = study.finding.includes("degenerative") ? "#ff6b6b" : "#4ecdc4";
+                    this.aiPanel.addInsight({
+                      id: `imaging_findings_${Date.now()}_${index}`,
+                      timestamp: Date.now(),
+                      content: `🔍 <strong>${study.name} Findings:</strong> ${study.finding}<br><span style="font-size: 0.9em; color: ${findingColor};">Result status: ${study.status.charAt(0).toUpperCase() + study.status.slice(1)}</span>`,
+                      type: study.finding.includes("degenerative") ? 'urgent' : 'diagnostic',
+                      confidence: 0.9
+                    })
+                  }
+                }, 600); // Reduced delay
+              }
+            }, index * 500); // Reduced interval
           }
-        }, index * 400)
-      })
+        });
+      }, 1000);
+
+      // Add comprehensive interpretation with reduced timeouts
+      setTimeout(() => {
+        if (this.aiPanel) {
+          this.aiPanel.addInsight({
+            id: `imaging_interpretation_${Date.now()}`,
+            timestamp: Date.now(),
+            content: "📋 <strong>Imaging Summary:</strong> Panoramic X-ray reveals bilateral TMJ degenerative changes with joint space narrowing. These findings correlate with patient's jaw pain and clicking symptoms.",
+            type: 'educational',
+            confidence: 0.9
+          });
+          
+          setTimeout(() => {
+            if (this.aiPanel) {
+              this.aiPanel.addInsight({
+                id: `imaging_recommendation_${Date.now()}`,
+                timestamp: Date.now(),
+                content: "💡 <strong>Nurse Amy:</strong> Imaging confirms TMJ degenerative changes. Consider referral to oral maxillofacial surgery for advanced treatment options if conservative management fails.",
+                type: 'voice',
+                confidence: 0.95
+              });
+              
+              // Add AI case specific enhancement if this is an AI-generated case
+              if (this.currentPatientCase && ('isAIGenerated' in this.currentPatientCase && this.currentPatientCase.isAIGenerated)) {
+                setTimeout(() => {
+                  if (this.aiPanel) {
+                    this.aiPanel.addInsight({
+                      id: `ai_imaging_enhancement_${Date.now()}`,
+                      timestamp: Date.now(),
+                      content: "🤖 <strong>AI Case Enhancement:</strong> This AI-generated case includes adaptive imaging protocols that evolve with your diagnostic decisions. Premium AI integrates multi-modal imaging findings in real-time.",
+                      type: 'premium',
+                      confidence: 0.95
+                    });
+                  }
+                }, 1200);
+              }
+              
+              // Add premium upsell message (single instance across all tools)
+              setTimeout(() => {
+                if (this.aiPanel) {
+                  this.aiPanel.addInsight({
+                    id: `premium_imaging_${Date.now()}`,
+                    timestamp: Date.now(),
+                    content: "💎 <strong>Advanced Imaging Available:</strong> Premium users can access 3D CBCT imaging, advanced MRI sequences, and AI-powered diagnostic overlays. Consider upgrading for enhanced visualization.",
+                    type: 'premium',
+                    confidence: 0.99
+                  });
+                  
+                  // Clean up old insights to prevent bloat
+                  this.cleanupOldInsights(15);
+                }
+              }, 2000);
+            }
+          }, 800);
+        }
+      }, 4000); // Reduced from complex calculation
     }
   }
 
@@ -1445,6 +1695,27 @@ export class DiagnosticUIManager {
     return this.uiElement
   }
 
+  // Helper method to limit accumulated insights and prevent bloat
+  private cleanupOldInsights(maxInsights: number = 20): void {
+    if (this.aiPanel) {
+      // Get current insights
+      const currentInsights = [...this.aiPanel['insights']]; // Access private insights array
+      
+      // If we have too many insights, remove oldest ones
+      if (currentInsights.length > maxInsights) {
+        const insightsToRemove = currentInsights.length - maxInsights;
+        console.log(`🧹 Cleaning up ${insightsToRemove} old insights to prevent bloat`);
+        
+        // Remove oldest insights (they're at the beginning of the array)
+        currentInsights.splice(0, insightsToRemove);
+        
+        // Update the insights in the AI panel
+        this.aiPanel['insights'] = currentInsights;
+        this.aiPanel['renderInsights'](); // Re-render the panel
+      }
+    }
+  }
+
   // Show achievement notification
   public showAchievementNotification(achievement: any): void {
     const notification = document.createElement('div');
@@ -1496,6 +1767,88 @@ export class DiagnosticUIManager {
 
   getUIElement(): HTMLElement | null {
     return this.uiElement;
+  }
+
+  // ENHANCED: Timer milestone investigation tool management
+  unlockInvestigationTool(toolType: string): void {
+    const toolMap: Record<string, string> = {
+      'patient_interview': '#patient-interview-btn',
+      'lab_orders': '#lab-orders-btn',
+      'imaging': '#imaging-btn',
+      'nurse_consult': '#consult-nurse-btn'
+    };
+
+    const buttonId = toolMap[toolType];
+    if (buttonId) {
+      const button = document.querySelector(buttonId) as HTMLElement;
+      if (button) {
+        // Add unlocked styling and enable button
+        button.style.opacity = '1';
+        button.style.pointerEvents = 'auto';
+        button.style.transform = 'scale(1)';
+
+        // Add unlock animation
+        button.style.animation = 'toolUnlock 0.8s ease-out';
+        setTimeout(() => button.style.animation = '', 800);
+
+        // Add glow effect for newly unlocked tools
+        button.style.boxShadow = '0 0 20px rgba(0, 255, 136, 0.5)';
+        setTimeout(() => button.style.boxShadow = '', 2000);
+      }
+    }
+  }
+
+  displayInvestigationResults(type: string, results: string[]): void {
+    // Create a temporary results display in the AI panel
+    if (this.aiPanel) {
+      const resultMessage = this.formatInvestigationResults(type, results);
+      this.aiPanel.addInsight({
+        id: `investigation_${type}_${Date.now()}`,
+        timestamp: Date.now(),
+        content: resultMessage,
+        type: 'diagnostic',
+        confidence: 0.9
+      });
+    }
+  }
+
+  updateCaseProgress(milestone: string, gameState: any): void {
+    // Update progress indicators in the case progress section
+    const progressContainer = document.querySelector('#diagnostic-content .case-progress');
+    if (progressContainer) {
+      // Update progress based on milestone and game state
+      const progressPercent = this.calculateProgressPercentage(milestone, gameState);
+      const progressBar = progressContainer.querySelector('.progress-fill') as HTMLElement;
+      if (progressBar) {
+        progressBar.style.width = `${progressPercent}%`;
+      }
+    }
+  }
+
+  // Helper methods for investigation results
+  private formatInvestigationResults(type: string, results: string[]): string {
+    const typeLabels = {
+      'lab': '📋 Laboratory Results',
+      'imaging': '📷 Imaging Results'
+    };
+
+    const label = typeLabels[type as keyof typeof typeLabels] || '📊 Investigation Results';
+    const formattedResults = results.map(result => `• ${result}`).join('\n');
+
+    return `${label}:\n${formattedResults}`;
+  }
+
+  private calculateProgressPercentage(milestone: string, gameState: any): number {
+    // Calculate progress based on milestone and game state
+    const baseProgress = 20; // Starting progress
+    const conditionsFound = gameState.conditionsFound || 0;
+    const investigationsUsed = gameState.investigationsUsed || 0;
+
+    // Progress increases with conditions found and investigations completed
+    const progressFromConditions = conditionsFound * 15;
+    const progressFromInvestigations = investigationsUsed * 10;
+
+    return Math.min(100, baseProgress + progressFromConditions + progressFromInvestigations);
   }
 
   // CLEAN: Add pulse animation styles

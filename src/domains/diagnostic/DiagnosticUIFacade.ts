@@ -107,6 +107,13 @@ export class DiagnosticUIFacade {
     this.uiManager.expand()
   }
 
+  // ENHANCED: Update patient context for milestone responses
+  updatePatientContext(patientContext: any): void {
+    // Delegate to UI manager to update patient information displays
+    // This can be used to show milestone-specific patient information
+    console.log('Updating patient context:', patientContext);
+  }
+
   // CLEAN: Error handling
   private showError(message: string): void {
     const errorDiv = document.createElement('div')

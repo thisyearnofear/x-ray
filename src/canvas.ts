@@ -19,6 +19,7 @@ import { MedicalCase } from "./domains/medical/types"
 import { TutorialFacade } from "./domains/tutorial/TutorialFacade"
 import { VoiceConsultationManager } from "./domains/voice/VoiceConsultationManager"
 import { NurseAmyNudgeSystem } from "./domains/diagnostic/NurseAmyNudgeSystem"
+import { colors, spacing, typography, borders, effects, zIndex } from './styles/design-tokens'
 
 export default class Canvas {
   element: HTMLCanvasElement
@@ -58,6 +59,7 @@ export default class Canvas {
   tutorial: TutorialFacade | null = null
   voiceConsultation: VoiceConsultationManager | null = null
   nurseAmyNudges: NurseAmyNudgeSystem | null = null
+  aiPanel: any = null // AI Panel reference for milestone responses
 
   // Control RAF and listeners
   private _rafId: number | null = null
@@ -187,9 +189,35 @@ export default class Canvas {
       
       <style>
         @keyframes pulse {
-          0%, 80%, 100% { transform: scale(0.8); opacity: 0.7; }
-          40% { transform: scale(1.2); opacity: 1; }
+        0%, 80%, 100% { transform: scale(0.8); opacity: 0.7; }
+        40% { transform: scale(1.2); opacity: 1; }
         }
+
+      @keyframes panelHighlight {
+        0% { filter: brightness(1); transform: scale(1); }
+        50% { filter: brightness(1.2); transform: scale(1.02); box-shadow: 0 0 30px rgba(0, 255, 136, 0.4); }
+        100% { filter: brightness(1); transform: scale(1); }
+      }
+
+      @keyframes toolUnlock {
+        0% { transform: scale(0.8); opacity: 0.5; filter: blur(2px); }
+        50% { transform: scale(1.1); opacity: 0.8; filter: blur(0px); }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      @keyframes warningPulse {
+        0% { opacity: 0; }
+        50% { opacity: 0.3; }
+        100% { opacity: 0; }
+      }
+
+      @keyframes emergencyPulse {
+        0% { opacity: 0; }
+        25% { opacity: 0.4; }
+        50% { opacity: 0.2; }
+        75% { opacity: 0.4; }
+        100% { opacity: 0; }
+      }
       </style>
     `
     
@@ -476,6 +504,10 @@ export default class Canvas {
 
     // Update the diagnostic UI with the GameManager
     this.diagnosticUI.updateGameManager(this.gameManager);
+
+    // Store AI panel reference for milestone responses
+    this.aiPanel = this.diagnosticUI.getUIManager()?.getAIPanel();
+
     console.log('🏥 DiagnosticUI initialized')
   }
 
@@ -541,15 +573,27 @@ export default class Canvas {
 
     // MODULAR: Connect timer events to Nurse Amy nudges and UI
     this.gameManager.on('timer_update', (data: any) => {
-      const gameState = this.gameManager?.getGameState()
-      if (gameState && this.nurseAmyNudges) {
-        this.nurseAmyNudges.evaluateNudgeNeeds(gameState)
-      }
-      
-      // ENHANCEMENT FIRST: Update timer display in UI
-      if (this.diagnosticUI && data.timeRemaining !== undefined) {
-        this.diagnosticUI.getUIManager()?.updateTimer(data.timeRemaining, data.urgency || 'normal')
-      }
+    const gameState = this.gameManager?.getGameState()
+    if (gameState && this.nurseAmyNudges) {
+    this.nurseAmyNudges.evaluateNudgeNeeds(gameState)
+    }
+
+    // ENHANCEMENT FIRST: Update timer display in UI
+    if (this.diagnosticUI && data.timeRemaining !== undefined) {
+    this.diagnosticUI.getUIManager()?.updateTimer(data.timeRemaining, data.urgency || 'normal')
+    }
+    })
+
+    // ENHANCED: Rich milestone events for immersive drama
+    this.gameManager.on('timer_milestone', (data: any) => {
+    console.log(`🎭 Timer milestone: ${data.milestone} at ${data.timeRemaining}s`)
+    this.handleTimerMilestone(data)
+    })
+
+    // ENHANCEMENT FIRST: Handle timer expiration with comprehensive end experience
+    this.gameManager.on('timer_expired', (data: any) => {
+      console.log('⏰ Timer expired - showing comprehensive end experience')
+      this.showTimerExpiredExperience(data)
     })
 
     // MODULAR: Connect condition discoveries to Nurse Amy
@@ -744,6 +788,597 @@ export default class Canvas {
     this.gameManager?.updateState({ patientCase: fallbackPatient })
     this.updatePatientDisplay()
     this.audioManager?.showFeedback('🏥 Emergency patient ready. AI diagnosis support limited.', 'warning')
+  }
+
+  // ENHANCED: Handle timer milestones with coordinated multi-panel responses
+  private handleTimerMilestone(data: any): void {
+    const milestone = data.milestone;
+    const urgency = data.urgency;
+
+    // Coordinate responses across all panels
+    this.coordinateMilestoneResponses(data);
+
+    // Audio response based on milestone
+    if (data.audioCue) {
+      this.playMilestoneAudio(data.audioCue, urgency);
+    }
+
+    // Visual effects coordination
+    if (data.visualEffects) {
+      this.applyVisualEffects(data.visualEffects, urgency);
+    }
+
+    // Update environmental context
+    this.updateEnvironmentalContext(milestone, data.patientContext);
+  }
+
+  // Coordinate responses across all app panels
+  private coordinateMilestoneResponses(data: any): void {
+    const milestone = data.milestone;
+    const actions = data.actions || [];
+
+    // Diagnostic UI Panel responses
+    if (this.diagnosticUI?.getUIManager()) {
+      this.updateDiagnosticUIPanel(milestone, actions, data);
+    }
+
+    // AI Panel responses (Nurse Amy)
+    if (this.aiPanel) {
+      this.updateAIPanel(milestone, data);
+    }
+
+    // Canvas/3D visualization responses
+    this.updateCanvasVisualization(milestone, data);
+
+    // Tier Status responses
+    this.updateTierStatus(milestone, data);
+  }
+
+  // Update diagnostic UI panel based on milestone
+  private updateDiagnosticUIPanel(milestone: string, actions: string[], data: any): void {
+    const uiManager = this.diagnosticUI?.getUIManager();
+    if (!uiManager) return;
+
+    // Tool unlocking animations
+    if (actions.includes('unlock_patient_interview')) {
+      uiManager.unlockInvestigationTool('patient_interview');
+    }
+    if (actions.includes('unlock_lab_orders')) {
+      uiManager.unlockInvestigationTool('lab_orders');
+    }
+    if (actions.includes('unlock_imaging')) {
+      uiManager.unlockInvestigationTool('imaging');
+    }
+    if (actions.includes('unlock_nurse_consult')) {
+      uiManager.unlockInvestigationTool('nurse_consult');
+    }
+
+    // Result displays
+    if (actions.includes('show_lab_results')) {
+      uiManager.displayInvestigationResults('lab', data.patientContext?.expected || []);
+    }
+    if (actions.includes('show_imaging_results')) {
+      uiManager.displayInvestigationResults('imaging', data.patientContext?.findings || []);
+    }
+
+    // Progress updates
+    uiManager.updateCaseProgress(milestone, data.gameState);
+  }
+
+  // Update AI panel with milestone context
+  private updateAIPanel(milestone: string, data: any): void {
+    if (!this.aiPanel) return;
+
+    // Trigger contextual Nurse Amy responses
+    this.aiPanel.addInsight({
+      id: `milestone_${milestone}_${Date.now()}`,
+      timestamp: Date.now(),
+      content: this.generateMilestoneMessage(milestone, data),
+      type: this.mapUrgencyToInsightType(data.urgency),
+      confidence: 0.95
+    });
+  }
+
+  // Update 3D canvas visualization
+  private updateCanvasVisualization(milestone: string, data: any): void {
+    switch (milestone) {
+      case 'patient_arrival':
+        // Subtle lighting adjustment for "patient arrival"
+        this.adjustSceneLighting('arrival');
+        break;
+      case 'imaging_complete':
+        // Spotlight effect on discovered conditions
+        this.highlightDiscoveredConditions();
+        break;
+      case 'complication_alert':
+        // Warning visual effects
+        this.showComplicationIndicators();
+        break;
+      case 'emergency_escalation':
+        // Crisis visual effects
+        this.showEmergencyIndicators();
+        break;
+    }
+  }
+
+  // Update tier status panel
+  private updateTierStatus(milestone: string, data: any): void {
+    // Update usage counters, show premium prompts for certain milestones
+    if (milestone === 'investigation_unlock' && !this.isPremiumUser()) {
+      this.showPremiumPrompt('advanced_investigations');
+    }
+  }
+
+  // Audio responses for milestones
+  private playMilestoneAudio(audioCue: string, urgency: string): void {
+    if (!this.audioManager) return;
+
+    const soundMap: Record<string, any> = {
+      'patient_arrival': 'MEDICAL_BEEP',
+      'tool_unlock': 'DISCOVERY',
+      'lab_results': 'MEDICAL_BEEP',
+      'imaging_complete': 'CONDITION_FOUND',
+      'consultation_alert': 'MEDIUM_SEVERITY',
+      'complication_discovery': 'HIGH_SEVERITY',
+      'decision_urgent': 'HIGH_SEVERITY',
+      'evidence_ready': 'MEDICAL_BEEP',
+      'diagnosis_urgent': 'HIGH_SEVERITY',
+      'emergency_alert': 'HIGH_SEVERITY'
+    };
+
+    const soundType = soundMap[audioCue];
+    if (soundType) {
+      this.audioManager.playSound(soundType as any);
+    }
+
+    // Urgency-based feedback
+    if (urgency === 'critical') {
+      this.audioManager.showFeedback('⚠️ Critical milestone reached', 'warning');
+    } else if (urgency === 'high') {
+      this.audioManager.showFeedback('⏰ Important development', 'info');
+    }
+  }
+
+  // Visual effects coordination
+  private applyVisualEffects(effects: string[], urgency: string): void {
+    effects.forEach(effect => {
+      switch (effect) {
+        case 'panel_highlight':
+          this.highlightDiagnosticPanel();
+          break;
+        case 'tool_unlock_animation':
+          this.animateToolUnlocks();
+          break;
+        case 'discovery_spotlight':
+          this.showDiscoverySpotlight();
+          break;
+        case 'urgent_highlight':
+          this.showUrgentHighlight(urgency);
+          break;
+        case 'warning_pulse':
+          this.showWarningPulse();
+          break;
+        case 'emergency_pulse':
+          this.showEmergencyPulse();
+          break;
+      }
+    });
+  }
+
+  // Environmental context updates
+  private updateEnvironmentalContext(milestone: string, patientContext: any): void {
+    // Adjust hospital ambience based on milestone urgency
+    switch (milestone) {
+      case 'patient_arrival':
+      case 'investigation_unlock':
+        // Calm, professional environment
+        this.audioManager?.startHospitalAmbience();
+        break;
+      case 'complication_alert':
+      case 'emergency_escalation':
+        // More urgent, active environment
+        // Could increase ambience volume or add urgent sounds
+        break;
+    }
+
+    // Update patient info displays with context
+    if (patientContext && this.diagnosticUI) {
+      this.diagnosticUI.updatePatientContext(patientContext);
+    }
+  }
+
+  // Helper methods for milestone responses
+  private generateMilestoneMessage(milestone: string, data: any): string {
+    const patientName = data.patientContext?.greeting?.split(' ')[1] || 'the patient';
+
+    const messages = {
+      'patient_arrival': `👩‍⚕️ Nurse Amy: Dr. [Player], ${patientName} has arrived and is ready for assessment. ${data.patientContext?.concern || ''}`,
+      'investigation_unlock': `👩‍⚕️ Nurse Amy: Investigation tools are now available. ${data.patientContext?.rationale || 'These will help clarify the diagnosis.'}`,
+      'lab_results_ready': `👩‍⚕️ Nurse Amy: Laboratory results are ready. ${data.patientContext?.correlation || 'Please review the findings.'}`,
+      'imaging_complete': `👩‍⚕️ Nurse Amy: Imaging study complete. ${data.patientContext?.clinical_impact || 'Key findings have been identified.'}`,
+      'consultation_escalation': `👩‍⚕️ Nurse Amy: I recommend consulting with me now for additional insights about ${patientName}'s condition.`,
+      'complication_alert': `👩‍⚕️ Nurse Amy: Additional findings suggest possible complications. This case may be more complex than initially thought.`,
+      'decision_critical': `👩‍⚕️ Nurse Amy: Time for critical decisions. ${patientName} needs a working diagnosis and treatment plan.`,
+      'evidence_synthesis': `👩‍⚕️ Nurse Amy: We're entering the evidence synthesis phase. All findings need to be correlated.`,
+      'diagnosis_preparation': `👩‍⚕️ Nurse Amy: Final diagnosis preparation. ${patientName} and their family are waiting for answers.`,
+      'emergency_escalation': `👩‍⚕️ Nurse Amy: Emergency escalation required! ${patientName}'s condition needs immediate attention.`
+    };
+
+    return messages[milestone as keyof typeof messages] || `👩‍⚕️ Nurse Amy: Important milestone reached: ${milestone}`;
+  }
+
+  private mapUrgencyToInsightType(urgency: string): 'diagnostic' | 'procedural' | 'educational' | 'urgent' | 'voice' {
+    switch (urgency) {
+      case 'critical': return 'urgent';
+      case 'high': return 'urgent';
+      case 'moderate': return 'voice';
+      default: return 'voice';
+    }
+  }
+
+  // Visual effect implementations
+  private highlightDiagnosticPanel(): void {
+    const panel = document.getElementById('diagnostic-panel');
+    if (panel) {
+      panel.style.animation = 'panelHighlight 1s ease-out';
+      setTimeout(() => panel.style.animation = '', 1000);
+    }
+  }
+
+  private animateToolUnlocks(): void {
+    const tools = document.querySelectorAll('#investigation-tools-panel button');
+    tools.forEach((tool, index) => {
+      setTimeout(() => {
+        (tool as HTMLElement).style.animation = 'toolUnlock 0.8s ease-out';
+        setTimeout(() => (tool as HTMLElement).style.animation = '', 800);
+      }, index * 200);
+    });
+  }
+
+  private showDiscoverySpotlight(): void {
+    // This would highlight discovered conditions in the 3D scene
+    console.log('🎭 Discovery spotlight effect triggered');
+  }
+
+  private showUrgentHighlight(urgency: string): void {
+    const color = urgency === 'critical' ? '#ff4444' : '#ffaa00';
+    document.body.style.boxShadow = `inset 0 0 50px ${color}20`;
+    setTimeout(() => document.body.style.boxShadow = '', 2000);
+  }
+
+  private showWarningPulse(): void {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255, 170, 0, 0.1);
+      pointer-events: none;
+      animation: warningPulse 1s ease-out;
+      z-index: 1000;
+    `;
+    document.body.appendChild(overlay);
+    setTimeout(() => document.body.removeChild(overlay), 1000);
+  }
+
+  private showEmergencyPulse(): void {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255, 68, 68, 0.2);
+      pointer-events: none;
+      animation: emergencyPulse 1.5s ease-out;
+      z-index: 1000;
+    `;
+    document.body.appendChild(overlay);
+    setTimeout(() => document.body.removeChild(overlay), 1500);
+  }
+
+  // Helper methods
+  private adjustSceneLighting(mode: string): void {
+    // Adjust Three.js scene lighting based on context
+    console.log(`💡 Adjusting scene lighting for: ${mode}`);
+  }
+
+  private highlightDiscoveredConditions(): void {
+    // Highlight discovered conditions in 3D scene
+    console.log('🔍 Highlighting discovered conditions');
+  }
+
+  private showComplicationIndicators(): void {
+    // Show visual indicators for complications
+    console.log('⚠️ Showing complication indicators');
+  }
+
+  private showEmergencyIndicators(): void {
+    // Show emergency visual indicators
+    console.log('🚨 Showing emergency indicators');
+  }
+
+  private isPremiumUser(): boolean {
+    const accessManager = this.medicalService?.getAccessManager?.();
+    return accessManager?.getUserStatus?.()?.currentTier === 'premium' || false;
+  }
+
+  private showPremiumPrompt(feature: string): void {
+    if (this.diagnosticUI?.getUIManager()) {
+      this.diagnosticUI.getUIManager().showUpgradePrompt('feature_locked');
+    }
+  }
+
+  // ENHANCEMENT FIRST: Comprehensive timer expired experience
+  private showTimerExpiredExperience(data: any): void {
+    // Stop audio and provide feedback
+    this.audioManager?.showFeedback('⏰ Time\'s up! Great effort!', 'warning')
+    this.audioManager?.playSound(SoundType.MEDIUM_SEVERITY)
+
+    // Calculate final statistics
+    const gameState = this.gameManager?.getGameState()
+    if (!gameState) return
+
+    const finalStats = {
+      score: gameState.score,
+      conditionsFound: gameState.discoveredConditions.size,
+      timeElapsed: Math.floor((Date.now() - gameState.sessionStartTime) / 1000),
+      accuracy: gameState.accuracy,
+      efficiency: gameState.efficiency,
+      patientCase: gameState.patientCase,
+      difficulty: gameState.difficulty
+    }
+
+    // Show comprehensive end screen overlay
+    this.showEndGameOverlay(finalStats)
+  }
+
+  // CLEAN: Dedicated method for end game overlay using existing design tokens
+  private showEndGameOverlay(stats: any): void {
+
+    const overlay = document.createElement('div')
+    overlay.id = 'timer-expired-overlay'
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: ${effects.blur.lg};
+      z-index: ${zIndex.modal};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    `
+
+    // Get access manager for premium status
+    const accessManager = this.medicalService?.getAccessManager?.()
+    const userStatus = accessManager?.getUserStatus?.()
+    const isPremium = userStatus?.currentTier === 'premium'
+
+    overlay.innerHTML = `
+      <div style="
+        background: linear-gradient(135deg, rgba(0, 20, 40, 0.95) 0%, rgba(0, 40, 80, 0.95) 100%);
+        border: ${borders.width.base} solid ${colors.border.primary};
+        border-radius: ${borders.radius.xl};
+        padding: ${spacing['3xl']};
+        max-width: 600px;
+        width: 90%;
+        color: ${colors.neutral.white};
+        font-family: ${typography.fontFamily.primary};
+        box-shadow: ${effects.shadow.xl}, ${effects.shadow.primaryGlow};
+        text-align: center;
+        transform: scale(0.9);
+        transition: transform 0.3s ease-out;
+      ">
+        <!-- Header -->
+        <div style="margin-bottom: ${spacing.xl};">
+          <div style="font-size: 4rem; margin-bottom: ${spacing.md};">⏰</div>
+          <h1 style="
+            color: ${colors.primary.base};
+            margin: 0;
+            font-size: ${typography.fontSize['4xl']};
+            font-weight: ${typography.fontWeight.bold};
+            text-shadow: ${effects.textShadow.base};
+          ">Time's Up!</h1>
+          <p style="
+            margin: ${spacing.md} 0 0 0;
+            opacity: 0.8;
+            font-size: ${typography.fontSize.lg};
+          ">Excellent diagnostic work completed</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: ${spacing.md};
+          margin-bottom: ${spacing.xl};
+        ">
+          <div style="
+            background: rgba(0, 255, 136, 0.1);
+            border: ${borders.width.thin} solid ${colors.border.primary};
+            border-radius: ${borders.radius.lg};
+            padding: ${spacing.md};
+          ">
+            <div style="
+              font-size: ${typography.fontSize['3xl']};
+              font-weight: ${typography.fontWeight.bold};
+              color: ${colors.primary.base};
+              text-shadow: ${effects.textShadow.sm};
+            ">${stats.score}</div>
+            <div style="font-size: ${typography.fontSize.sm}; opacity: 0.8;">Final Score</div>
+          </div>
+
+          <div style="
+            background: rgba(0, 212, 255, 0.1);
+            border: ${borders.width.thin} solid ${colors.border.info};
+            border-radius: ${borders.radius.lg};
+            padding: ${spacing.md};
+          ">
+            <div style="
+              font-size: ${typography.fontSize['3xl']};
+              font-weight: ${typography.fontWeight.bold};
+              color: ${colors.info.base};
+              text-shadow: ${effects.textShadow.sm};
+            ">${stats.conditionsFound}</div>
+            <div style="font-size: ${typography.fontSize.sm}; opacity: 0.8;">Conditions Found</div>
+          </div>
+
+          <div style="
+            background: rgba(255, 170, 0, 0.1);
+            border: ${borders.width.thin} solid ${colors.border.accent};
+            border-radius: ${borders.radius.lg};
+            padding: ${spacing.md};
+          ">
+            <div style="
+              font-size: ${typography.fontSize['3xl']};
+              font-weight: ${typography.fontWeight.bold};
+              color: ${colors.accent.base};
+              text-shadow: ${effects.textShadow.sm};
+            ">${Math.floor(stats.timeElapsed / 60)}:${(stats.timeElapsed % 60).toString().padStart(2, '0')}</div>
+            <div style="font-size: ${typography.fontSize.sm}; opacity: 0.8;">Time Used</div>
+          </div>
+        </div>
+
+        <!-- Performance Feedback -->
+        <div style="
+          background: rgba(255, 255, 255, 0.05);
+          border: ${borders.width.thin} solid rgba(255, 255, 255, 0.1);
+          border-radius: ${borders.radius.lg};
+          padding: ${spacing.lg};
+          margin-bottom: ${spacing.xl};
+          text-align: left;
+        ">
+          <h3 style="
+            margin: 0 0 ${spacing.md} 0;
+            color: ${colors.primary.base};
+            font-size: ${typography.fontSize.lg};
+          ">📊 Performance Summary</h3>
+          <div style="font-size: ${typography.fontSize.sm}; line-height: 1.6;">
+            <div>• <strong>Accuracy:</strong> ${Math.round(stats.accuracy * 100)}% - ${stats.accuracy > 0.7 ? 'Excellent diagnostic precision!' : 'Keep practicing for better accuracy'}</div>
+            <div>• <strong>Efficiency:</strong> ${Math.round(stats.efficiency * 100)}% - ${stats.efficiency > 0.6 ? 'Great time management!' : 'Consider faster scanning techniques'}</div>
+            <div>• <strong>Difficulty:</strong> ${stats.difficulty.charAt(0).toUpperCase() + stats.difficulty.slice(1)} - ${stats.difficulty === 'hard' ? 'Impressive challenge conquered!' : stats.difficulty === 'medium' ? 'Solid performance!' : 'Great foundation building!'}</div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; flex-direction: column; gap: ${spacing.md};">
+          <button id="restart-same-case" style="
+            background: linear-gradient(135deg, ${colors.primary.base} 0%, ${colors.primary.dark} 100%);
+            color: ${colors.neutral.black};
+            border: none;
+            padding: ${spacing.lg} ${spacing.xl};
+            border-radius: ${borders.radius.lg};
+            font-size: ${typography.fontSize.lg};
+            font-weight: ${typography.fontWeight.bold};
+            cursor: pointer;
+            box-shadow: ${effects.shadow.lg}, ${effects.shadow.primaryGlow};
+            transition: all 0.3s ease;
+            width: 100%;
+          ">
+            🔄 Try Same Case Again
+          </button>
+
+          ${!isPremium ? `
+          <button id="upgrade-premium" style="
+            background: linear-gradient(135deg, ${colors.info.base} 0%, ${colors.info.dark} 100%);
+            color: ${colors.neutral.black};
+            border: none;
+            padding: ${spacing.lg} ${spacing.xl};
+            border-radius: ${borders.radius.lg};
+            font-size: ${typography.fontSize.lg};
+            font-weight: ${typography.fontWeight.bold};
+            cursor: pointer;
+            box-shadow: ${effects.shadow.lg}, ${effects.shadow.primaryGlow};
+            transition: all 0.3s ease;
+            width: 100%;
+          ">
+            💎 Upgrade to Premium - Unlimited AI Cases
+          </button>
+          ` : ''}
+
+          <button id="close-end-overlay" style="
+            background: rgba(255, 255, 255, 0.1);
+            color: ${colors.neutral.white};
+            border: ${borders.width.thin} solid rgba(255, 255, 255, 0.3);
+            padding: ${spacing.md} ${spacing.xl};
+            border-radius: ${borders.radius.lg};
+            font-size: ${typography.fontSize.base};
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+          ">
+            Close & Return to Menu
+          </button>
+        </div>
+      </div>
+    `
+
+    document.body.appendChild(overlay)
+
+    // Animate in
+    setTimeout(() => {
+      overlay.style.opacity = '1'
+      const content = overlay.querySelector('div')
+      if (content) content.style.transform = 'scale(1)'
+    }, 100)
+
+    // Add event listeners
+    const restartBtn = overlay.querySelector('#restart-same-case') as HTMLElement
+    const upgradeBtn = overlay.querySelector('#upgrade-premium') as HTMLElement
+    const closeBtn = overlay.querySelector('#close-end-overlay') as HTMLElement
+
+    restartBtn?.addEventListener('click', () => {
+      this.closeEndOverlay()
+      this.restartWithSameCase()
+    })
+
+    upgradeBtn?.addEventListener('click', () => {
+      this.showPremiumUpgradePrompt()
+    })
+
+    closeBtn?.addEventListener('click', () => {
+      this.closeEndOverlay()
+    })
+  }
+
+  // MODULAR: Restart with same case functionality
+  private restartWithSameCase(): void {
+    console.log('🔄 Restarting with same case')
+
+    // Reset game state but keep the same patient case
+    const currentCase = this.gameManager?.getGameState()?.patientCase
+    if (currentCase) {
+      this.gameManager?.resetGameState()
+
+      // Reapply the same case
+      this.gameManager?.updateState({ patientCase: currentCase })
+
+      // Restart the game
+      this.startGame()
+
+      this.audioManager?.showFeedback('🔄 Same case restarted - Good luck!', 'info')
+    }
+  }
+
+  // CLEAN: Show premium upgrade prompt using existing system
+  private showPremiumUpgradePrompt(): void {
+    const accessManager = this.medicalService?.getAccessManager?.()
+    if (accessManager && this.diagnosticUI) {
+      this.diagnosticUI.getUIManager()?.showUpgradePrompt('ai_access')
+    }
+  }
+
+  // UTILITY: Close end overlay
+  private closeEndOverlay(): void {
+    const overlay = document.getElementById('timer-expired-overlay')
+    if (overlay) {
+      overlay.style.opacity = '0'
+      setTimeout(() => {
+        if (overlay.parentElement) {
+          overlay.parentElement.removeChild(overlay)
+        }
+      }, 500)
+    }
   }
 
   // ENHANCEMENT FIRST: Minimal keyboard shortcuts using existing systems
