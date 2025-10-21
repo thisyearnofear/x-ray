@@ -502,13 +502,19 @@ export class VoiceConsultationManager {
     // Personalize the greeting based on patient data
     const patientName = context.patientCase?.patientName || 'the patient'
     const chiefComplaint = context.patientCase?.chiefComplaint || 'the symptoms'
+    const title = context.patientCase?.title || 'this case'
+    const presentingComplaint = context.patientCase?.presentingComplaint || chiefComplaint
+    const patientStory = context.patientCase?.historyOfPresentIllness || 'the patient history'
+    const initialFindings = context.patientCase?.initialPresentation?.generalAssessment || 'initial findings'
+    const mission = context.patientCase?.mission || 'complete the diagnostic evaluation'
     
-    insights.push(`👩‍⚕️ Nurse Amy here: Based on ${context.discoveredConditions.size} discovered condition${context.discoveredConditions.size !== 1 ? 's' : ''} in ${patientName}, let's consider the differential diagnosis`)
+    // Enhanced introduction with case context
+    insights.push(`👩‍⚕️ Nurse Amy here: I'm reviewing ${title} for ${patientName}. The presenting complaint is "${presentingComplaint}".`)
     
     // Analyze discovered conditions for patterns
     if (context.discoveredConditions.size > 0) {
       const conditionArray = Array.from(context.discoveredConditions)
-      insights.push(`🔍 Analysis: You've identified ${conditionArray.join(', ')}. Consider if these conditions are related or independent.`)
+      insights.push(`🔍 Analysis: You've identified ${conditionArray.join(', ')}. Let's consider how these findings correlate with the clinical presentation.`)
       
       // Generate condition-specific clinical correlations
       conditionArray.forEach(condition => {
@@ -516,15 +522,17 @@ export class VoiceConsultationManager {
         if (correlationInsight) insights.push(correlationInsight)
       })
     } else {
-      insights.push(`📋 The patient's chief complaint is "${chiefComplaint}". Focus your scan on anatomical regions that could explain these symptoms.`)
+      insights.push(`📋 Based on the initial findings "${initialFindings}", I recommend focusing on anatomical regions that could explain these symptoms.`)
     }
     
-    // Time-based recommendation
-    const timePercentage = 1 - (context.timeRemaining / (context.timeRemaining + (Date.now() - (context.patientCase?.sessionStartTime || Date.now())) / 1000))
-    if (timePercentage > 0.7) {
-      insights.push(`⏰ Time alert: You're running low on time. Focus on high-yield anatomical regions that could explain "${chiefComplaint}".`)
+    // Time-based recommendation with mission context
+    const timePercentage = context.timeRemaining / (context.patientCase?.estimatedCaseLength || 300)
+    if (timePercentage < 0.3) {
+      insights.push(`⏰ Time alert: You're running low on time to ${mission}. Focus on high-yield anatomical regions.`)
+    } else if (timePercentage < 0.5) {
+      insights.push(`⏳ Time status: ${Math.floor(context.timeRemaining / 60)}m ${context.timeRemaining % 60}s remaining - maintain your systematic approach to ${mission}.`)
     } else {
-      insights.push(`⏳ Time status: ${Math.floor(context.timeRemaining / 60)}m ${context.timeRemaining % 60}s remaining - sufficient time for thorough evaluation.`)
+      insights.push(`⏱️ Time status: ${Math.floor(context.timeRemaining / 60)}m ${context.timeRemaining % 60}s remaining - you have adequate time to complete ${mission}.`)
     }
     
     // Performance analysis based on scan progress
@@ -538,6 +546,12 @@ export class VoiceConsultationManager {
       }
     }
     
+    // Add context-specific insights based on case complexity
+    const complexity = context.patientCase?.caseComplexity || 'moderate'
+    if (complexity === 'complex' || complexity === 'advanced') {
+      insights.push(`🧠 Complex case alert: ${title} is classified as ${complexity}. Consider multiple pathologies and subtle findings.`)
+    }
+    
     // Add context-specific insights
     if (context.discoveredConditions.size === 0) {
       insights.push('🎯 First-time diagnostic tip: Start with systematic scanning - evaluate bone structures, soft tissues, and organ contours in a structured pattern')
@@ -545,7 +559,7 @@ export class VoiceConsultationManager {
       insights.push('✅ Excellent progress! Consider submitting your diagnosis or continue scanning for additional findings to confirm your hypothesis.')
     }
     
-    // Add clinical reasoning
+    // Add clinical reasoning based on game phase and case context
     if (context.gamePhase === 'scanning') {
       insights.push('🔍 Scanning phase: Focus on identifying abnormalities. Look for asymmetry, unexpected densities, or structural changes.')
     } else if (context.gamePhase === 'analyzing') {
@@ -557,6 +571,12 @@ export class VoiceConsultationManager {
       insights.push('🏆 High performance noticed! Consider advancing to more complex cases or focusing on subtle findings.')
     } else if (context.currentScore < 200 && context.discoveredConditions.size === 0) {
       insights.push('💡 Don\'t worry about the score yet. Focus on learning anatomical landmarks and pathology recognition.')
+    }
+    
+    // Add case-specific guidance
+    const difficulty = context.patientCase?.difficulty || 'medium'
+    if (difficulty === 'hard') {
+      insights.push('💪 Challenging case: This is rated as a difficult case. Take your time and consider less common pathologies.')
     }
     
     return insights

@@ -76,6 +76,49 @@ export class NurseAmyNudgeSystem {
     this.phaseManager.on('phaseChanged', (data: any) => {
       this.handlePhaseChange(data)
     })
+
+    // Send initial introduction message when systems are ready
+    setTimeout(() => {
+      this.sendInitialIntroduction()
+    }, 3000) // Wait a few seconds for user to get oriented
+  }
+
+  // NEW: Send initial introduction to Nurse Amy
+  private sendInitialIntroduction(): void {
+    const userStatus = this.accessManager.getUserStatus()
+    
+    if (userStatus.isAuthenticated) {
+      this.sendNudge({
+        message: "👩‍⚕️ Nurse Amy: Hello Doctor! I'm here to assist you throughout this case. If you need help or have questions, just ask me! I can provide insights, suggest next steps, or help with patient management. Try clicking the 'Consult Nurse' button anytime.",
+        urgency: 'normal',
+        type: 'progress_positive'
+      })
+    } else {
+      this.sendNudge({
+        message: "👩‍⚕️ Nurse Amy: Hello Doctor! I'm here to assist you throughout this case. As a premium feature, I can provide personalized insights and guidance. Connect your wallet to unlock my full capabilities!",
+        urgency: 'normal',
+        type: 'progress_positive'
+      })
+    }
+  }
+
+  // NEW: Proactive prompting for nurse consultation
+  public sendConsultationPrompt(): void {
+    const userStatus = this.accessManager.getUserStatus()
+    
+    if (userStatus.isAuthenticated) {
+      this.sendNudge({
+        message: "👩‍⚕️ Nurse Amy: Feeling stuck? I can help! Click the 'Consult Nurse' button to ask me questions about the case, get guidance on next steps, or discuss patient management strategies.",
+        urgency: 'normal',
+        type: 'tool_suggestion'
+      })
+    } else {
+      this.sendNudge({
+        message: "👩‍⚕️ Nurse Amy: Feeling stuck? I can provide personalized guidance and insights. Connect your wallet to unlock full nurse consultation capabilities!",
+        urgency: 'normal',
+        type: 'tool_suggestion'
+      })
+    }
   }
 
   // IMMERSIVE: Time-pressure nudging system with phase transitions
@@ -93,8 +136,12 @@ export class NurseAmyNudgeSystem {
     // MODULAR: Trigger phase transitions based on time milestones
     this.handlePhaseTransitions(timeRemaining)
 
+    // Proactive consultation prompt at 4 minutes (early in the case)
+    if (timeRemaining === 240 && conditionsFound === 0) {
+      this.sendConsultationPrompt()
+    }
     // Critical time pressure (< 1 minute)
-    if (timeRemaining <= 60) {
+    else if (timeRemaining <= 60) {
       this.triggerCriticalTimeNudge(conditionsFound, gameState)
     }
     // High time pressure (< 2 minutes)
@@ -167,25 +214,27 @@ export class NurseAmyNudgeSystem {
     let message: string
     let type: NurseNudge['type'] = 'time_pressure'
     const userStatus = this.accessManager.getUserStatus()
-    const patientName = gameState.patientCase?.patientInfo?.patientName || 'the patient'
+    const patientName = gameState.patientCase?.patientName || 'the patient'
+    const chiefComplaint = gameState.patientCase?.chiefComplaint || 'the presenting symptoms'
+    const title = gameState.patientCase?.title || 'this case'
 
     if (conditionsFound === 0) {
       if (userStatus.currentTier === 'premium') {
-        message = `👩‍⚕️ Nurse Amy: Doctor, we're almost out of time! ${patientName} is getting worried and their family is asking questions. Should I call for emergency consultation?`
+        message = `👩‍⚕️ Nurse Amy: Doctor, we're almost out of time on ${title}! ${patientName} is getting worried and their family is asking questions. Should I call for emergency consultation? The chief complaint of "${chiefComplaint}" needs urgent attention.`
       } else {
-        message = "👩‍⚕️ Nurse Amy: Doctor, we're almost out of time! The patient is getting worried and their family is asking questions. Should I call for emergency consultation?"
+        message = `👩‍⚕️ Nurse Amy: Doctor, we're almost out of time! The patient is getting worried and their family is asking questions. The chief complaint of "${chiefComplaint}" needs urgent attention. Should I call for emergency consultation?`
       }
     } else if (conditionsFound < 2) {
       if (userStatus.currentTier === 'premium') {
-        message = `👩‍⚕️ Nurse Amy: Doctor, time is critical! We have some findings but ${patientName} needs a diagnosis now. They need to start treatment - what's your assessment?`
+        message = `👩‍⚕️ Nurse Amy: Doctor, time is critical on ${title}! We have some findings for ${patientName} but need a diagnosis now. They need to start treatment - what's your assessment of the "${chiefComplaint}"?`
       } else {
-        message = "👩‍⚕️ Nurse Amy: Doctor, time is critical! We have some findings but need a diagnosis now. The patient needs to start treatment - what's your assessment?"
+        message = `👩‍⚕️ Nurse Amy: Doctor, time is critical! We have some findings but need a diagnosis now. The patient needs to start treatment - what's your assessment of the "${chiefComplaint}"?`
       }
     } else {
       if (userStatus.currentTier === 'premium') {
-        message = `👩‍⚕️ Nurse Amy: Doctor, excellent findings! But we need your diagnosis immediately - ${patientName} is ready for treatment. Can you submit your assessment now?`
+        message = `👩‍⚕️ Nurse Amy: Doctor, excellent findings on ${title}! But we need your diagnosis immediately for ${patientName} - they're ready for treatment. Can you submit your assessment of the "${chiefComplaint}" now?`
       } else {
-        message = "👩‍⚕️ Nurse Amy: Doctor, excellent findings! But we need your diagnosis immediately - the patient is ready for treatment. Can you submit your assessment now?"
+        message = `👩‍⚕️ Nurse Amy: Doctor, excellent findings! But we need your diagnosis immediately - the patient is ready for treatment. Can you submit your assessment of the "${chiefComplaint}" now?`
       }
       type = 'progress_positive'
     }
@@ -201,16 +250,19 @@ export class NurseAmyNudgeSystem {
   private triggerHighTimeNudge(conditionsFound: number, phase: DiagnosticPhase, gameState: any): void {
     let message: string
     let type: NurseNudge['type'] = 'family_pressure'
+    const patientName = gameState.patientCase?.patientName || 'the patient'
+    const chiefComplaint = gameState.patientCase?.chiefComplaint || 'the presenting symptoms'
+    const title = gameState.patientCase?.title || 'this case'
 
     if (phase === DiagnosticPhase.INITIAL_SCAN && conditionsFound === 0) {
-      message = "👩‍⚕️ Nurse Amy: Doctor, the family is getting anxious. They're asking if everything is okay. Should I reassure them while you continue your examination?"
+      message = `👩‍⚕️ Nurse Amy: Doctor, ${patientName} is getting anxious about ${title}. They're asking if everything is okay with the "${chiefComplaint}". Should I reassure them while you continue your examination?`
     } else if (phase === DiagnosticPhase.INVESTIGATION) {
-      message = "👩‍⚕️ Nurse Amy: Doctor, the patient mentioned they have an important meeting tomorrow. They're hoping for quick answers - how are we progressing?"
+      message = `👩‍⚕️ Nurse Amy: Doctor, ${patientName} mentioned they have an important meeting tomorrow. They're hoping for quick answers about the "${chiefComplaint}" - how are we progressing?`
     } else if (conditionsFound >= 2) {
-      message = "👩‍⚕️ Nurse Amy: Doctor, you've made great progress! The patient is asking if we know what's causing their symptoms. Are you ready to discuss your findings?"
+      message = `👩‍⚕️ Nurse Amy: Doctor, you've made great progress on ${title} with ${patientName}! They're asking if we know what's causing their "${chiefComplaint}". Are you ready to discuss your findings?`
       type = 'progress_positive'
     } else {
-      message = "👩‍⚕️ Nurse Amy: Doctor, we're making progress but time is getting short. The patient seems uncomfortable - should I provide any comfort measures?"
+      message = `👩‍⚕️ Nurse Amy: Doctor, we're making progress on ${title} but time is getting short for ${patientName} with "${chiefComplaint}". Should I provide any comfort measures?`
       type = 'patient_comfort'
     }
 

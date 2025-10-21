@@ -448,11 +448,17 @@ export default class Canvas {
         timeRemaining: 300,
         phase: 'scanning',
         score: 0,
-        patientCase: { patientName: 'Test Patient' }
+        patientCase: { 
+          patientName: 'Test Patient',
+          chiefComplaint: 'Test complaint'
+        }
       }
 
       // Use real patient case data if available, otherwise fall back to test
-      const patientCase = gameState.patientCase || { patientName: 'Test Patient' };
+      const patientCase = gameState.patientCase || { 
+        patientName: 'Test Patient',
+        chiefComplaint: 'Test complaint'
+      };
 
       const context = {
         patientCase: patientCase,
@@ -488,6 +494,11 @@ export default class Canvas {
       this.diagnosticUI?.getUIManager()?.getAIPanel() || undefined,
       this.diagnosticUI?.getGamePhaseManager()
     )
+
+    // Register Nurse Amy with the diagnostic UI manager
+    if (this.diagnosticUI && this.voiceConsultation) {
+      this.diagnosticUI.getUIManager()?.registerNurseAmy(this.nurseAmyNudges);
+    }
 
     // MODULAR: Connect timer events to Nurse Amy nudges and UI
     this.gameManager.on('timer_update', (data: any) => {

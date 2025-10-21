@@ -81,6 +81,12 @@ export class DiagnosticUIManager {
     return this.aiPanel
   }
 
+  // NEW: Register Nurse Amy system
+  public registerNurseAmy(nurseAmy: any): void {
+    // Nurse Amy is already registered through the constructor
+    // This method is for future expansion if needed
+  }
+
   constructor(config: DiagnosticUIConfig = {}) {
     this.config = config
     this.accessManager = CaseAccessManager.getInstance()
@@ -241,8 +247,9 @@ export class DiagnosticUIManager {
               gap: ${spacing.xs};
               font-weight: ${typography.fontWeight.medium};
               transition: all 0.3s ease;
-              ${effects.inset.medium}
-            "><span>🤖</span> Free AI Consult</button>
+              ${effects.inset.medium};
+              animation: pulse 2s infinite;
+            "><span>👩‍⚕️</span> Ask Nurse Amy</button>
           </div>
         </div>
         
@@ -334,7 +341,24 @@ export class DiagnosticUIManager {
         </div>
       </div>
     `
-
+    
+    // Add CSS animation for pulse effect
+    const style = document.createElement('style')
+    style.textContent = `
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 10px rgba(0, 212, 255, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
+        }
+      }
+    `
+    document.head.appendChild(style)
+    
     document.body.appendChild(this.uiElement)
     this.setupEventListeners()
   }
@@ -1021,6 +1045,21 @@ export class DiagnosticUIManager {
     })
 
     consultNurseBtn?.addEventListener('click', () => {
+      // Show contextual help for first-time users
+      const hasUsedNurse = localStorage.getItem('nurse_consultation_used')
+      if (!hasUsedNurse) {
+        if (this.aiPanel) {
+          this.aiPanel.addInsight({
+            id: `nurse_help_${Date.now()}`,
+            timestamp: Date.now(),
+            content: "👩‍⚕️ Nurse Amy: Great! I can help you with case insights, patient management, and diagnostic guidance. Ask me anything about the case!",
+            type: 'voice',
+            confidence: 1.0
+          })
+        }
+        localStorage.setItem('nurse_consultation_used', 'true')
+      }
+      
       this.startGaslessConsultation()
     })
   }

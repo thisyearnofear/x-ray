@@ -92,12 +92,18 @@ export class GameManager {
         const medicalCase = this.medicalService.getCase(caseId);
         if (medicalCase) {
             // Convert MedicalCase to PatientCase to fix type mismatch
+            // Include comprehensive patient information for better context
             const patientCase: PatientCase = {
                 id: medicalCase.id,
                 patientName: medicalCase.patientInfo.patientName,
                 age: medicalCase.patientInfo.age,
                 gender: medicalCase.patientInfo.gender,
                 chiefComplaint: medicalCase.patientInfo.chiefComplaint,
+                historyOfPresentIllness: medicalCase.patientStory,
+                socialHistory: medicalCase.stakes,
+                initialPresentation: {
+                    generalAssessment: medicalCase.initialFindings
+                },
                 requiredModel: medicalCase.requiredModel,
                 conditions: medicalCase.conditions,
                 caseComplexity: medicalCase.caseComplexity,
