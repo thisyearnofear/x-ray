@@ -26,14 +26,19 @@ export class MedicalServiceFacade {
 
   // ENHANCED: Tier-aware case access
   public getCase(caseId: string): MedicalCase | undefined {
-    // For static cases (like case-x487), check access
+    // For static cases (like case-x487), always allow access - they're free and unlimited
     if (caseId === 'case-x487') {
-      if (!this.accessManager.canAccessCaseType('static')) {
-        throw new Error('Daily case limit reached. Please upgrade to premium for unlimited access.');
-      }
-      this.accessManager.recordCaseUsage('static');
+      // No access check or usage recording for static cases
+      return this.medicalDataService.getCase(caseId);
     }
     
+    // For other cases, check access normally
+    if (!this.accessManager.canAccessCaseType('ai_generated')) {
+      throw new Error('AI case access requires premium access. Please connect your wallet and upgrade.');
+    }
+    
+    // Record usage for AI-generated cases
+    this.accessManager.recordCaseUsage('ai_generated');
     return this.medicalDataService.getCase(caseId);
   }
 

@@ -121,8 +121,8 @@ export class CaseAccessManager {
     const tier = this.CASE_TIERS[this.userStatus.currentTier]
     
     if (caseType === 'static') {
-      // Static cases always accessible
-      return this.userStatus.casesUsedToday < (tier.maxCasesPerDay || Infinity)
+      // Static cases are always accessible - no daily limit
+      return true
     }
     
     if (caseType === 'ai_generated') {
@@ -155,11 +155,12 @@ export class CaseAccessManager {
       return false
     }
 
-    if (caseType === 'static') {
+    // Only track usage for AI-generated cases, not static cases
+    if (caseType === 'ai_generated') {
       this.userStatus.casesUsedToday++
+      this.saveUserStatus()
     }
-
-    this.saveUserStatus()
+    
     this.emit('caseUsageRecorded', { 
       caseType, 
       casesUsedToday: this.userStatus.casesUsedToday 
