@@ -1040,7 +1040,14 @@ export class DiagnosticUIManager {
       // Add patient responses based on the current case
       setTimeout(() => {
         if (this.aiPanel && this.currentPatientCase) {
-          const patientName = this.currentPatientCase.patientInfo.patientName;
+          // Handle both MedicalCase and PatientCase types
+          let patientName = 'Patient';
+          if ('patientInfo' in this.currentPatientCase) {
+            patientName = (this.currentPatientCase as any).patientInfo.patientName;
+          } else if ('patientName' in this.currentPatientCase) {
+            patientName = (this.currentPatientCase as any).patientName;
+          }
+
           const patientResponses = [
             `🗣️ ${patientName}: \"The pain is mainly in my temples and jaw area. It feels like a constant dull ache that sometimes sharpens when I chew.\"`,
             `🗣️ ${patientName}: \"These headaches started about three weeks ago. They've been getting worse, especially in the mornings.\"`,
@@ -1253,12 +1260,12 @@ export class DiagnosticUIManager {
                 margin-bottom: ${spacing.sm};
                 text-transform: uppercase;
                 letter-spacing: ${typography.letterSpacing.wider};
-              ">📋 CASE #${patientCase.id}: ${patientCase.title}</div>
+              ">📋 CASE #${patientCase.id}: ${(patientCase as any).title || 'Unknown Case'}</div>
               <div id="case-complaint" style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.light};">
-                <strong>Presenting Complaint:</strong> ${patientCase.presentingComplaint}
+                <strong>Presenting Complaint:</strong> ${(patientCase as any).presentingComplaint || 'Not specified'}
               </div>
               <div id="case-mission" style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.base}; margin-top: ${spacing.xs};">
-                Your Mission: ${patientCase.mission}
+                Your Mission: ${(patientCase as any).mission || 'Not specified'}
               </div>
             </div>
         `;
@@ -1279,14 +1286,28 @@ export class DiagnosticUIManager {
       return;
     }
 
+    // Handle both MedicalCase and PatientCase types
+    let patientInfo: any = null;
+    if ('patientInfo' in patientCase) {
+      patientInfo = (patientCase as any).patientInfo;
+    } else if ('patientName' in patientCase) {
+      // Create a PatientInfo object from PatientCase properties
+      patientInfo = {
+        patientName: (patientCase as any).patientName,
+        age: (patientCase as any).age,
+        gender: (patientCase as any).gender,
+        chiefComplaint: (patientCase as any).chiefComplaint
+      };
+    }
+
     // Create or update the patient info section
     if (!this.patientInfoSection) {
       this.patientInfoSection = new PatientInfoSection()
-      const patientElement = this.patientInfoSection.create(patientCase.patientInfo)
+      const patientElement = this.patientInfoSection.create(patientInfo)
       patientInfoContainer.innerHTML = ''
       patientInfoContainer.appendChild(patientElement)
     } else {
-      this.patientInfoSection.update(patientCase.patientInfo)
+      this.patientInfoSection.update(patientInfo)
     }
   }
 

@@ -587,9 +587,18 @@ export default class Canvas {
   private async generateAndIntroducePatientCase() {
     try {
       // Use existing case from MedicalServiceFacade
-      const patientCase = this.medicalService?.getCase('case-x487')
+      const medicalCase = this.medicalService?.getCase('case-x487')
 
-      if (patientCase) {
+      if (medicalCase) {
+        // Convert MedicalCase to PatientCase to fix type mismatch
+        const patientCase: any = {
+          ...medicalCase,
+          patientName: medicalCase.patientInfo.patientName,
+          age: medicalCase.patientInfo.age,
+          gender: medicalCase.patientInfo.gender,
+          chiefComplaint: medicalCase.patientInfo.chiefComplaint
+        };
+
         // DRY: Update game state (single call updates everything)
         this.gameManager?.updateState({ patientCase })
 
@@ -603,9 +612,9 @@ export default class Canvas {
         this.updatePatientDisplay()
 
         // PERFORMANT: Immersive feedback with staggered notifications
-        this.providePatientIntroductionFeedback(patientCase)
+        this.providePatientIntroductionFeedback(medicalCase)
 
-        console.log(`🏥 Case Loaded: ${patientCase.patientInfo.patientName} (${patientCase.patientInfo.age}yo ${patientCase.patientInfo.gender})`)
+        console.log(`🏥 Case Loaded: ${medicalCase.patientInfo.patientName} (${medicalCase.patientInfo.age}yo ${medicalCase.patientInfo.gender})`)
       }
     } catch (error) {
       console.error('Case loading failed:', error)
@@ -616,7 +625,7 @@ export default class Canvas {
   // CLEAN: Separate method for patient display updates
   private updatePatientDisplay(): void {
     const gameState = this.gameManager?.getGameState();
-    if (gameState?.patientCase?.patientInfo) {
+    if (gameState?.patientCase) {
       this.diagnosticUI?.updatePatientInfo(gameState.patientCase);
     }
   }
@@ -640,7 +649,8 @@ export default class Canvas {
 
   // CLEAN: Separate method for fallback case handling
   private handleCaseGenerationFallback(): void {
-    const fallbackPatient: MedicalCase = {
+    // Convert MedicalCase to PatientCase to fix type mismatch
+    const medicalCase: any = {
       id: 'fallback-case',
       title: 'Emergency Patient',
       presentingComplaint: 'Urgent diagnostic evaluation required',
@@ -654,7 +664,16 @@ export default class Canvas {
         gender: 'Unknown',
         chiefComplaint: 'Urgent diagnostic evaluation required'
       }
-    }
+    };
+
+    const fallbackPatient: any = {
+      ...medicalCase,
+      patientName: medicalCase.patientInfo.patientName,
+      age: medicalCase.patientInfo.age,
+      gender: medicalCase.patientInfo.gender,
+      chiefComplaint: medicalCase.patientInfo.chiefComplaint
+    };
+
     this.gameManager?.updateState({ patientCase: fallbackPatient })
     this.updatePatientDisplay()
     this.audioManager?.showFeedback('🏥 Emergency patient ready. AI diagnosis support limited.', 'warning')

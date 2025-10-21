@@ -89,10 +89,28 @@ export class GameManager {
     }
 
     public loadCase(caseId: string, gameState: GameState | null = null): void {
-        const caseData = this.medicalService.getCase(caseId);
-        if (caseData) {
+        const medicalCase = this.medicalService.getCase(caseId);
+        if (medicalCase) {
+            // Convert MedicalCase to PatientCase to fix type mismatch
+            const patientCase: PatientCase = {
+                id: medicalCase.id,
+                patientName: medicalCase.patientInfo.patientName,
+                age: medicalCase.patientInfo.age,
+                gender: medicalCase.patientInfo.gender,
+                chiefComplaint: medicalCase.patientInfo.chiefComplaint,
+                requiredModel: medicalCase.requiredModel,
+                conditions: medicalCase.conditions,
+                caseComplexity: medicalCase.caseComplexity,
+                estimatedCaseLength: medicalCase.estimatedCaseLength,
+                caseDifficulty: medicalCase.caseDifficulty,
+                difficulty: medicalCase.difficulty,
+                aiGenerated: medicalCase.aiGenerated,
+                estimatedStudyTime: medicalCase.estimatedStudyTime,
+                timestamp: medicalCase.timestamp
+            };
+
             const stateToUpdate = gameState || this.gameState;
-            stateToUpdate.patientCase = caseData;
+            stateToUpdate.patientCase = patientCase;
             this.emit('gameStateUpdated', stateToUpdate);
         }
     }
