@@ -31,7 +31,9 @@ export enum SoundType {
   TUTORIAL_START = 'tutorial_start',
   TUTORIAL_PROGRESS = 'tutorial_progress',
   TUTORIAL_SUCCESS = 'tutorial_success',
-  PRE_DISCOVERY = 'pre_discovery'
+  PRE_DISCOVERY = 'pre_discovery',
+  // ENHANCEMENT: New sound for AI case introduction
+  AI_CASE_INTRO = 'ai_case_intro'
 }
 
 export class AudioManager {
@@ -120,6 +122,7 @@ export class AudioManager {
     this.soundMap.set(SoundType.AI_PROCESSING, this.createAIProcessingSound());
     this.soundMap.set(SoundType.CEREBRAS_INFERENCE, this.createCerebrasInferenceSound());
     this.soundMap.set(SoundType.PRE_DISCOVERY, this.createProceduralSound(0.5, 600, 1000, 'sine', 0.2));
+    this.soundMap.set(SoundType.AI_CASE_INTRO, this.createProceduralSound(0.8, 300, 1500, 'sawtooth', 0.3));
   }
 
   private createProceduralSound(duration: number, startFreq: number, endFreq: number, waveform: OscillatorType, volume: number): THREE.Audio {

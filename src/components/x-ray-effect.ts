@@ -14,6 +14,7 @@ import { MedicalMarker } from "./MedicalMarker"
 import { AudioManager as AudioManagerType, SoundType as SoundTypeType } from "./AudioManager"
 import { VisualFeedbackSystem } from "./VisualFeedbackSystem"
 import { AudioManagementSystem } from "../domains/audio/audio-management-system"
+import { AdvancedConditionDetection } from "./AdvancedConditionDetection"
 
 const rtParams = {
   format: THREE.RGBAFormat,
@@ -86,6 +87,9 @@ export default class XRayEffect {
   discoveredConditions: Set<string> = new Set() // Track discovered conditions
   visibleAnatomy: string[] = ['head', 'neck', 'cervical_spine', 'jaw', 'face'] // Current visible anatomy
   
+  // ENHANCEMENT: Advanced condition detection system
+  private advancedDetection: AdvancedConditionDetection;
+  
   // ENHANCEMENT: Visual scanning feedback system
   scanRings: Map<string, THREE.Mesh> = new Map(); // Scanning rings around markers
   progressRings: Map<string, THREE.Mesh> = new Map(); // Progress rings for each marker
@@ -112,6 +116,10 @@ export default class XRayEffect {
       current: { x: 0, y: 0 },
       target: { x: 0, y: 0 },
     }
+    
+    // ENHANCEMENT: Initialize advanced detection system
+    this.advancedDetection = new AdvancedConditionDetection(this.scanFeedbackSystem);
+    
     this.createRenderTargets()
     this.setupPostprocessing()
     this.createLeePerry()
@@ -159,7 +167,7 @@ export default class XRayEffect {
     this.updateScanProgress(position)
   }
 
-  // INTEGRATION: Progressive discovery through scanning
+  // INTEGRATION: Advanced progressive discovery through scanning
   updateScanProgress(mousePosition: Position) {
     const scanRadius = 0.15 // Radius around mouse for scanning
     const deltaTime = 0.016 // Approximate frame time (60fps)
@@ -181,13 +189,42 @@ export default class XRayEffect {
         // Mark this as an activity to reset hint timer
         this.lastActivityTime = Date.now();
         
-        // Increase scan progress
+        // ENHANCEMENT FIRST: Use advanced detection system to calculate scan metrics
+        const condition = MEDICAL_CONDITIONS.find(c => c.id === conditionId);
+        if (!condition) return; // Skip if condition not found
+        
+        // Calculate scan metrics using advanced detection system
+        const scanPath = [mousePos3D]; // In this simplified case, we just use current position
+        const scanMetrics = this.advancedDetection.calculateScanMetrics(
+          condition.position,
+          { x: mousePos3D.x, y: mousePos3D.y, z: mousePos3D.z },
+          scanPath
+        );
+
+        // Get current progress and compute new progress with advanced detection
         const currentProgress = this.scanProgress.get(conditionId) || 0
-        const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId)
         const requiredTime = condition?.scanTimeRequired || 3
 
-        const newProgress = Math.min(currentProgress + deltaTime, requiredTime)
-        this.scanProgress.set(conditionId, newProgress)
+        // ENHANCEMENT: Instead of linear progress, use advanced detection to determine progress rate
+        const baseIncrement = deltaTime;
+        const qualityModifier = 
+          (scanMetrics.positionAccuracy * 0.3) + 
+          (scanMetrics.scanCoverage * 0.2) + 
+          (scanMetrics.focusQuality * 0.3) + 
+          (scanMetrics.timeEfficiency * 0.2);
+        
+        const progressIncrement = baseIncrement * (0.5 + qualityModifier * 0.5); // Range: 0.5 to 1.0
+        const newProgress = Math.min(currentProgress + progressIncrement, requiredTime);
+        
+        this.scanProgress.set(conditionId, newProgress);
+
+        // ENHANCEMENT: Update scan feedback system with scan data including clues
+        const detectionResult = this.advancedDetection.detectCondition(condition, newProgress, scanMetrics);
+        if (this.scanFeedbackSystem && this.scanFeedbackSystem.updateScanProgress) {
+          this.scanFeedbackSystem.updateScanProgress(conditionId, newProgress / requiredTime, {
+            clues: detectionResult.clues
+          });
+        }
 
         // Create or update scanning VFX
         if (!this.scanRings.has(conditionId)) {
@@ -208,12 +245,12 @@ export default class XRayEffect {
         // Update diagnostic UI progress
         this.diagnosticUI.updateScanProgress(conditionId, newProgress / requiredTime)
 
-        // Provide audio feedback during scanning
+        // ENHANCEMENT: Provide intelligent audio feedback based on advanced detection
         const progressRatio = newProgress / requiredTime;
-        if (condition && progressRatio > 0.9 && progressRatio < 0.95) { // Almost discovered
-          this.audioManager?.showFeedback(`Almost there! Keep scanning ${condition.name}!`, 'success');
+        if (condition && progressRatio > 0.8 && progressRatio < 0.85) { // Almost discovered
+          this.audioManager?.showFeedback(detectionResult.clues[0] || `Almost there! Keep scanning ${condition.name}!`, 'success');
         } else if (condition && progressRatio > 0.5 && progressRatio < 0.55) { // Halfway
-          this.audioManager?.showFeedback(`Halfway to discovering ${condition.name}. Keep going!`, 'info');
+          this.audioManager?.showFeedback(detectionResult.clues[0] || `Halfway to discovering ${condition.name}. Keep going!`, 'info');
         }
 
         // Check if this is the first scan (any scanning activity)
@@ -237,8 +274,8 @@ export default class XRayEffect {
           }
         }
 
-        // Check if condition is fully discovered
-        if (newProgress >= requiredTime && !this.discoveredConditions.has(conditionId)) {
+        // ENHANCEMENT: Use advanced detection to determine when condition is discovered
+        if (detectionResult.detected && !this.discoveredConditions.has(conditionId)) {
           this.discoverCondition(conditionId)
         }
         
@@ -631,6 +668,11 @@ export default class XRayEffect {
           condition.severity,
           condition.name
         );
+      }
+      
+      // ENHANCEMENT: Report discovery to scan feedback system for effects
+      if (this.scanFeedbackSystem && this.scanFeedbackSystem.updateMarker) {
+        this.scanFeedbackSystem.updateMarker(conditionId, true);
       }
       
       // Remove scanning VFX for this condition

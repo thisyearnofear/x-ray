@@ -103,29 +103,94 @@ export class MedicalServiceFacade {
         isAIGenerated: true,
         generatedAt: Date.now(),
         difficulty,
-        smartAccountAddress: this.smartAccount?.address
+        smartAccountAddress: this.smartAccount?.address,
+        // ENHANCEMENT FIRST: Add unique identifiers for tracking
+        caseGenerationContext: {
+          originalDifficulty: difficulty,
+          generationTimestamp: Date.now(),
+          generatedByAI: true,
+          userWallet: this.smartAccount?.address
+        }
       };
 
       return enhancedCase;
     } catch (error) {
       console.error('AI case generation failed:', error);
       // Fallback to static case with upgrade prompt
-      throw new Error('AI case generation temporarily unavailable. Please try again or use the free static case.');
+      const staticCase = this.getCase('case-x487');
+      if (!staticCase) {
+        throw new Error('No fallback case available. Please try again later.');
+      }
+      
+      // Modify static case to indicate it's a fallback for premium users
+      return {
+        ...staticCase,
+        id: `fallback_ai_case_${Date.now()}`,
+        title: `Premium Case (Fallback): ${staticCase.title}`,
+        caseGenerationContext: {
+          originalDifficulty: difficulty,
+          generationTimestamp: Date.now(),
+          generatedByAI: false,
+          generationFailed: true,
+          fallbackUsed: true,
+          userWallet: this.smartAccount?.address
+        }
+      };
     }
   }
 
-  // ENHANCED: Get appropriate case based on user tier
+  // ENHANCED: Get appropriate case based on user tier with better error handling
   public async getRecommendedCase(): Promise<MedicalCase> {
-    const userStatus = this.accessManager.getUserStatus();
-    
-    if (userStatus.currentTier === 'premium' && userStatus.canAccessAICases) {
-      // Generate AI case for premium users
-      return await this.generateAICase();
-    } else {
-      // Return static case for free users
+    try {
+      const userStatus = this.accessManager.getUserStatus();
+      
+      if (userStatus.currentTier === 'premium' && userStatus.canAccessAICases) {
+        // Generate AI case for premium users with their preferred difficulty
+        try {
+          const difficulty = userStatus.preferredDifficulty || 'medium';
+          const aiCase = await this.generateAICase(difficulty);
+          console.log('🏥 Generated premium AI-powered case for authenticated user', {
+            difficulty,
+            userWallet: this.smartAccount?.address
+          });
+          return aiCase;
+        } catch (aiError) {
+          console.warn('AI case generation failed for premium user, falling back to static case:', aiError);
+          // Even for premium users, fallback to static case if AI generation fails
+          const staticCase = this.getCase('case-x487');
+          if (!staticCase) {
+            throw new Error('No fallback case available');
+          }
+          return {
+            ...staticCase,
+            id: `premium_fallback_${Date.now()}`,
+            title: `Premium Case (AI Generation Failed): ${staticCase.title}`,
+            isAIGenerated: false,
+            caseGenerationContext: {
+              originalDifficulty: userStatus.preferredDifficulty || 'medium',
+              generationTimestamp: Date.now(),
+              generatedByAI: false,
+              generationFailed: true,
+              fallbackUsed: true,
+              userWallet: this.smartAccount?.address
+            }
+          };
+        }
+      } else {
+        // Return static case for free users
+        const staticCase = this.getCase('case-x487');
+        if (!staticCase) {
+          throw new Error('Static case not available');
+        }
+        console.log('🏥 Loaded standard static case for user');
+        return staticCase;
+      }
+    } catch (error) {
+      console.error('Error getting recommended case:', error);
+      // Always fallback to static case if there's any error
       const staticCase = this.getCase('case-x487');
       if (!staticCase) {
-        throw new Error('Static case not available');
+        throw new Error('No cases available');
       }
       return staticCase;
     }

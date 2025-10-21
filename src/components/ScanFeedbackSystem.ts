@@ -183,12 +183,13 @@ export class ScanFeedbackSystem {
     }
 
     // Update scan progress for a region (0.0 to 1.0)
-    updateScanProgress(regionId: string, progress: number): void {
+    updateScanProgress(regionId: string, progress: number, scanData?: any): void {
         const region = this.scanRegions.get(regionId)
         if (region) {
             // PREVENT BLOAT: Only update visuals if progress changed significantly
             const progressThreshold = 0.02; // Only update if progress changed by 2%
             if (Math.abs(region.progress - progress) >= progressThreshold) {
+                const oldProgress = region.progress;
                 region.progress = Math.min(progress, 1.0)
                 region.lastUpdate = Date.now()
 
@@ -197,14 +198,31 @@ export class ScanFeedbackSystem {
                 this.updateParticleIntensity(regionId, progress)
                 this.updateTextLabel(region);
 
+                // ENHANCEMENT FIRST: Enhanced audio-visual feedback based on scan data
                 if (this.audioManager) {
-                    if (progress > 0.9) {
+                    // Play different sounds based on progress and scan quality
+                    if (progress > 0.9 && oldProgress <= 0.9) {
                         this.audioManager.playSound(SoundType.PRE_DISCOVERY);
+                    } else if (progress > 0.75 && oldProgress <= 0.75) {
+                        this.audioManager.playSound(SoundType.DISCOVERY_HIGHLIGHT);
+                    } else if (progress > 0.5 && oldProgress <= 0.5) {
+                        this.audioManager.playSound(SoundType.SCAN_PROGRESS);
                     }
+                    
                     this.audioManager.playProgressiveBeep(progress);
                 }
 
                 this.vibrate(progress * 50);
+
+                // ENHANCEMENT FIRST: Advanced discovery mechanics with clues
+                if (scanData?.clues && progress >= 0.8 && oldProgress < 0.8) {
+                    this.triggerClueEffect(regionId, scanData.clues);
+                }
+                
+                // ENHANCEMENT FIRST: Partial discovery effects
+                if (progress >= 0.95 && oldProgress < 0.95) {
+                    this.prepareDiscoveryEffect(regionId);
+                }
 
                 // Trigger discovery effect at 100%
                 if (progress >= 1.0) {
@@ -212,6 +230,76 @@ export class ScanFeedbackSystem {
                 }
             }
         }
+    }
+    
+    // ENHANCED: Clue effect for near-discovery progress
+    private triggerClueEffect(regionId: string, clues: string[]): void {
+        const region = this.scanRegions.get(regionId);
+        if (region && region.mesh) {
+            // Create a temporary text label with the clue
+            const clueText = clues[Math.floor(Math.random() * clues.length)];
+            this.createTemporaryClueLabel(region.mesh.position, clueText);
+        }
+    }
+    
+    // ENHANCED: Prepare effect for imminent discovery
+    private prepareDiscoveryEffect(regionId: string): void {
+        const region = this.scanRegions.get(regionId);
+        if (region && region.glowMaterial) {
+            // Intensify the glow to indicate imminent discovery
+            const prepColor = new THREE.Color(0xffaa00); // Orange color for preparation
+            region.glowMaterial.uniforms.color.value = prepColor;
+            
+            // Increase pulsing rate
+            region.glowMaterial.uniforms.intensity.value = 0.9;
+        }
+    }
+    
+    // ENHANCED: Create temporary clue labels
+    private createTemporaryClueLabel(position: THREE.Vector3, text: string): void {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) return;
+
+        const fontSize = 24;
+        canvas.width = 300;
+        canvas.height = 80;
+        
+        context.font = `bold ${fontSize}px Arial`;
+        context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        context.textAlign = 'center';
+        context.fillText(text, canvas.width / 2, canvas.height / 2 + fontSize / 3);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.SpriteMaterial({ 
+            map: texture, 
+            transparent: true,
+            depthWrite: false
+        });
+        
+        const sprite = new THREE.Sprite(material);
+        sprite.position.copy(position).add(new THREE.Vector3(0, 1, 0));
+        sprite.scale.set(1.2, 0.4, 1);
+        sprite.material.opacity = 0.9;
+
+        this.scene.add(sprite);
+        
+        // Fade out and remove after 3 seconds
+        setTimeout(() => {
+            // Animate fade out
+            const fadeInterval = setInterval(() => {
+                if (sprite.material.opacity > 0) {
+                    sprite.material.opacity -= 0.05;
+                } else {
+                    clearInterval(fadeInterval);
+                    if (sprite.parent) {
+                        this.scene.remove(sprite);
+                        texture.dispose();
+                        material.dispose();
+                    }
+                }
+            }, 100);
+        }, 3000);
     }
 
     // Stop scanning a region

@@ -678,41 +678,97 @@ export class GameManager {
         }
     }
 
-    // MODULAR: Local leaderboard and competitive elements
+    // MODULAR: Enhanced leaderboard and competitive elements
     public recordHighScore(): void {
         const currentScore = this.gameState.score;
         const currentCase = this.gameState.patientCase?.id || 'unknown';
+        const currentCaseTitle = this.gameState.patientCase?.title || 'Unknown Case';
         const sessionTime = Date.now() - this.gameState.sessionStartTime;
         const conditionsFound = this.gameState.discoveredConditions.size;
+        const timeRemaining = this.gameState.timeRemaining;
 
+        // Enhanced entry with more competitive metrics
         const newEntry = {
             score: currentScore,
             caseId: currentCase,
+            caseTitle: currentCaseTitle,
             time: sessionTime,
+            timeRemaining: timeRemaining,
             conditionsFound,
+            discoveredConditions: Array.from(this.gameState.discoveredConditions),
             date: new Date().toISOString(),
             accuracy: this.gameState.accuracy,
-            efficiency: this.gameState.efficiency
+            efficiency: this.gameState.efficiency,
+            streak: this.gameState.streak,
+            hintsUsed: this.gameState.hintsUsed,
+            difficulty: this.gameState.difficulty,
+            isAICase: this.gameState.patientCase?.aiGenerated || false,
+            walletAddress: this.smartAccount?.address || null
         };
 
         // Get existing high scores
         const highScores = this.getHighScores();
         highScores.push(newEntry);
 
-        // Sort and keep top 10
-        highScores.sort((a, b) => b.score - a.score);
-        const topScores = highScores.slice(0, 10);
+        // Sort by score (primary), then by time remaining (secondary) for tie-breaking
+        highScores.sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            return b.timeRemaining - a.timeRemaining; // More time remaining = better
+        });
+        
+        const topScores = highScores.slice(0, 15); // Increased to top 15 for more engagement
 
         // Save to localStorage
         if (typeof window !== 'undefined') {
             localStorage.setItem('xray-high-scores', JSON.stringify(topScores));
         }
 
+        // Emit detailed high score event
+        const rank = highScores.findIndex(entry => 
+            entry.score === newEntry.score && 
+            entry.timeRemaining === newEntry.timeRemaining
+        ) + 1;
+        
+        const isPersonalBest = this.isPersonalBest(newEntry);
+        const isNewRecord = rank === 1;
+
         this.emit('highScoreRecorded', {
             entry: newEntry,
-            rank: highScores.indexOf(newEntry) + 1,
-            isNewRecord: highScores[0] === newEntry
+            rank,
+            isNewRecord,
+            isPersonalBest,
+            totalScores: highScores.length
         });
+        
+        // Additionally emit competitive events for UI engagement
+        if (isNewRecord) {
+            this.emit('newGlobalRecord', {
+                score: currentScore,
+                message: `🏆 New Global Record! You're #1 on the leaderboard!`
+            });
+        } else if (rank <= 5) {
+            this.emit('top5Achievement', {
+                rank,
+                message: `🎉 Top ${rank}! Excellent performance!`
+            });
+        }
+    }
+    
+    // ENHANCED: Personal best tracking
+    private isPersonalBest(newEntry: any): boolean {
+        const walletAddress = this.smartAccount?.address;
+        if (!walletAddress) return false; // Can't determine without wallet
+        
+        const userScores = this.getUserScores(walletAddress);
+        if (userScores.length === 0) return true;
+        
+        return newEntry.score > Math.max(...userScores.map((s: any) => s.score));
+    }
+    
+    // ENHANCED: Get scores for a specific user
+    private getUserScores(walletAddress: string): any[] {
+        const allScores = this.getHighScores();
+        return allScores.filter((score: any) => score.walletAddress === walletAddress);
     }
 
     public getHighScores(): any[] {

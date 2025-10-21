@@ -25,13 +25,21 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
       
       // ENHANCEMENT FIRST: Dispatch wallet connection event for tier system
       const event = new CustomEvent('walletConnected', {
-        detail: { address, isConnected: true }
+        detail: { 
+          address, 
+          isConnected: true,
+          // Include default preferred difficulty for authenticated users
+          preferredDifficulty: 'medium' 
+        }
       })
       document.dispatchEvent(event)
     } else if (!isConnected) {
       // Dispatch disconnection event
       const event = new CustomEvent('walletDisconnected', {
-        detail: { isConnected: false }
+        detail: { 
+          isConnected: false,
+          preferredDifficulty: 'medium' // Default for unauthenticated users
+        }
       })
       document.dispatchEvent(event)
     }

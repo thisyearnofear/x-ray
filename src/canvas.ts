@@ -91,6 +91,9 @@ export default class Canvas {
     this.setupKeyboardShortcuts() // ENHANCEMENT: Minimal keyboard support
     this.createMobileComponents()
     
+    // Listen for wallet connection events to update MedicalServiceFacade
+    this.setupWalletEventListeners();
+    
     // Remove loading screen and start render after a brief delay to ensure everything is initialized
     setTimeout(() => {
       this.removeLoadingScreen()
@@ -203,6 +206,42 @@ export default class Canvas {
         }
       }, 500)
     }
+  }
+  
+  // ENHANCEMENT: Wallet connection event listeners
+  private setupWalletEventListeners(): void {
+    // Listen for wallet connection events
+    document.addEventListener('walletConnected', (event: any) => {
+      const { address, preferredDifficulty } = event.detail;
+      
+      console.log('💰 Wallet connected event received:', { address, preferredDifficulty });
+      
+      // Update MedicalServiceFacade with new authentication status
+      if (this.medicalService) {
+        this.medicalService.updateAuthStatus(true, address, preferredDifficulty);
+      }
+      
+      // If a game is active, update the case to potentially get a new AI-generated one
+      if (this.gameManager && this.gameManager.getGameState().phase !== 'solved') {
+        // Generate a new patient case for authenticated user
+        this.generateAndIntroducePatientCase();
+      }
+    });
+    
+    // Listen for wallet disconnection events
+    document.addEventListener('walletDisconnected', (event: any) => {
+      console.log('🔒 Wallet disconnected event received');
+      
+      // Update MedicalServiceFacade with new authentication status
+      if (this.medicalService) {
+        this.medicalService.updateAuthStatus(false, undefined, 'medium');
+      }
+      
+      // If a game is active, update the case to fall back to static
+      if (this.gameManager && this.gameManager.getGameState().phase !== 'solved') {
+        this.generateAndIntroducePatientCase();
+      }
+    });
   }
 
   createScene() {
@@ -594,8 +633,23 @@ export default class Canvas {
   // AGGRESSIVE CONSOLIDATION: Use AI-powered case generation with progressive revelation
   private async generateAndIntroducePatientCase() {
     try {
-      // Use existing case from MedicalServiceFacade
-      const medicalCase = this.medicalService?.getCase('case-x487')
+      // ENHANCEMENT FIRST: Generate AI-powered case for authenticated users, fallback to static for others
+      let medicalCase: any;
+      const userStatus = this.medicalService?.getAccessManager?.()?.getUserStatus?.();
+      
+      if (userStatus?.isAuthenticated && userStatus?.currentTier === 'premium') {
+        // Try to generate an AI-powered case for premium users
+        try {
+          medicalCase = await this.medicalService?.generateAICase?.(userStatus.preferredDifficulty || 'medium');
+          console.log('🏥 Generated AI-powered patient case for premium user');
+        } catch (aiError) {
+          console.warn('AI case generation failed, falling back to static case:', aiError);
+          medicalCase = this.medicalService?.getCase('case-x487');
+        }
+      } else {
+        // Use static case for non-premium users
+        medicalCase = this.medicalService?.getCase('case-x487');
+      }
 
       if (medicalCase) {
         // Convert MedicalCase to PatientCase to fix type mismatch
@@ -611,8 +665,7 @@ export default class Canvas {
         this.gameManager?.updateState({ patientCase })
 
         // MODULAR: Connect case timer to game timer
-        // Using a fixed time for now since the case doesn't have estimatedCaseLength
-        const estimatedCaseLength = 300; // 5 minutes
+        const estimatedCaseLength = medicalCase.estimatedCaseLength || 300; // Default to 5 minutes
         this.gameManager?.updateTimeRemaining(estimatedCaseLength)
         console.log(`⏰ Case timer: ${estimatedCaseLength}s`)
 
@@ -621,6 +674,12 @@ export default class Canvas {
 
         // PERFORMANT: Immersive feedback with staggered notifications
         this.providePatientIntroductionFeedback(medicalCase)
+        
+        // ENHANCEMENT FIRST: Different feedback for AI-generated vs static cases
+        if (medicalCase.aiGenerated) {
+          this.audioManager?.showFeedback('🤖 AI-Generated Case: Each case is uniquely created for you!', 'info');
+          this.audioManager?.playSound(SoundType.AI_CASE_INTRO);
+        }
 
         console.log(`🏥 Case Loaded: ${medicalCase.patientInfo.patientName} (${medicalCase.patientInfo.age}yo ${medicalCase.patientInfo.gender})`)
       }

@@ -31,6 +31,7 @@ export interface UserAccessStatus {
   casesUsedToday: number
   canAccessAICases: boolean
   upgradeRequired: boolean
+  preferredDifficulty?: 'easy' | 'medium' | 'hard'
 }
 
 export class CaseAccessManager {
@@ -93,7 +94,11 @@ export class CaseAccessManager {
   }
 
   // CLEAN: Update user authentication status
-  public updateAuthStatus(isAuthenticated: boolean, walletAddress?: string): void {
+  public updateAuthStatus(
+    isAuthenticated: boolean, 
+    walletAddress?: string,
+    preferredDifficulty?: 'easy' | 'medium' | 'hard'
+  ): void {
     const wasAuthenticated = this.userStatus.isAuthenticated
     
     this.userStatus.isAuthenticated = isAuthenticated
@@ -101,6 +106,14 @@ export class CaseAccessManager {
     this.userStatus.currentTier = isAuthenticated ? 'premium' : 'free'
     this.userStatus.canAccessAICases = isAuthenticated
     this.userStatus.upgradeRequired = !isAuthenticated
+    
+    // ENHANCEMENT: Preserve or set preferred difficulty
+    if (preferredDifficulty) {
+      this.userStatus.preferredDifficulty = preferredDifficulty;
+    } else if (!this.userStatus.preferredDifficulty) {
+      // Default difficulty for authenticated users
+      this.userStatus.preferredDifficulty = 'medium';
+    }
 
     // Reset daily usage if upgrading to premium
     if (!wasAuthenticated && isAuthenticated) {
@@ -112,7 +125,8 @@ export class CaseAccessManager {
     
     console.log(`🔐 Access tier updated: ${this.userStatus.currentTier}`, {
       authenticated: isAuthenticated,
-      canAccessAI: this.userStatus.canAccessAICases
+      canAccessAI: this.userStatus.canAccessAICases,
+      preferredDifficulty: this.userStatus.preferredDifficulty
     })
   }
 
@@ -248,9 +262,17 @@ export class CaseAccessManager {
         }
         
         this.userStatus = { ...this.userStatus, ...parsed }
+        
+        // Set default preferred difficulty if not set
+        if (!this.userStatus.preferredDifficulty) {
+          this.userStatus.preferredDifficulty = this.userStatus.isAuthenticated ? 'medium' : 'medium';
+        }
       }
     } catch (error) {
       console.warn('Failed to load user access status:', error)
+      
+      // Set default preferred difficulty if parsing fails
+      this.userStatus.preferredDifficulty = 'medium';
     }
   }
 
