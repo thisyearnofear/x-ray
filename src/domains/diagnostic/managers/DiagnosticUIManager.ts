@@ -509,7 +509,7 @@ export class DiagnosticUIManager {
             color: #ff6b6b;
             text-align: center;
             opacity: 0.9;
-          ">Daily limit reached. Upgrade for unlimited access!</div>
+          ">AI case limit reached. Static cases always available.</div>
         ` : ''}
       </div>
     `

@@ -201,7 +201,7 @@ export const TierStatusIndicator: React.FC<TierStatusIndicatorProps> = ({
           textAlign: 'center',
           opacity: 0.9
         }}>
-          Daily limit reached. Upgrade for unlimited access!
+          AI case limit reached. Static cases always available.
         </div>
       )}
     </div>

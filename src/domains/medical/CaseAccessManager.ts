@@ -271,7 +271,15 @@ export class CaseAccessManager {
     if (this.userStatus.currentTier === 'premium') return Infinity
     
     const maxCases = this.CASE_TIERS.free.maxCasesPerDay || 0
+    // For free users, static cases (case-x487) are always available regardless of limit
+    // This method returns remaining AI-generated cases, not static cases
     return Math.max(0, maxCases - this.userStatus.casesUsedToday)
+  }
+  
+  // MODULAR: Check if user can access static cases (always available)
+  public canAccessStaticCases(): boolean {
+    // Static cases are always available for everyone
+    return true
   }
 
   // MODULAR: Generate access summary for UI
