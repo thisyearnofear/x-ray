@@ -1,15 +1,32 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useContext } from 'react'
 import { Web3Facade, type Web3State } from '../../lib/web3/web3-facade'
+import { Web3Context } from '../../components/web3/Web3Provider'
 
 export function useWeb3() {
-  const [web3Facade] = useState(() => new Web3Facade())
-  const [state, setState] = useState<Web3State>(web3Facade.getState())
-  const [isConnecting, setIsConnecting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const contextWeb3Facade = useContext(Web3Context);
+  const [web3Facade, setWeb3Facade] = useState<Web3Facade | null>(null);
+  const [state, setState] = useState<Web3State>({ isConnected: false, delegations: [] });
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize the facade from context or create a new one
+  useEffect(() => {
+    if (contextWeb3Facade) {
+      // Use the facade from context
+      setWeb3Facade(contextWeb3Facade);
+      setState(contextWeb3Facade.getState());
+    } else if (!web3Facade) {
+      // Create a new facade if we don't have one and context is not available
+      const facade = new Web3Facade();
+      setWeb3Facade(facade);
+      setState(facade.getState());
+    }
+  }, [contextWeb3Facade, web3Facade]);
 
   const connectWallet = useCallback(async () => {
+    if (!web3Facade) return;
     try {
       setIsConnecting(true)
       setError(null)
@@ -28,6 +45,7 @@ export function useWeb3() {
   }, [web3Facade])
 
   const disconnectWallet = useCallback(async () => {
+    if (!web3Facade) return;
     try {
       await web3Facade.disconnectWallet()
       setState(web3Facade.getState())
@@ -38,6 +56,7 @@ export function useWeb3() {
   }, [web3Facade])
 
   const createMedicalConsultationDelegation = useCallback(async (delegateAddress: `0x${string}`) => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       const delegation = await web3Facade.createMedicalConsultationDelegation(delegateAddress)
@@ -50,6 +69,7 @@ export function useWeb3() {
   }, [web3Facade])
 
   const createDataSharingDelegation = useCallback(async (delegateAddress: `0x${string}`, allowedData: string[]) => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       const delegation = await web3Facade.createDataSharingDelegation(delegateAddress, allowedData)
@@ -62,6 +82,7 @@ export function useWeb3() {
   }, [web3Facade])
 
   const executeDelegatedAction = useCallback(async (action: { to: `0x${string}`; data: string; value?: bigint }) => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       const result = await web3Facade.executeDelegatedAction(action)
@@ -81,6 +102,7 @@ export function useWeb3() {
     conditions: string[]
     tokenURI: string
   }) => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       if (!state.address) {
@@ -95,6 +117,7 @@ export function useWeb3() {
   }, [web3Facade, state.address])
 
   const getCertificate = useCallback(async (tokenId: bigint) => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       const result = await web3Facade.getContractClient().getCertificate(tokenId)
@@ -106,6 +129,7 @@ export function useWeb3() {
   }, [web3Facade])
 
   const certificateExists = useCallback(async (tokenId: bigint) => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       const result = await web3Facade.getContractClient().certificateExists(tokenId)
@@ -117,6 +141,7 @@ export function useWeb3() {
   }, [web3Facade])
 
   const getTotalCertificates = useCallback(async () => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       const result = await web3Facade.getContractClient().getTotalCertificates()
@@ -128,6 +153,7 @@ export function useWeb3() {
   }, [web3Facade])
 
   const authorizeContract = useCallback(async (contractAddress: `0x${string}`) => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       if (!state.address) {
@@ -142,6 +168,7 @@ export function useWeb3() {
   }, [web3Facade, state.address])
 
   const isContractAuthorized = useCallback(async (contractAddress: `0x${string}`) => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       const result = await web3Facade.getContractClient().isContractAuthorized(contractAddress)
@@ -153,6 +180,7 @@ export function useWeb3() {
   }, [web3Facade])
 
   const getPaymasterDeposit = useCallback(async () => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       const result = await web3Facade.getContractClient().getPaymasterDeposit()
@@ -169,6 +197,7 @@ export function useWeb3() {
     functionData: `0x${string}`
     value?: bigint
   }) => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       const result = await web3Facade.executeGaslessTransaction(action)
@@ -187,6 +216,7 @@ export function useWeb3() {
     conditions: string[]
     tokenURI: string
   }) => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       const result = await web3Facade.mintCertificateGasless(params)
@@ -198,6 +228,7 @@ export function useWeb3() {
   }, [web3Facade])
 
   const checkGaslessQuota = useCallback(async () => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       setError(null)
       const result = await web3Facade.checkGaslessQuota()
@@ -209,6 +240,7 @@ export function useWeb3() {
   }, [web3Facade])
 
   const getMonBalance = useCallback(async () => {
+    if (!web3Facade) throw new Error('Web3 not initialized');
     try {
       if (!state.address) {
         throw new Error('Wallet not connected')
@@ -224,8 +256,9 @@ export function useWeb3() {
 
   // Listen for account changes
   useEffect(() => {
-    if (window.ethereum) {
+    if (typeof window !== 'undefined' && window.ethereum) {
       const handleAccountsChanged = (accounts: string[]) => {
+        if (!web3Facade) return;
         if (accounts.length === 0) {
           disconnectWallet()
         } else if (accounts[0] !== state.address) {
@@ -239,7 +272,7 @@ export function useWeb3() {
         window.ethereum?.removeListener('accountsChanged', handleAccountsChanged)
       }
     }
-  }, [state.address, connectWallet, disconnectWallet])
+  }, [state.address, connectWallet, disconnectWallet, web3Facade])
 
   return {
     // State

@@ -27,19 +27,34 @@ export class Web3Facade {
     this.delegationService = new DelegationService(this.smartAccountService)
     this.contractClient = new ContractClient()
     this.paymasterService = new PaymasterIntegrationService(this.smartAccountService)
-    this.metaMaskSmartAccount = new MetaMaskSmartAccount()
+    
+    // Defer instantiation to client-side
+    this.metaMaskSmartAccount = {} as MetaMaskSmartAccount;
 
-    // Restore persisted state
-    const persistedState = this.loadPersistedState()
-    this.state = persistedState || {
-      isConnected: false,
-      delegations: [],
-      gaslessEnabled: false
+    // Restore persisted state only on client
+    if (typeof window !== 'undefined') {
+      const persistedState = this.loadPersistedState()
+      this.state = persistedState || {
+        isConnected: false,
+        delegations: [],
+        gaslessEnabled: false
+      }
+    } else {
+      this.state = {
+        isConnected: false,
+        delegations: [],
+        gaslessEnabled: false
+      }
     }
   }
 
   async connectWallet(): Promise<Web3State> {
     try {
+      // Instantiate on client-side
+      if (!this.metaMaskSmartAccount.initializeSmartAccount) {
+        this.metaMaskSmartAccount = new MetaMaskSmartAccount();
+      }
+
       if (!window.ethereum) {
         throw new Error('MetaMask not found. Please install MetaMask to use onchain features.')
       }
@@ -246,6 +261,9 @@ export class Web3Facade {
 
   // Persistence methods
   private persistState(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
     try {
       const stateToPersist = {
         ...this.state,
@@ -258,6 +276,9 @@ export class Web3Facade {
   }
 
   private loadPersistedState(): Web3State | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
     try {
       const persisted = localStorage.getItem('xrai_wallet_state')
       if (persisted) {

@@ -53,7 +53,7 @@ export class MetaMaskSmartAccount {
   async initializeSmartAccount(): Promise<void> {
     try {
       // Check if MetaMask is available
-      if (typeof window.ethereum !== 'undefined') {
+      if (typeof window !== 'undefined' && typeof window.ethereum !== 'undefined') {
         this.provider = new ethers.providers.Web3Provider(window.ethereum);
 
         // Initialize MetaMask Smart Account using Delegation Toolkit SDK
