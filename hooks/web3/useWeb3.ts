@@ -15,6 +15,11 @@ export function useWeb3() {
       setError(null)
       const newState = await web3Facade.connectWallet()
       setState(newState)
+      
+      // PERFORMANT: Expose wallet client on window for payment service
+      if (typeof window !== 'undefined') {
+        (window as any).walletClient = web3Facade.getWalletClient()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to connect wallet')
     } finally {

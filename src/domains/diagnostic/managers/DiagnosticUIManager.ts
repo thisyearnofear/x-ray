@@ -14,7 +14,6 @@ import { colors, spacing, typography, borders, effects, zIndex } from '../../../
 import { TierStatusIndicator } from '../../medical/ui/TierStatusIndicator'
 import { UpgradePrompt } from '../../medical/ui/UpgradePrompt'
 import { CaseAccessManager } from '../../medical/CaseAccessManager'
-import { SmartAccountOnboarding } from '../../web3/SmartAccountOnboarding'
 import { GaslessConsultationFlow } from '../../web3/GaslessConsultationFlow'
 import { DelegationPermissionsUI } from '../../web3/DelegationPermissionsUI'
 
@@ -659,9 +658,33 @@ export class DiagnosticUIManager {
       this.upgradePrompt = null
     })
 
-    connectBtn?.addEventListener('click', () => {
+    connectBtn?.addEventListener('click', async () => {
       // Trigger wallet connection
-      this.config.onConsultationClick?.() // Reuse existing wallet connection flow
+      console.log('🔗 Connect Wallet button clicked')
+      
+      // Check if wallet is already connected
+      if (typeof window.ethereum !== 'undefined') {
+        try {
+          // Request account access
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+          console.log('✅ Wallet connected:', accounts[0])
+          
+          // Upgrade to premium by updating auth status
+          this.accessManager.updateAuthStatus(true, accounts[0])
+          
+          // Show success feedback inline
+          this.showInlineFeedback('✅ Successfully upgraded to Premium!', 'success')
+        } catch (error) {
+          console.error('❌ Wallet connection failed:', error)
+          this.showInlineFeedback('❌ Wallet connection failed. Please try again.', 'error')
+        }
+      } else {
+        // No wallet detected
+        console.warn('⚠️ No wallet detected')
+        this.showInlineFeedback('⚠️ Please install MetaMask to upgrade', 'warning')
+        window.open('https://metamask.io/download/', '_blank')
+      }
+      
       document.body.removeChild(promptContainer)
       this.upgradePrompt = null
     })
@@ -669,137 +692,13 @@ export class DiagnosticUIManager {
     this.upgradePrompt = promptContainer
   }
 
-  // ENHANCEMENT FIRST: Smart Account onboarding for new users
-  public showSmartAccountOnboarding(): void {
-    if (this.onboardingActive) return
-
-    this.onboardingActive = true
-    const onboardingContainer = document.createElement('div')
-    onboardingContainer.id = 'smart-account-onboarding'
-    
-    // Create React-like onboarding component
-    this.renderSmartAccountOnboarding(onboardingContainer)
-    document.body.appendChild(onboardingContainer)
-  }
-
-  private renderSmartAccountOnboarding(container: HTMLElement): void {
-    // CLEAN: Simple onboarding without technical jargon
-    container.innerHTML = `
-      <div style="
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.9);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: ${zIndex.modal};
-        backdrop-filter: blur(10px);
-      ">
-        <div style="
-          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-          border: 2px solid #00d4ff;
-          border-radius: 20px;
-          padding: 2rem;
-          max-width: 500px;
-          width: 90%;
-          color: white;
-          font-family: 'Segoe UI', sans-serif;
-          box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
-          text-align: center;
-        ">
-          <div style="font-size: 4rem; margin-bottom: 1rem;">🏥</div>
-          <h2 style="margin: 0 0 1rem 0; color: #00d4ff; font-size: 1.5rem;">
-            Welcome to Smart Medical Accounts
-          </h2>
-          <p style="margin: 0 0 1.5rem 0; font-size: 1rem; line-height: 1.5; opacity: 0.9;">
-            Get free AI medical consultations without any transaction fees. 
-            Our smart account technology handles all the complexity for you.
-          </p>
-          
-          <div style="
-            background: rgba(0, 212, 255, 0.1);
-            border: 1px solid rgba(0, 212, 255, 0.3);
-            border-radius: 10px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-          ">
-            <div style="font-size: 0.9rem; font-weight: bold; color: #00d4ff; margin-bottom: 0.5rem;">
-              ✨ What you get:
-            </div>
-            <div style="font-size: 0.8rem; text-align: left;">
-              • Free AI medical consultations (no fees)<br>
-              • Instant responses from medical AI<br>
-              • Secure permission management<br>
-              • Verified medical achievement certificates
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 1rem; justify-content: center;">
-            <button id="onboarding-skip" style="
-              background: rgba(255, 255, 255, 0.1);
-              color: white;
-              border: 1px solid rgba(255, 255, 255, 0.3);
-              padding: 0.75rem 1.5rem;
-              border-radius: 10px;
-              cursor: pointer;
-              font-size: 0.9rem;
-              transition: all 0.3s ease;
-            ">Skip Setup</button>
-            
-            <button id="onboarding-start" style="
-              background: linear-gradient(45deg, #00d4ff, #0099cc);
-              color: white;
-              border: none;
-              padding: 0.75rem 2rem;
-              border-radius: 10px;
-              cursor: pointer;
-              font-size: 0.9rem;
-              font-weight: bold;
-              transition: all 0.3s ease;
-              box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
-            ">🚀 Set Up Smart Account</button>
-          </div>
-
-          <div style="margin-top: 1rem; font-size: 0.75rem; opacity: 0.6;">
-            Secure • Free • No technical knowledge required
-          </div>
-        </div>
-      </div>
-    `
-
-    // Add event listeners
-    const skipBtn = container.querySelector('#onboarding-skip') as HTMLElement
-    const startBtn = container.querySelector('#onboarding-start') as HTMLElement
-
-    skipBtn?.addEventListener('click', () => {
-      this.completeOnboarding(container, false)
-    })
-
-    startBtn?.addEventListener('click', () => {
-      this.completeOnboarding(container, true)
-    })
-  }
-
-  private completeOnboarding(container: HTMLElement, shouldConnect: boolean): void {
-    if (shouldConnect) {
-      // Trigger wallet connection
-      this.config.onConsultationClick?.()
-    }
-    
-    document.body.removeChild(container)
-    this.onboardingActive = false
-  }
+  // AGGRESSIVE CONSOLIDATION: Removed HTML-based onboarding methods
+  // Now using React PostLoginOnboardingFlow component instead
+  // Dead code removed per PREVENT BLOAT principle
 
   // ENHANCEMENT FIRST: Gasless consultation flow
   private startGaslessConsultation(): void {
-    if (!this.isSmartAccountConnected) {
-      this.showSmartAccountOnboarding()
-      return
-    }
-
+    // Onboarding now handled by React component in Canvas.tsx
     // Show gasless consultation UI
     this.showGaslessConsultationFlow()
   }
@@ -1870,6 +1769,46 @@ export class DiagnosticUIManager {
       }
     `
     document.head.appendChild(style)
+  }
+
+  // UTILITY: Show inline feedback message
+  private showInlineFeedback(message: string, type: 'success' | 'error' | 'warning' = 'success'): void {
+    const feedback = document.createElement('div')
+    feedback.style.cssText = `
+      position: fixed;
+      top: ${spacing.xl};
+      right: ${spacing.xl};
+      z-index: ${zIndex.overlay};
+      background: ${type === 'success' ? colors.background.gradient.primary : type === 'error' ? 'rgba(255, 107, 107, 0.95)' : 'rgba(255, 193, 7, 0.95)'};
+      color: ${colors.neutral.white};
+      padding: ${spacing.md} ${spacing.lg};
+      border-radius: ${borders.radius.lg};
+      box-shadow: ${effects.shadow.lg};
+      font-size: ${typography.fontSize.base};
+      font-weight: ${typography.fontWeight.bold};
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: all 0.3s ease;
+    `
+    feedback.textContent = message
+    document.body.appendChild(feedback)
+
+    // Animate in
+    setTimeout(() => {
+      feedback.style.opacity = '1'
+      feedback.style.transform = 'translateY(0)'
+    }, 10)
+
+    // Auto dismiss after 3 seconds
+    setTimeout(() => {
+      feedback.style.opacity = '0'
+      feedback.style.transform = 'translateY(-20px)'
+      setTimeout(() => {
+        if (feedback.parentNode) {
+          feedback.parentNode.removeChild(feedback)
+        }
+      }, 300)
+    }, 3000)
   }
 
   destroy(): void {

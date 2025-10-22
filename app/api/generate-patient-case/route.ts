@@ -184,9 +184,9 @@ function createPatientGenerationPrompt(
 
 **Structure Required:**
 {
-  "patientName": "Authentic full name (ethnic diversity)",
+  "patientName": "Authentic male name (ethnic diversity)",
   "age": number (18-85, varied distribution),
-  "gender": "Male/Female/Non-binary",
+  "gender": "Male",
   "occupation": "Realistic occupation affecting presentation",
   "socialHistory": "Brief relevant social factors",
   "chiefComplaint": "Concise primary complaint",
@@ -272,9 +272,9 @@ function getComplexConditions(model: string, difficulty: string): string {
 
 function getFallbackCase(): GeneratedPatientCase {
     return {
-        patientName: "Jordan Chen",
+        patientName: "Marcus Chen",
         age: 34,
-        gender: "Non-binary",
+        gender: "Male",
         occupation: "Software Engineer",
         socialHistory: "Non-smoker, occasional alcohol, regular exercise",
         chiefComplaint: "Chest pain and shortness of breath",

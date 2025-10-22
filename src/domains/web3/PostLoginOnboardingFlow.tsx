@@ -427,10 +427,10 @@ export const PostLoginOnboardingFlow: React.FC<PostLoginOnboardingFlowProps> = (
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
           <span style={{ color: 'white', fontWeight: 'bold' }}>Cost:</span>
-          <span style={{ color: '#00d4ff', fontSize: '1.5rem', fontWeight: 'bold' }}>10 $MON</span>
+          <span style={{ color: '#00d4ff', fontSize: '1.5rem', fontWeight: 'bold' }}>0.1 $MON</span>
         </div>
         <div style={{ color: 'white', fontSize: '0.85rem', opacity: 0.7 }}>
-          Testnet tokens • Balance: 1000 $MON
+          Testnet tokens • Gas fees covered by smart account
         </div>
       </div>
 

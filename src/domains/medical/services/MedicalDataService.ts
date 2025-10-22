@@ -10,9 +10,9 @@ const sampleCase: MedicalCase = {
   mission: 'Your mission is to establish a definitive diagnosis within the next 5 minutes and recommend an initial management plan.',
   stakes: 'The patient\'s quality of life is significantly impacted. A misdiagnosis could lead to unnecessary procedures or a worsening of the underlying condition.',
   patientInfo: {
-    patientName: 'Sarah Johnson',
+    patientName: 'Marcus Johnson',
     age: 34,
-    gender: 'Female',
+    gender: 'Male',
     chiefComplaint: 'Chronic headaches with jaw pain'
   },
   // Enhanced diagnostic properties for immersive experience

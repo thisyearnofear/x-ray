@@ -199,6 +199,10 @@ export class Web3Facade {
     return { ...this.state }
   }
 
+  getWalletClient() {
+    return this.smartAccountService.getWalletClient()
+  }
+
   getSmartAccountService(): SmartAccountService {
     return this.smartAccountService
   }

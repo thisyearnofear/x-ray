@@ -49,7 +49,7 @@ export class TutorialOverlay {
     if (!this.element) return
 
     this.currentStep = step
-    
+
     const titleElement = this.element.querySelector('.tutorial-title')
     const descriptionElement = this.element.querySelector('.tutorial-description')
     const progressElement = this.element.querySelector('.tutorial-progress-text')
@@ -68,20 +68,20 @@ export class TutorialOverlay {
     // Clear previous highlights
     const highlighted = document.querySelectorAll('.tutorial-highlight');
     highlighted.forEach(el => {
-        (el as HTMLElement).style.boxShadow = '';
-        (el as HTMLElement).style.borderRadius = '';
-        (el as HTMLElement).style.transition = '';
-        el.classList.remove('tutorial-highlight');
+      (el as HTMLElement).style.boxShadow = '';
+      (el as HTMLElement).style.borderRadius = '';
+      (el as HTMLElement).style.transition = '';
+      el.classList.remove('tutorial-highlight');
     });
 
     if (!selector) return;
 
     const element = document.querySelector(selector) as HTMLElement;
     if (element) {
-        element.classList.add('tutorial-highlight');
-        element.style.boxShadow = `0 0 20px 10px ${colors.primary.base}`;
-        element.style.borderRadius = borders.radius.lg;
-        element.style.transition = 'box-shadow 0.3s ease-in-out';
+      element.classList.add('tutorial-highlight');
+      element.style.boxShadow = `0 0 20px 10px ${colors.primary.base}`;
+      element.style.borderRadius = borders.radius.lg;
+      element.style.transition = 'box-shadow 0.3s ease-in-out';
     }
   }
 
@@ -130,6 +130,7 @@ export class TutorialOverlay {
         box-shadow: 0 20px 60px rgba(0, 255, 136, 0.4);
         text-align: center;
         animation: celebrationPulse 2s ease-in-out infinite;
+        position: relative;
       ">
         <div style="font-size: 5rem; margin-bottom: 1.5rem; animation: bounce 1s ease-in-out infinite;">🎓</div>
         
@@ -226,6 +227,8 @@ export class TutorialOverlay {
     if (startBtn) {
       startBtn.addEventListener('click', () => {
         this.config.onComplete()
+        // Properly destroy the completion modal when tutorial is completed
+        this.destroy()
       })
 
       // Add hover effect

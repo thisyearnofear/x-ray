@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { WalletConnection } from '../../src/components/WalletConnection';
 import { DelegationPanel } from '../../src/components/DelegationPanel';
 import { MedicalNFTMinter } from '../../src/components/MedicalNFTMinter';
-import { SmartAccountOnboarding } from '../../src/domains/web3/SmartAccountOnboarding';
+import { PostLoginOnboardingFlow } from '../../src/domains/web3/PostLoginOnboardingFlow';
 import { useWeb3 } from '../../hooks/web3/useWeb3';
 
 const CanvasComponent = () => {
@@ -18,21 +18,33 @@ const CanvasComponent = () => {
   const [lastDiagnosis, setLastDiagnosis] = useState<{conditions: string[], accuracy: number} | null>(null);
   const [showDelegationPanel, setShowDelegationPanel] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
   const hasShownOnboarding = useRef(false);
 
   // Web3 integration
-  const { isConnected, address: walletAddress } = useWeb3();
+  const { isConnected, address: walletAddress, web3Facade } = useWeb3();
+
+  // ENHANCEMENT FIRST: Get smart account address when wallet connects
+  useEffect(() => {
+    if (isConnected && walletAddress) {
+      // Get smart account address from web3Facade
+      const smartAccount = web3Facade?.getState().smartAccount
+      if (smartAccount?.address) {
+        setSmartAccountAddress(smartAccount.address)
+      }
+    }
+  }, [isConnected, walletAddress, web3Facade])
 
   // ENHANCEMENT FIRST: Show onboarding on first wallet connect (once per session)
   useEffect(() => {
-    if (isConnected && walletAddress && !hasShownOnboarding.current) {
+    if (isConnected && walletAddress && smartAccountAddress && !hasShownOnboarding.current) {
       const hasCompletedOnboarding = localStorage.getItem('xrai_onboarding_completed')
       if (!hasCompletedOnboarding) {
         setShowOnboarding(true)
         hasShownOnboarding.current = true
       }
     }
-  }, [isConnected, walletAddress])
+  }, [isConnected, walletAddress, smartAccountAddress])
 
   // Listen for diagnosis completion events
   useEffect(() => {
@@ -138,14 +150,23 @@ const CanvasComponent = () => {
             onConnected={() => {}} // Handled by useWeb3 hook internally
           />
           
-          {/* ENHANCEMENT FIRST: Smart Account Onboarding on first connect */}
-          {showOnboarding && (
-            <SmartAccountOnboarding
-              onComplete={() => {
+          {/* ENHANCEMENT FIRST: Post-Login Onboarding with AI case choice */}
+          {showOnboarding && smartAccountAddress && walletAddress && (
+            <PostLoginOnboardingFlow
+              smartAccountAddress={smartAccountAddress}
+              walletAddress={walletAddress}
+              onComplete={(config) => {
                 setShowOnboarding(false)
                 localStorage.setItem('xrai_onboarding_completed', 'true')
-                // Trigger wallet connection and show delegation panel
-                setTimeout(() => setShowDelegationPanel(true), 500)
+                
+                // Dispatch event with user's choice
+                document.dispatchEvent(new CustomEvent('onboardingComplete', {
+                  detail: {
+                    generateAICase: config.generateAICase,
+                    delegationsEnabled: config.delegationsEnabled,
+                    chargeTestnetMON: config.chargeTestnetMON
+                  }
+                }))
               }}
               onSkip={() => {
                 setShowOnboarding(false)

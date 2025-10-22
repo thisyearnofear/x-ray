@@ -346,13 +346,18 @@ export class PatientInfoSection {
   private setupExpandFunctionality(): void {
     if (!this.element) return
 
+    // Remove any existing click handlers to prevent duplicates
+    const newElement = this.element.cloneNode(true) as HTMLElement;
+    this.element.parentNode?.replaceChild(newElement, this.element);
+    this.element = newElement;
+
     // Add click handler for the main element
     this.element.addEventListener('click', (e) => {
-      e.stopPropagation();
-
       // Check if clicked on "Read more" link to expand HPI without toggling section
-      if ((e.target as HTMLElement).classList.contains('read-more')) {
+      if ((e.target as HTMLElement).classList.contains('read-more') || 
+          (e.target as HTMLElement).classList.contains('read-less')) {
         e.preventDefault();
+        e.stopPropagation();
         this.expandHPI();
         return;
       }

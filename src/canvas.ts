@@ -20,6 +20,7 @@ import { TutorialFacade } from "./domains/tutorial/TutorialFacade"
 import { VoiceConsultationManager } from "./domains/voice/VoiceConsultationManager"
 import { NurseAmyNudgeSystem } from "./domains/diagnostic/NurseAmyNudgeSystem"
 import { colors, spacing, typography, borders, effects, zIndex } from './styles/design-tokens'
+import { payForAICase } from "./domains/web3/services/mon-payment"
 
 export default class Canvas {
   element: HTMLCanvasElement
@@ -249,10 +250,50 @@ export default class Canvas {
         this.medicalService.updateAuthStatus(true, address, preferredDifficulty);
       }
       
-      // If a game is active, update the case to potentially get a new AI-generated one
-      if (this.gameManager && this.gameManager.getGameState().phase !== 'solved') {
-        // Generate a new patient case for authenticated user
-        this.generateAndIntroducePatientCase();
+      // PERFORMANT: Don't auto-generate case on wallet connect
+      // Wait for onboardingComplete event with user's choice
+    });
+    
+    // ENHANCEMENT FIRST: Listen for onboarding completion with user's case choice
+    document.addEventListener('onboardingComplete', async (event: any) => {
+      const { generateAICase, chargeTestnetMON } = event.detail;
+      
+      console.log('🎓 Onboarding complete:', { generateAICase, chargeTestnetMON });
+      
+      if (generateAICase && chargeTestnetMON) {
+        // User chose to generate AI case and pay wMON
+        try {
+          // Get wallet client from window (set by useWeb3 hook)
+          const walletClient = (window as any).walletClient;
+          
+          if (!walletClient) {
+            throw new Error('Wallet client not available');
+          }
+          
+          console.log('💰 Processing 0.1 wMON payment for AI case generation');
+          this.audioManager?.showFeedback('💰 Processing payment...', 'info');
+          
+          // Charge 0.1 wMON tokens to paymaster (virtuous flywheel)
+          const txHash = await payForAICase(0.1, walletClient);
+          console.log('✅ Payment successful:', txHash);
+          
+          // Generate the AI case
+          await this.generateAndIntroducePatientCase();
+          
+          this.audioManager?.showFeedback('🎉 AI case generated! 0.1 wMON paid to paymaster.', 'success');
+        } catch (error: any) {
+          console.error('Payment error:', error);
+          this.audioManager?.showFeedback(`❌ Payment failed: ${error.message}`, 'error');
+          // Still generate free case as fallback
+          await this.generateAndIntroducePatientCase();
+        }
+      } else if (generateAICase) {
+        // Generate AI case without payment (shouldn't happen but handle it)
+        await this.generateAndIntroducePatientCase();
+      } else {
+        // User chose free static case - just enable NFT tracking on existing case
+        console.log('🆓 User chose free static case with NFT tracking enabled');
+        this.audioManager?.showFeedback('🆓 Free case - NFT tracking enabled!', 'success');
       }
     });
     
@@ -265,10 +306,8 @@ export default class Canvas {
         this.medicalService.updateAuthStatus(false, undefined, 'medium');
       }
       
-      // If a game is active, update the case to fall back to static
-      if (this.gameManager && this.gameManager.getGameState().phase !== 'solved') {
-        this.generateAndIntroducePatientCase();
-      }
+      // PERFORMANT: Don't reset case on disconnect - just update auth status
+      // User can continue with their current case
     });
   }
 
