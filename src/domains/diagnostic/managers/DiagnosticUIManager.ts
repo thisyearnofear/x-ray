@@ -17,6 +17,7 @@ import { UpgradePrompt } from '../../medical/ui/UpgradePrompt'
 import { CaseAccessManager } from '../../medical/CaseAccessManager'
 import { GaslessConsultationFlow } from '../../web3/GaslessConsultationFlow'
 import { DelegationPermissionsUI } from '../../web3/DelegationPermissionsUI'
+import { CaseRevelationService } from '../../medical/services/CaseRevelationService'
 
 export interface DiagnosticUIConfig {
   onSolveClick?: () => void
@@ -40,6 +41,7 @@ export class DiagnosticUIManager {
   private upgradePrompt: any = null // UpgradePrompt instance
   private onboardingActive: boolean = false
   private isSmartAccountConnected: boolean = false
+  private revelationService: CaseRevelationService // ENHANCEMENT: Progressive disclosure service
 
   // Public getter to access the AI panel for voice integration
   public showTransitionOverlay(message: string): Promise<void> {
@@ -91,6 +93,7 @@ export class DiagnosticUIManager {
   constructor(config: DiagnosticUIConfig = {}) {
     this.config = config
     this.accessManager = CaseAccessManager.getInstance()
+    this.revelationService = new CaseRevelationService() // ENHANCEMENT: Initialize revelation service
   }
 
   initialize(): void {
@@ -1034,8 +1037,15 @@ export class DiagnosticUIManager {
     }
   }
 
-  // NEW: Enhanced Patient interview functionality with immersive experience
+  // ENHANCEMENT FIRST: Enhanced Patient interview using AI case data when available
   private showPatientInterview(): void {
+    // ENHANCEMENT: Track investigation with revelation service
+    const unlocked = this.revelationService.performInvestigation({
+      type: 'interview',
+      timestamp: Date.now()
+    })
+    console.log('🔓 Interview unlocked:', unlocked)
+
     if (this.aiPanel) {
       this.aiPanel.addInsight({
         id: `interview_${Date.now()}`,
@@ -1045,30 +1055,48 @@ export class DiagnosticUIManager {
         confidence: 0.9
       })
 
-      // Show initial engagement
+      const chiefComplaint = this.getChiefComplaint()
+      const fullHistory = this.getFullHistory()
+
+      // Show initial engagement with actual chief complaint
       setTimeout(() => {
         if (this.aiPanel) {
           this.aiPanel.addInsight({
             id: `interview_intro_${Date.now()}`,
             timestamp: Date.now(),
-            content: "📋 <strong>Chief Complaint:</strong> Chronic headaches with jaw pain",
+            content: `📋 <strong>Chief Complaint:</strong> ${chiefComplaint}`,
             type: 'diagnostic',
             confidence: 0.85
           });
         }
       }, 600);
 
-      // Add symptom questions with enhanced interactivity
-      const symptoms = [
-        { question: "📍 Where exactly do you feel the pain?", response: "The pain is mainly in my temples and jaw area. It feels like a constant dull ache that sometimes sharpens when I chew." },
-        { question: "⏱️ When did the headaches start?", response: "These headaches started about three weeks ago. They've been getting worse, especially in the mornings." },
-        { question: "🔄 Do the headaches come and go or are they constant?", response: "They're pretty constant now. I used to get occasional headaches, but this is different - much more persistent." },
-        { question: "🔥 Does anything make the pain better or worse?", response: "The pain gets worse when I'm stressed or chew hard foods. Warm compresses and rest help a little." },
-        { question: "😴 Are the headaches affecting your sleep?", response: "Yes, they're really affecting my sleep. I wake up with a stiff jaw and headache most mornings." },
-        { question: "🥱 Any associated jaw clicking or popping?", response: "Yes! There's definitely clicking when I open my mouth wide, especially when I yawn." }
-      ]
+      // ENHANCEMENT FIRST: Use AI-generated history or fallback to static
+      if (fullHistory && this.isAIGeneratedCase()) {
+        // Display AI-generated full history progressively
+        setTimeout(() => {
+          if (this.aiPanel) {
+            this.aiPanel.addInsight({
+              id: `interview_history_${Date.now()}`,
+              timestamp: Date.now(),
+              content: `📝 <strong>History of Present Illness:</strong><br>${fullHistory}`,
+              type: 'diagnostic',
+              confidence: 0.9
+            })
+          }
+        }, 1200)
+      } else {
+        // Fallback to static TMJ symptoms for static case
+        const symptoms = [
+          { question: "📍 Where exactly do you feel the pain?", response: "The pain is mainly in my temples and jaw area. It feels like a constant dull ache that sometimes sharpens when I chew." },
+          { question: "⏱️ When did the headaches start?", response: "These headaches started about three weeks ago. They've been getting worse, especially in the mornings." },
+          { question: "🔄 Do the headaches come and go or are they constant?", response: "They're pretty constant now. I used to get occasional headaches, but this is different - much more persistent." },
+          { question: "🔥 Does anything make the pain better or worse?", response: "The pain gets worse when I'm stressed or chew hard foods. Warm compresses and rest help a little." },
+          { question: "😴 Are the headaches affecting your sleep?", response: "Yes, they're really affecting my sleep. I wake up with a stiff jaw and headache most mornings." },
+          { question: "🥱 Any associated jaw clicking or popping?", response: "Yes! There's definitely clicking when I open my mouth wide, especially when I yawn." }
+        ]
 
-      symptoms.forEach((symptom, index) => {
+        symptoms.forEach((symptom, index) => {
         setTimeout(() => {
           if (this.aiPanel) {
             this.aiPanel.addInsight({
@@ -1102,53 +1130,62 @@ export class DiagnosticUIManager {
               }
             }, 1500);
           }
-        }, index * 2200)
-      })
+          }, index * 2200)
+        })
+      }
 
-      // Add conclusion and clinical correlation after interview completes
+      // Add conclusion and evidence after appropriate delay
+      const delayMs = fullHistory && this.isAIGeneratedCase() ? 2400 : (6 * 1200 + 600)
       setTimeout(() => {
         if (this.aiPanel) {
-          this.aiPanel.addInsight({
-            id: `interview_conclusion_${Date.now()}`,
-            timestamp: Date.now(),
-            content: "📋 <strong>Interview Summary:</strong> Patient reports chronic temporal and jaw pain, worse in mornings, associated with jaw clicking. Pattern suggests TMJ dysfunction.",
-            type: 'educational',
-            confidence: 0.9
-          });
-
-          // ENHANCEMENT: Add evidence to Investigation Panel
-          this.addEvidence({
-            id: `evidence_interview_${Date.now()}`,
-            source: 'interview',
-            content: 'Chronic jaw pain for 3 weeks, worse with chewing and stress',
-            abnormal: false,
-            timestamp: Date.now()
-          })
-          this.addEvidence({
-            id: `evidence_interview_clicking_${Date.now()}`,
-            source: 'interview',
-            content: 'Morning stiffness and audible clicking when opening mouth',
-            abnormal: false,
-            timestamp: Date.now()
-          })
-          this.addEvidence({
-            id: `evidence_interview_history_${Date.now()}`,
-            source: 'interview',
-            content: 'No prior history of TMJ issues',
-            abnormal: false,
-            timestamp: Date.now()
-          })
+          // ENHANCEMENT: Use AI physical findings for evidence or fallback to static
+          const physicalFindings = this.getPhysicalFindings()
+          if (physicalFindings.length > 0 && this.isAIGeneratedCase()) {
+            // Add AI-generated evidence
+            physicalFindings.slice(0, 3).forEach((finding, index) => {
+              this.addEvidence({
+                id: `evidence_interview_${Date.now()}_${index}`,
+                source: 'interview',
+                content: finding,
+                abnormal: false,
+                timestamp: Date.now()
+              })
+            })
+          } else {
+            // Fallback to static TMJ evidence
+            this.addEvidence({
+              id: `evidence_interview_${Date.now()}`,
+              source: 'interview',
+              content: 'Chronic jaw pain for 3 weeks, worse with chewing and stress',
+              abnormal: false,
+              timestamp: Date.now()
+            })
+            this.addEvidence({
+              id: `evidence_interview_clicking_${Date.now()}`,
+              source: 'interview',
+              content: 'Morning stiffness and audible clicking when opening mouth',
+              abnormal: false,
+              timestamp: Date.now()
+            })
+            this.addEvidence({
+              id: `evidence_interview_history_${Date.now()}`,
+              source: 'interview',
+              content: 'No prior history of TMJ issues',
+              abnormal: false,
+              timestamp: Date.now()
+            })
+          }
 
           // Mark interview as complete
           this.investigationPanel?.updateToolStatus('interview', 'complete')
           
-          // Suggest next steps
+          // Suggest next steps and mention Investigation Panel
           setTimeout(() => {
             if (this.aiPanel) {
               this.aiPanel.addInsight({
                 id: `interview_next_${Date.now()}`,
                 timestamp: Date.now(),
-                content: "💡 <strong>Nurse Amy:</strong> Based on the history, I recommend physical examination focusing on TMJ and palpation. Consider imaging if conservative management fails.",
+                content: this.getNurseAmyGuidance('interview'),
                 type: 'voice',
                 confidence: 0.85
               });
@@ -1170,12 +1207,19 @@ export class DiagnosticUIManager {
             }
           }, 600);
         }
-      }, symptoms.length * 1200 + 600);
+      }, delayMs);
     }
   }
 
-  // NEW: Enhanced Lab orders functionality with realistic lab workflow
+  // ENHANCEMENT FIRST: Enhanced Lab orders using AI case data when available
   private showLabOrders(): void {
+    // ENHANCEMENT: Track investigation with revelation service
+    const unlocked = this.revelationService.performInvestigation({
+      type: 'lab_order',
+      timestamp: Date.now()
+    })
+    console.log('🔓 Lab order unlocked:', unlocked)
+
     if (this.aiPanel) {
       this.aiPanel.addInsight({
         id: `lab_orders_${Date.now()}`,
@@ -1184,6 +1228,9 @@ export class DiagnosticUIManager {
         type: 'diagnostic',
         confidence: 0.9
       })
+
+      const aiLabResults = this.getLabResults()
+      const hasAILabs = Object.keys(aiLabResults).length > 0 && this.isAIGeneratedCase()
 
       // Simulate real lab ordering process with reduced timeouts
       setTimeout(() => {
@@ -1198,8 +1245,16 @@ export class DiagnosticUIManager {
         }
       }, 500);
 
-      // Add lab order options with realistic turnarounds - batched for performance
-      const labTests = [
+      // ENHANCEMENT: Use AI labs or fallback to static
+      const labTests = hasAILabs
+        ? Object.entries(aiLabResults).map(([name, result]) => ({
+            name,
+            rationale: "AI-generated test",
+            ordered: true,
+            turnaround: "30 min",
+            result: result as string
+          }))
+        : [
         { 
           name: "Complete Blood Count (CBC)", 
           rationale: "Rule out infection/inflammation", 
@@ -1275,21 +1330,35 @@ export class DiagnosticUIManager {
             confidence: 0.85
           });
 
-          // ENHANCEMENT: Add lab evidence
-          this.addEvidence({
-            id: `evidence_labs_esr_${Date.now()}`,
-            source: 'labs',
-            content: 'ESR: 18 mm/hr (Elevated - indicates inflammation)',
-            abnormal: true,
-            timestamp: Date.now()
-          })
-          this.addEvidence({
-            id: `evidence_labs_crp_${Date.now()}`,
-            source: 'labs',
-            content: 'CRP: 2.8 mg/L (Elevated - acute inflammatory marker)',
-            abnormal: true,
-            timestamp: Date.now()
-          })
+          // ENHANCEMENT: Add lab evidence from AI or static
+          if (hasAILabs) {
+            // Add AI-generated lab evidence
+            Object.entries(aiLabResults).slice(0, 3).forEach(([name, result], index) => {
+              this.addEvidence({
+                id: `evidence_labs_${Date.now()}_${index}`,
+                source: 'labs',
+                content: `${name}: ${result}`,
+                abnormal: (result as string).toLowerCase().includes('elevated') || (result as string).toLowerCase().includes('abnormal'),
+                timestamp: Date.now()
+              })
+            })
+          } else {
+            // Static fallback
+            this.addEvidence({
+              id: `evidence_labs_esr_${Date.now()}`,
+              source: 'labs',
+              content: 'ESR: 18 mm/hr (Elevated - indicates inflammation)',
+              abnormal: true,
+              timestamp: Date.now()
+            })
+            this.addEvidence({
+              id: `evidence_labs_crp_${Date.now()}`,
+              source: 'labs',
+              content: 'CRP: 2.8 mg/L (Elevated - acute inflammatory marker)',
+              abnormal: true,
+              timestamp: Date.now()
+            })
+          }
 
           // Mark labs as complete
           this.investigationPanel?.updateToolStatus('labs', 'complete')
@@ -1299,7 +1368,7 @@ export class DiagnosticUIManager {
               this.aiPanel.addInsight({
                 id: `lab_followup_${Date.now()}`,
                 timestamp: Date.now(),
-                content: "💡 <strong>Nurse Amy:</strong> Elevated inflammatory markers support inflammatory TMJ dysfunction. Consider anti-inflammatory therapy alongside jaw protection measures.",
+                content: this.getNurseAmyGuidance('labs'),
                 type: 'voice',
                 confidence: 0.9
               });
@@ -1328,8 +1397,15 @@ export class DiagnosticUIManager {
     }
   }
 
-  // NEW: Enhanced Imaging options functionality with realistic imaging workflow
+  // ENHANCEMENT FIRST: Enhanced Imaging using AI case data when available
   private showImagingOptions(): void {
+    // ENHANCEMENT: Track investigation with revelation service
+    const unlocked = this.revelationService.performInvestigation({
+      type: 'imaging',
+      timestamp: Date.now()
+    })
+    console.log('🔓 Imaging unlocked:', unlocked)
+
     if (this.aiPanel) {
       this.aiPanel.addInsight({
         id: `imaging_${Date.now()}`,
@@ -1338,6 +1414,9 @@ export class DiagnosticUIManager {
         type: 'diagnostic',
         confidence: 0.9
       })
+
+      const aiImagingFindings = this.getImagingFindings()
+      const hasAIImaging = Object.keys(aiImagingFindings).length > 0 && this.isAIGeneratedCase()
 
       // Simulate imaging ordering and preparation with reduced timeouts
       setTimeout(() => {
@@ -1352,8 +1431,16 @@ export class DiagnosticUIManager {
         }
       }, 500);
 
-      // Add realistic imaging studies with actual medical findings - optimized for performance
-      const imagingStudies = [
+      // ENHANCEMENT: Use AI imaging or fallback to static
+      const imagingStudies = hasAIImaging
+        ? Object.entries(aiImagingFindings).map(([name, finding]) => ({
+            name,
+            status: "completed",
+            finding: finding as string,
+            details: `${name} study`,
+            duration: "10 min"
+          }))
+        : [
         { 
           name: "Panoramic X-ray", 
           status: "in_progress", 
@@ -1426,12 +1513,45 @@ export class DiagnosticUIManager {
             confidence: 0.9
           });
           
+          // ENHANCEMENT: Add imaging evidence from AI or static
+          if (hasAIImaging) {
+            // Add AI-generated imaging evidence
+            Object.entries(aiImagingFindings).slice(0, 2).forEach(([name, finding], index) => {
+              this.addEvidence({
+                id: `evidence_imaging_${Date.now()}_${index}`,
+                source: 'imaging',
+                content: `${name}: ${finding}`,
+                abnormal: true,
+                timestamp: Date.now()
+              })
+            })
+          } else {
+            // Static fallback
+            this.addEvidence({
+              id: `evidence_imaging_tmj_${Date.now()}`,
+              source: 'imaging',
+              content: 'Panoramic X-ray: Bilateral TMJ degenerative changes with joint space narrowing',
+              abnormal: true,
+              timestamp: Date.now()
+            })
+            this.addEvidence({
+              id: `evidence_imaging_osteophytes_${Date.now()}`,
+              source: 'imaging',
+              content: 'TMJ Series: Subchondral sclerosis and possible osteophyte formation',
+              abnormal: true,
+              timestamp: Date.now()
+            })
+          }
+          
+          // Mark imaging as complete
+          this.investigationPanel?.updateToolStatus('imaging', 'complete')
+          
           setTimeout(() => {
             if (this.aiPanel) {
               this.aiPanel.addInsight({
                 id: `imaging_recommendation_${Date.now()}`,
                 timestamp: Date.now(),
-                content: "💡 <strong>Nurse Amy:</strong> Imaging confirms TMJ degenerative changes. Consider referral to oral maxillofacial surgery for advanced treatment options if conservative management fails.",
+                content: this.getNurseAmyGuidance('imaging'),
                 type: 'voice',
                 confidence: 0.95
               });
@@ -1605,6 +1725,11 @@ export class DiagnosticUIManager {
     // Store the current patient case for use in other methods
     this.currentPatientCase = patientCase;
     
+    // ENHANCEMENT: Load case into revelation service for progressive disclosure
+    if (patientCase && 'chiefComplaint' in patientCase) {
+      this.revelationService.loadPatientCase(patientCase as PatientCase)
+    }
+    
     const patientInfoContainer = document.getElementById('patient-info-container')
     if (!patientInfoContainer) return
 
@@ -1688,10 +1813,6 @@ export class DiagnosticUIManager {
   showConsultationButton(): void {
     // The consultation button has been removed from the main panel to reduce clutter
     // Consultation is now handled through the dedicated AI panel
-  }
-
-  showDiagnosisSubmission(): void {
-    // Diagnosis submission UI can be added here if needed
   }
 
   updateButtonCount(buttonId: string, count: number | string): void {
@@ -1868,6 +1989,14 @@ export class DiagnosticUIManager {
 
   // ENHANCEMENT: Add physical examination
   private showPhysicalExam(): void {
+    // ENHANCEMENT: Track investigation with revelation service
+    const unlocked = this.revelationService.performInvestigation({
+      type: 'exam',
+      subtype: 'musculoskeletal',
+      timestamp: Date.now()
+    })
+    console.log('🔓 Physical exam unlocked:', unlocked)
+
     if (this.aiPanel) {
       this.aiPanel.addInsight({
         id: `physical_exam_${Date.now()}`,
@@ -1898,6 +2027,19 @@ export class DiagnosticUIManager {
 
           // Mark physical exam as complete
           this.investigationPanel?.updateToolStatus('physical', 'complete')
+          
+          // Mention Investigation Panel
+          setTimeout(() => {
+            if (this.aiPanel) {
+              this.aiPanel.addInsight({
+                id: `physical_guidance_${Date.now()}`,
+                timestamp: Date.now(),
+                content: this.getNurseAmyGuidance('physical'),
+                type: 'voice',
+                confidence: 0.85
+              });
+            }
+          }, 600)
         }
       }, 1500)
     }
@@ -1991,6 +2133,58 @@ export class DiagnosticUIManager {
         }
       }, 300)
     }, 3000)
+  }
+
+  // DRY: Helper methods for accessing AI case data
+  private getHiddenElements(): any {
+    return (this.currentPatientCase as PatientCase)?.hiddenElements || {}
+  }
+
+  private getFullHistory(): string {
+    return this.getHiddenElements().fullHistory || ''
+  }
+
+  private getLabResults(): { [key: string]: string } {
+    return this.getHiddenElements().labResults || {}
+  }
+
+  private getImagingFindings(): { [key: string]: string } {
+    return this.getHiddenElements().imagingFindings || {}
+  }
+
+  private getPhysicalFindings(): string[] {
+    return this.getHiddenElements().physicalFindings || []
+  }
+
+  private isAIGeneratedCase(): boolean {
+    return !!(this.currentPatientCase as any)?.isAIGenerated || !!(this.currentPatientCase as any)?.aiGenerated
+  }
+
+  private getChiefComplaint(): string {
+    if ('chiefComplaint' in (this.currentPatientCase || {})) {
+      return (this.currentPatientCase as PatientCase).chiefComplaint
+    }
+    if ('patientInfo' in (this.currentPatientCase || {})) {
+      return (this.currentPatientCase as MedicalCase).patientInfo.chiefComplaint
+    }
+    return 'symptoms'
+  }
+
+  // DRY: Generate context-aware Nurse Amy guidance
+  private getNurseAmyGuidance(investigationType: 'interview' | 'labs' | 'imaging' | 'physical'): string {
+    const chiefComplaint = this.getChiefComplaint()
+    const isAI = this.isAIGeneratedCase()
+    
+    const guidanceMap: Record<string, string> = {
+      interview: isAI 
+        ? `Based on ${chiefComplaint}, I recommend focused physical examination. Check your Investigation Panel for all collected evidence!`
+        : `Based on the history, I recommend physical examination focusing on TMJ and palpation. Check your Investigation Panel at the top for all collected evidence!`,
+      labs: `Lab findings reveal important clues about ${chiefComplaint}. Your Investigation Panel now has multiple pieces of evidence - keep investigating!`,
+      imaging: `Imaging studies complete for ${chiefComplaint}. Great work! Review your Investigation Panel to see all evidence - you may be ready to diagnose soon.`,
+      physical: `Physical findings added to your Investigation Panel. Combine this with labs and imaging for a complete picture!`
+    }
+    
+    return `💡 <strong>Nurse Amy:</strong> ${guidanceMap[investigationType] || 'Continue your investigation.'}`
   }
 
   destroy(): void {

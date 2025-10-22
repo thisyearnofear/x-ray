@@ -13,8 +13,6 @@ export { ScanProgressSection } from './ScanProgressSection'
 export type { ScanProgressData } from './ScanProgressSection'
 export { ActionButtonsSection } from './ActionButtonsSection'
 export type { ActionButtonConfig } from './ActionButtonsSection'
-export { DiagnosisSubmissionSection } from './DiagnosisSubmissionSection'
-export type { DiagnosisSubmissionData } from './DiagnosisSubmissionSection'
 
 // AGGRESSIVE CONSOLIDATION: Replaced bloated files with focused components
 export { MobileResponsivePanel } from './MobileResponsivePanel'

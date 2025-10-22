@@ -668,6 +668,25 @@ export default class XRayEffect {
           condition.severity,
           condition.name
         );
+        
+        // ENHANCEMENT: Add to Investigation Panel evidence
+        const uiManager = this.diagnosticUI.getUIManager()
+        if (uiManager && uiManager.addDiscoveredCondition) {
+          uiManager.addDiscoveredCondition(conditionId)
+          
+          // Add evidence to Investigation Panel
+          const investigationPanel = uiManager.getInvestigationPanel()
+          if (investigationPanel) {
+            investigationPanel.addEvidence({
+              id: `evidence_scanning_${conditionId}_${Date.now()}`,
+              source: 'scanning',
+              content: `${condition.name} detected`,
+              abnormal: condition.severity !== 'low',
+              timestamp: Date.now(),
+              relatedCondition: conditionId
+            })
+          }
+        }
       }
       
       // ENHANCEMENT: Report discovery to scan feedback system for effects

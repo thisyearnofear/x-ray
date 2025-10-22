@@ -91,10 +91,6 @@ export class DiagnosticUIFacade {
     this.uiManager.showConsultationButton()
   }
 
-  showDiagnosisSubmission(): void {
-    this.uiManager.showDiagnosisSubmission()
-  }
-
   updateButtonCount(buttonId: string, count: number | string): void {
     this.uiManager.updateButtonCount(buttonId, count)
   }

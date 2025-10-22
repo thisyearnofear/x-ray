@@ -7,6 +7,7 @@
  */
 
 import { colors, spacing, typography, borders, effects, zIndex } from '../../../styles/design-tokens'
+import { MEDICAL_CONDITIONS } from '../../medical/medical-data'
 
 export interface Evidence {
   id: string
@@ -314,20 +315,66 @@ export class InvestigationPanel {
       `
     }
 
-    // This will be populated with actual conditions from the game
+    // ENHANCEMENT: Populate with discovered conditions from game state
+    const conditionsHTML = Array.from(this.discoveredConditions).map(conditionId => {
+      const condition = MEDICAL_CONDITIONS.find(c => c.id === conditionId)
+      if (!condition) return ''
+      
+      return `
+        <div style="
+          padding: ${spacing.md};
+          margin-bottom: ${spacing.sm};
+          background: ${colors.background.panelLight};
+          border: ${borders.width.thin} solid ${colors.border.primary};
+          border-radius: ${borders.radius.md};
+          display: flex;
+          align-items: center;
+          gap: ${spacing.md};
+        ">
+          <input 
+            type="checkbox" 
+            name="diagnosis" 
+            value="${condition.id}"
+            id="diagnosis_${condition.id}"
+            style="width: 20px; height: 20px; cursor: pointer;"
+          />
+          <label for="diagnosis_${condition.id}" style="flex: 1; cursor: pointer;">
+            <div style="font-weight: ${typography.fontWeight.bold}; color: ${colors.primary.base};">
+              ${condition.name}
+            </div>
+            <div style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.base}; margin-top: ${spacing.xs};">
+              ${condition.description}
+            </div>
+          </label>
+          <span style="
+            padding: ${spacing.xs} ${spacing.sm};
+            background: ${this.getSeverityColor(condition.severity)};
+            border-radius: ${borders.radius.sm};
+            font-size: ${typography.fontSize.xs};
+            font-weight: ${typography.fontWeight.bold};
+            color: ${colors.neutral.black};
+          ">
+            ${condition.severity.toUpperCase()}
+          </span>
+        </div>
+      `
+    }).join('')
+
     return `
       <div class="diagnosis-form">
         <div style="margin-bottom: ${spacing.md}; color: ${colors.neutral.light};">
-          Select all conditions that apply based on your investigation:
+          ${this.discoveredConditions.size > 0 
+            ? `Select all conditions that apply based on your investigation (${this.discoveredConditions.size} discovered):`
+            : 'Scan the patient to discover conditions before diagnosing.'}
         </div>
-        <div id="diagnosis-conditions-list">
-          <!-- Conditions will be dynamically populated by DiagnosticUIManager -->
+        <div id="diagnosis-conditions-list" style="max-height: 400px; overflow-y: auto;">
+          ${conditionsHTML || '<div style="text-align: center; padding: ${spacing.md}; color: ${colors.neutral.base};">No conditions discovered yet. Continue scanning and investigating.</div>'}
         </div>
         <div style="display: flex; gap: ${spacing.md}; margin-top: ${spacing.lg};">
           <button id="review-evidence-btn" style="${this.getSecondaryButtonStyles()}">
             📋 Review All Evidence
           </button>
-          <button id="submit-diagnosis-btn" style="${this.getPrimaryButtonStyles()}">
+          <button id="submit-diagnosis-btn" style="${this.getPrimaryButtonStyles()}" ${this.discoveredConditions.size === 0 ? 'disabled' : ''}>
             ✓ SUBMIT DIAGNOSIS
           </button>
         </div>
@@ -361,6 +408,7 @@ export class InvestigationPanel {
   public addDiscoveredCondition(conditionId: string): void {
     this.discoveredConditions.add(conditionId)
     this.updateReadyToDiagnoseState()
+    this.render() // Re-render to update diagnosis tab
   }
 
   public setDiagnosisConditions(conditions: string[]): void {
@@ -425,6 +473,15 @@ export class InvestigationPanel {
       consultation: '👩‍⚕️'
     }
     return icons[source] || '📌'
+  }
+
+  private getSeverityColor(severity: 'low' | 'medium' | 'high'): string {
+    const severityColors: Record<string, string> = {
+      low: colors.accent.base,
+      medium: '#ffaa00',
+      high: '#ff6b6b'
+    }
+    return severityColors[severity] || colors.neutral.base
   }
 
   private getToolButtonLabel(tool: InvestigationTool): string {

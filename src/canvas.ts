@@ -878,6 +878,16 @@ export default class Canvas {
     const uiManager = this.diagnosticUI?.getUIManager();
     if (!uiManager) return;
 
+    // ENHANCEMENT: Auto-trigger Investigation Panel at 60 seconds
+    if (milestone === 'diagnosis_preparation') {
+      const investigationPanel = uiManager.getInvestigationPanel();
+      if (investigationPanel) {
+        investigationPanel.expand();
+        investigationPanel.switchTab('diagnosis');
+        this.audioManager?.showFeedback('📋 Investigation Panel opened - time to submit your diagnosis!', 'info');
+      }
+    }
+
     // Tool unlocking animations
     if (actions.includes('unlock_patient_interview')) {
       uiManager.unlockInvestigationTool('patient_interview');

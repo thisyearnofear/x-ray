@@ -104,7 +104,7 @@ export class TutorialStepService {
         title: 'Submit Diagnosis',
         description: 'When ready, submit your diagnosis to complete the case and earn achievements',
         action: 'diagnosis-submit',
-        targetElement: '.diagnosis-submission-section',
+        targetElement: '.investigation-panel',
         tooltipMessage: 'Submit when you have enough evidence',
         autoProgress: false,
         duration: 4000
