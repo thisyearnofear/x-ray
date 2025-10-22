@@ -247,8 +247,6 @@ export default class XRayEffect {
   private hospitalBudget: number = 0.5; // Starting budget (free mode) - 0.5 MON
   private caseEarnings: number = 0;
   private potentialBonus: number = 0;
-  private budgetDisplay: HTMLElement | null = null;
-  private earningsDisplay: HTMLElement | null = null;
   private currentCaseProfile!: CaseProfile;
 
   // HACKATHON: MetaMask Smart Accounts integration
@@ -294,6 +292,12 @@ export default class XRayEffect {
     this.createSkeleton()
     this.initializeMedicalMarkers()
     this.instructionsPanel = new InstructionsPanel()
+
+    // Add control handlers to the instructions panel
+    this.instructionsPanel.addControlHandlers(
+      () => this.showCaseSelectionHub(),
+      () => this.showTreatmentOptions()
+    );
 
     // ENHANCEMENT FIRST: Pass system references to DiagnosticUIFacade
     this.diagnosticUI = new DiagnosticUIFacade({
@@ -605,14 +609,40 @@ export default class XRayEffect {
     this.medicalMarkers.clear()
     this.scanProgress.clear()
 
-    // PERFORMANT: Use consolidated condition filtering
-    const conditions = getConditionsForModel(this.currentModel)
-    conditions.forEach(condition => {
-      if (condition.requiredModel === this.currentModel ||
-        condition.visibleIn.some(part => this.visibleAnatomy.includes(part))) {
-        this.createConditionMarker(condition)
-        this.scanProgress.set(condition.id, 0) // Initialize scan progress
+    // ENHANCEMENT FIRST: Only show markers for conditions relevant to current patient case
+    let conditionsToDisplay: any[] = [];
+    
+    // Get patient case conditions if available
+    if (this.gameManager) {
+      const gameState = this.gameManager.getGameState();
+      const patientCase = gameState.patientCase;
+      
+      if (patientCase && patientCase.conditions) {
+        // Filter conditions to only those relevant to the current patient case
+        const caseConditions = patientCase.conditions;
+        
+        // Match case conditions with our medical conditions database
+        conditionsToDisplay = MEDICAL_CONDITIONS.filter(condition => 
+          caseConditions.includes(condition.id) &&
+          (condition.requiredModel === this.currentModel ||
+           condition.visibleIn.some(part => this.visibleAnatomy.includes(part)))
+        );
       }
+    }
+    
+    // Fallback to all conditions if no patient case or debugging
+    if (conditionsToDisplay.length === 0) {
+      // PERFORMANT: Use consolidated condition filtering
+      const allConditions = getConditionsForModel(this.currentModel)
+      conditionsToDisplay = allConditions.filter(condition => {
+        return condition.requiredModel === this.currentModel ||
+          condition.visibleIn.some(part => this.visibleAnatomy.includes(part));
+      });
+    }
+
+    conditionsToDisplay.forEach(condition => {
+      this.createConditionMarker(condition)
+      this.scanProgress.set(condition.id, 0) // Initialize scan progress
     })
 
     console.log(`Updated markers for ${this.currentModel} model: ${this.medicalMarkers.size} conditions`)
@@ -952,48 +982,6 @@ export default class XRayEffect {
     achievementPreview.addEventListener('click', () => this.showCaseSelectionHub());
     document.body.appendChild(achievementPreview);
 
-    // Create case hub access button (top center)
-    const caseHubButton = document.createElement('div');
-    caseHubButton.id = 'case-hub-button';
-    caseHubButton.style.cssText = `
-      position: fixed;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: linear-gradient(135deg, #3498db, #2980b9);
-      color: white;
-      padding: 10px 20px;
-      border-radius: 25px;
-      font-family: 'Arial', sans-serif;
-      font-size: 14px;
-      font-weight: bold;
-      box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
-      cursor: pointer;
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.3s ease;
-    `;
-
-    caseHubButton.innerHTML = `
-      <span style="font-size: 16px;">🏥</span>
-      <span>Case Hub</span>
-    `;
-
-    caseHubButton.addEventListener('mouseenter', () => {
-      caseHubButton.style.transform = 'translateX(-50%) translateY(-2px)';
-      caseHubButton.style.boxShadow = '0 6px 20px rgba(52, 152, 219, 0.4)';
-    });
-
-    caseHubButton.addEventListener('mouseleave', () => {
-      caseHubButton.style.transform = 'translateX(-50%) translateY(0)';
-      caseHubButton.style.boxShadow = '0 4px 15px rgba(52, 152, 219, 0.3)';
-    });
-
-    caseHubButton.addEventListener('click', () => this.showCaseSelectionHub());
-    document.body.appendChild(caseHubButton);
-
     // HACKATHON: Add AI delegation setup button
     const aiDelegateButton = document.createElement('div');
     aiDelegateButton.id = 'ai-delegation-button';
@@ -1327,88 +1315,19 @@ export default class XRayEffect {
     }, 3000);
   }
 
-  // ECONOMIC SYSTEM: Create budget and earnings displays
+  // ECONOMIC SYSTEM: Initialize economic displays (now in instructions panel)
   createEconomicDisplays(): void {
-    // Budget display (bottom left)
-    this.budgetDisplay = document.createElement('div');
-    this.budgetDisplay.className = 'economic-display budget-display';
-    this.budgetDisplay.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      background: linear-gradient(135deg, #2c3e50, #34495e);
-      color: white;
-      padding: 12px 16px;
-      border-radius: 20px;
-      font-family: 'Arial', sans-serif;
-      font-size: 14px;
-      font-weight: bold;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    `;
-
-    this.budgetDisplay.innerHTML = `
-      <span style="font-size: 16px;">🏥</span>
-      <span>Budget: <span id="budget-amount">${this.hospitalBudget}</span> MON</span>
-    `;
-
-    document.body.appendChild(this.budgetDisplay);
-
-    // Earnings display (bottom right, above progress ring)
-    this.earningsDisplay = document.createElement('div');
-    this.earningsDisplay.className = 'economic-display earnings-display';
-    this.earningsDisplay.style.cssText = `
-      position: fixed;
-      bottom: 120px;
-      right: 20px;
-      background: linear-gradient(135deg, #27ae60, #2ecc71);
-      color: white;
-      padding: 12px 16px;
-      border-radius: 20px;
-      font-family: 'Arial', sans-serif;
-      font-size: 14px;
-      font-weight: bold;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      opacity: 0.9;
-    `;
-
-    this.earningsDisplay.innerHTML = `
-      <span style="font-size: 16px;">💰</span>
-      <span>Earnings: <span id="earnings-amount">${this.caseEarnings}</span> MON</span>
-      <span style="font-size: 12px; opacity: 0.8;">(Potential: <span id="potential-bonus">${this.potentialBonus}</span> MON)</span>
-    `;
-
-    document.body.appendChild(this.earningsDisplay);
+    // Economic displays are now integrated into the instructions panel
+    // Update the displays with initial values
+    this.updateEconomicDisplays();
   }
 
   updateEconomicDisplays(): void {
-    if (this.budgetDisplay) {
-      const budgetAmount = this.budgetDisplay.querySelector('#budget-amount');
-      if (budgetAmount) budgetAmount.textContent = this.hospitalBudget.toString();
-
-      // Color coding for budget (in MON)
-      if (this.hospitalBudget < 0.1) {
-        this.budgetDisplay.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
-      } else if (this.hospitalBudget < 0.5) {
-        this.budgetDisplay.style.background = 'linear-gradient(135deg, #f39c12, #e67e22)';
-      } else {
-        this.budgetDisplay.style.background = 'linear-gradient(135deg, #2c3e50, #34495e)';
-      }
-    }
-
-    if (this.earningsDisplay) {
-      const earningsAmount = this.earningsDisplay.querySelector('#earnings-amount');
-      const potentialBonus = this.earningsDisplay.querySelector('#potential-bonus');
-
-      if (earningsAmount) earningsAmount.textContent = this.caseEarnings.toString();
-      if (potentialBonus) potentialBonus.textContent = this.potentialBonus.toString();
+    // Update economic displays through instructions panel
+    if (this.instructionsPanel) {
+      this.instructionsPanel.updateEarnings(this.caseEarnings, this.potentialBonus);
+      // Pass current budget (remaining) and starting budget (total)
+      this.instructionsPanel.updateBudget(this.hospitalBudget, this.currentCaseProfile?.budget || 0.5);
     }
   }
 

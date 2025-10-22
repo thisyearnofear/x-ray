@@ -235,8 +235,8 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
 
       <div style={{ marginTop: '15px', fontSize: '11px', opacity: 0.7, lineHeight: '1.4' }}>
         {isConnected
-          ? 'Connected - Free AI consultations enabled! No transaction fees required.'
-          : 'Connect to unlock free AI medical consultations (no gas fees)'
+          ? 'Connected - Gasless transactions enabled! No transaction fees required.'
+          : 'Connect to unlock gasless transactions (no gas fees)'
         }
       </div>
     </div>

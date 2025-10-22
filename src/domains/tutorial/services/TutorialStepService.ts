@@ -39,7 +39,7 @@ export class TutorialStepService {
       {
         id: 'wallet-connection',
         title: 'Connect Your Wallet',
-        description: 'Connect your wallet to save achievements and access AI consultations',
+        description: 'Connect your wallet to save achievements and enable gasless transactions',
         action: 'wallet-connect',
         targetElement: '.wallet-connection-panel',
         tooltipMessage: 'Click "Connect" to enable all features',
@@ -64,20 +64,12 @@ export class TutorialStepService {
         duration: 4000
       },
       {
-        id: 'scan-demo',
-        title: 'Scanning Demo',
-        description: 'Watch as we demonstrate the scanning process',
-        action: 'scan-demo',
-        autoProgress: true,
-        duration: 3000
-      },
-      {
-        id: 'scan-progress',
-        title: 'Scan Progress',
-        description: 'Continue scanning until progress reaches 100%',
-        action: 'scan-progress-100',
+        id: 'condition-discovery',
+        title: 'Condition Discovery',
+        description: 'Click on highlighted areas to discover medical conditions',
+        action: 'click-condition',
         autoProgress: false,
-        duration: 5000
+        duration: 4000
       },
       {
         id: 'investigation-tools',
@@ -108,34 +100,6 @@ export class TutorialStepService {
         tooltipMessage: 'Submit when you have enough evidence',
         autoProgress: false,
         duration: 4000
-      },
-      {
-        id: 'condition-discovery',
-        title: 'Condition Discovery',
-        description: 'Click on highlighted areas to discover medical conditions',
-        action: 'click-condition',
-        autoProgress: false,
-        duration: 4000
-      },
-      {
-        id: 'investigation-tools',
-        title: 'Investigation Tools',
-        description: 'Use these tools to gather more information about the patient.',
-        action: 'show-investigation-tools',
-        targetElement: '#investigation-tools-panel',
-        autoProgress: false,
-        duration: 4000,
-        tooltipMessage: 'This panel contains all the tools you need to investigate the case.'
-      },
-      {
-        id: 'voice-consultation',
-        title: 'Voice Consultation',
-        description: 'Click the microphone to consult with Nurse Amy, your AI assistant.',
-        action: 'show-voice-consultation',
-        targetElement: '#voice-toggle-btn',
-        autoProgress: false,
-        duration: 4000,
-        tooltipMessage: 'Click here to talk to Nurse Amy.'
       },
       {
         id: 'tutorial-complete',

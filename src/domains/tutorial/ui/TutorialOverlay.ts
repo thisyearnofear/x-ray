@@ -288,7 +288,7 @@ export class TutorialOverlay {
             color: ${colors.neutral.light};
             font-size: ${typography.fontSize.sm};
           ">
-            1 / 8
+            1 / 9
           </div>
         </div>
 

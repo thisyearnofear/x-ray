@@ -1260,7 +1260,7 @@ export default class Canvas {
             margin: ${spacing.md} 0 0 0;
             opacity: 0.8;
             font-size: ${typography.fontSize.lg};
-          ">Excellent diagnostic work completed</p>
+          ">Great diagnostic effort! Let's review your performance.</p>
         </div>
 
         <!-- Stats Grid -->
@@ -1329,11 +1329,66 @@ export default class Canvas {
             margin: 0 0 ${spacing.md} 0;
             color: ${colors.primary.base};
             font-size: ${typography.fontSize.lg};
-          ">📊 Performance Summary</h3>
+          ">📊 Performance Insights</h3>
           <div style="font-size: ${typography.fontSize.sm}; line-height: 1.6;">
             <div>• <strong>Accuracy:</strong> ${Math.round(stats.accuracy * 100)}% - ${stats.accuracy > 0.7 ? 'Excellent diagnostic precision!' : 'Keep practicing for better accuracy'}</div>
             <div>• <strong>Efficiency:</strong> ${Math.round(stats.efficiency * 100)}% - ${stats.efficiency > 0.6 ? 'Great time management!' : 'Consider faster scanning techniques'}</div>
             <div>• <strong>Difficulty:</strong> ${stats.difficulty.charAt(0).toUpperCase() + stats.difficulty.slice(1)} - ${stats.difficulty === 'hard' ? 'Impressive challenge conquered!' : stats.difficulty === 'medium' ? 'Solid performance!' : 'Great foundation building!'}</div>
+            <div>• <strong>Conditions Found:</strong> ${stats.conditionsFound} - ${stats.conditionsFound > 2 ? 'Comprehensive diagnostic work!' : 'Keep exploring all possible conditions'}</div>
+          </div>
+        </div>
+        <!-- Personalized Recommendations -->
+        <div style="
+          background: rgba(100, 100, 255, 0.1);
+          border: ${borders.width.thin} solid rgba(100, 100, 255, 0.3);
+          border-radius: ${borders.radius.lg};
+          padding: ${spacing.lg};
+          margin-bottom: ${spacing.xl};
+          text-align: left;
+        ">
+          <h3 style="
+            margin: 0 0 ${spacing.md} 0;
+            color: #6464ff;
+            font-size: ${typography.fontSize.lg};
+          ">🎯 Personalized Recommendations</h3>
+          <div style="font-size: ${typography.fontSize.sm}; line-height: 1.6;">
+            ${stats.conditionsFound === 0 ? 
+              `<div>• <strong>🔍 Scanning:</strong> Focus on glowing markers first - they indicate high-probability areas</div>
+               <div>• <strong>🖱️ Investigation:</strong> Try using the investigation tools panel for detailed analysis</div>
+               <div>• <strong>🎙️ AI Consultation:</strong> Press 'V' to get expert diagnostic guidance from Nurse Amy</div>` : 
+              stats.accuracy < 0.5 ? 
+              `<div>• <strong>🖱️ Investigation:</strong> Use investigation tools to confirm suspected conditions before submitting</div>
+               <div>• <strong>🎙️ AI Consultation:</strong> Get expert guidance from Nurse Amy to improve diagnostic accuracy</div>
+               <div>• <strong>📋 Evidence:</strong> Collect more evidence before finalizing your diagnosis</div>` : 
+              stats.efficiency < 0.5 ? 
+              `<div>• <strong>⏰ Time Management:</strong> Prioritize high-probability areas early in the case</div>
+               <div>• <strong>🖱️ Quick Tools:</strong> Use keyboard shortcuts: [C] for conditions, [V] for voice consultation</div>
+               <div>• <strong>🎙️ AI Guidance:</strong> Get rapid diagnostic tips from Nurse Amy</div>` : 
+              `<div>• <strong>🏆 Great Work:</strong> You're mastering the diagnostic process!</div>
+               <div>• <strong>📈 Next Challenge:</strong> Try a more difficult case to continue improving</div>
+               <div>• <strong>💎 Premium:</strong> Unlock unlimited AI-generated cases for varied practice</div>`
+            }
+          </div>
+        </div>
+        <!-- Feature Discovery -->
+        <div style="
+          background: rgba(255, 100, 100, 0.1);
+          border: ${borders.width.thin} solid rgba(255, 100, 100, 0.3);
+          border-radius: ${borders.radius.lg};
+          padding: ${spacing.lg};
+          margin-bottom: ${spacing.xl};
+          text-align: left;
+        ">
+          <h3 style="
+            margin: 0 0 ${spacing.md} 0;
+            color: #ff6464;
+            font-size: ${typography.fontSize.lg};
+          ">🌟 Features You Might Have Missed</h3>
+          <div style="font-size: ${typography.fontSize.sm}; line-height: 1.6;">
+            <div>• <strong>🖱️ Investigation Tools:</strong> Click the toolkit icon to access advanced diagnostic tools</div>
+            <div>• <strong>🎙️ Voice Consultation:</strong> Press 'V' to consult Nurse Amy for expert guidance</div>
+            <div>• <strong>⌨️ Keyboard Shortcuts:</strong> [C] toggles conditions, [E] expands view</div>
+            <div>• <strong>📊 Progress Tracking:</strong> Watch the progress ring while scanning conditions</div>
           </div>
         </div>
 
@@ -1352,7 +1407,7 @@ export default class Canvas {
             transition: all 0.3s ease;
             width: 100%;
           ">
-            🔄 Try Same Case Again
+            🔄 Practice This Case Again
           </button>
 
           ${!isPremium ? `

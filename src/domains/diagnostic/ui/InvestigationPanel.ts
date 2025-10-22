@@ -145,8 +145,8 @@ export class InvestigationPanel {
       top: ${spacing.lg};
       left: 50%;
       transform: translateX(-50%);
-      width: 80%;
-      max-width: 800px;
+      width: 70%;
+      max-width: 650px;
       z-index: ${zIndex.panel};
       transition: all 0.3s ease;
     `
@@ -603,7 +603,7 @@ export class InvestigationPanel {
       background: ${colors.background.panel};
       border-left: ${borders.width.base} solid ${colors.border.primary};
       border-right: ${borders.width.base} solid ${colors.border.primary};
-      padding: ${spacing.xs} ${spacing.md};
+      padding: ${spacing.xs} ${spacing.sm};
     `
   }
 
@@ -612,10 +612,10 @@ export class InvestigationPanel {
       background: ${isActive ? colors.background.primaryGlow : 'transparent'};
       color: ${isActive ? colors.primary.base : colors.neutral.base};
       border: ${borders.width.thin} solid ${isActive ? colors.border.primary : 'transparent'};
-      padding: ${spacing.sm} ${spacing.md};
+      padding: ${spacing.xs} ${spacing.sm};
       border-radius: ${borders.radius.md};
       cursor: pointer;
-      font-size: ${typography.fontSize.sm};
+      font-size: ${typography.fontSize.xs};
       font-weight: ${isActive ? typography.fontWeight.bold : typography.fontWeight.normal};
       transition: all 0.2s ease;
     `
@@ -627,7 +627,7 @@ export class InvestigationPanel {
       border: ${borders.width.base} solid ${colors.border.primary};
       border-bottom-left-radius: ${borders.radius.lg};
       border-bottom-right-radius: ${borders.radius.lg};
-      padding: ${spacing.md};
+      padding: ${spacing.sm};
       max-height: 60vh;
       overflow-y: auto;
       box-shadow: ${effects.shadow.md};
@@ -640,8 +640,8 @@ export class InvestigationPanel {
       background: ${colors.background.panelLight};
       border: ${borders.width.thin} solid ${status === 'complete' ? colors.border.primary : colors.border.neutral};
       border-radius: ${borders.radius.md};
-      padding: ${spacing.md};
-      margin-bottom: ${spacing.sm};
+      padding: ${spacing.sm};
+      margin-bottom: ${spacing.xs};
       transition: all 0.2s ease;
     `
   }
@@ -652,7 +652,7 @@ export class InvestigationPanel {
       background: ${isDisabled ? colors.background.panelLight : colors.accent.base};
       color: ${colors.neutral.black};
       border: none;
-      padding: ${spacing.sm} ${spacing.md};
+      padding: ${spacing.xs} ${spacing.sm};
       border-radius: ${borders.radius.md};
       cursor: ${isDisabled ? 'not-allowed' : 'pointer'};
       font-size: ${typography.fontSize.xs};

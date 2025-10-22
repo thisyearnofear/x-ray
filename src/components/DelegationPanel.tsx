@@ -32,7 +32,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
 
     try {
       await createMedicalConsultationDelegation(delegateAddress as `0x${string}`)
-      setSuccess('🎙️ AI Consultation access enabled! Voice AI can now assist you.')
+      setSuccess('🔐 Gasless consultation permissions granted! Your delegate can now assist with gasless transactions.')
       setDelegateAddress('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to enable delegation')
@@ -50,7 +50,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
 
     try {
       await createDataSharingDelegation(delegateAddress as `0x${string}`, ['diagnosis', 'treatment', 'progress', 'ai-insights'])
-      setSuccess('📊 Medical AI data sharing enabled! Your diagnostic history is now accessible.')
+      setSuccess('📊 Data sharing permissions granted! Your delegate can now access specified medical data.')
       setDelegateAddress('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to share medical data')
@@ -83,7 +83,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
         marginBottom: '20px'
       }}>
         <h3 style={{ margin: 0, fontSize: '18px', color: '#00d4ff' }}>
-          🔐 AI Consultation Permissions
+          🔐 Gasless Transaction Permissions
         </h3>
         <button 
           onClick={onClose}
@@ -106,7 +106,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
       </div>
       
       <p style={{ margin: '0 0 25px 0', fontSize: '13px', opacity: 0.8, textAlign: 'center', lineHeight: '1.4' }}>
-        Grant AI assistants permission to provide medical consultations
+        Grant permissions for gasless transactions and data sharing
       </p>
 
       {!walletAddress && (
@@ -164,7 +164,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
               fontWeight: 'bold',
               color: '#00d4ff'
             }}>
-              🤖 AI Assistant Address:
+              🤖 Delegate Address:
             </label>
             <input
               type="text"
@@ -183,7 +183,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
               }}
             />
             <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '5px' }}>
-              Address of the AI system that will provide consultations
+              Address of the delegate that will perform gasless transactions
             </div>
           </div>
 
@@ -206,7 +206,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
                 opacity: (!walletAddress || !delegateAddress) ? 0.5 : 1
               }}
             >
-              {isDelegating ? '🔄 Setting up...' : '🎙️ Enable Gasless AI'}
+              {isDelegating ? '🔄 Setting up...' : '🔐 Enable Gasless Transactions'}
             </button>
 
             <button
@@ -239,7 +239,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
             lineHeight: '1.4'
           }}>
             <div style={{ marginBottom: '8px' }}>
-              🎯 <strong>Gasless AI Consultations:</strong> AI can respond without you paying gas fees
+              🎯 <strong>Gasless Transactions:</strong> Delegates can perform actions without you paying gas fees
             </div>
             <div>
               🔒 <strong>Controlled Access:</strong> You maintain full control over permissions
