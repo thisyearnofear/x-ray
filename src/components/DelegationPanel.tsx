@@ -5,16 +5,30 @@ import { useWeb3 } from '../../hooks/web3/useWeb3'
 
 interface DelegationPanelProps {
   walletAddress: string | null
+  isConnected?: boolean
+  gaslessEnabled?: boolean
   isVisible: boolean
   onClose: () => void
 }
 
 export const DelegationPanel: React.FC<DelegationPanelProps> = ({
-  walletAddress,
+  walletAddress: propWalletAddress, // Renamed to indicate it's a prop
+  isConnected = false,
+  gaslessEnabled = false,
   isVisible,
   onClose
 }) => {
-  const { createMedicalConsultationDelegation, createDataSharingDelegation, error: web3Error } = useWeb3()
+  const { 
+    createMedicalConsultationDelegation, 
+    createDataSharingDelegation, 
+    error: web3Error,
+    address: contextWalletAddress,
+    isConnected: contextIsConnected
+  } = useWeb3()
+  
+  // Use the context wallet address instead of prop to ensure consistency
+  const effectiveWalletAddress = contextWalletAddress || propWalletAddress
+  const effectiveIsConnected = contextIsConnected || isConnected
   const [delegateAddress, setDelegateAddress] = useState('')
   const [isDelegating, setIsDelegating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,7 +38,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
   if (!isVisible) return null
 
   const handleEnableConsultationDelegation = async () => {
-    if (!walletAddress || !delegateAddress) return
+    if (!effectiveWalletAddress || !delegateAddress) return
 
     setIsDelegating(true)
     setError(null)
@@ -42,7 +56,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
   }
 
   const handleShareMedicalData = async () => {
-    if (!walletAddress || !delegateAddress) return
+    if (!effectiveWalletAddress || !delegateAddress) return
 
     setIsDelegating(true)
     setError(null)
@@ -109,7 +123,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
         Grant permissions for gasless transactions and data sharing
       </p>
 
-      {!walletAddress && (
+      {!effectiveWalletAddress && (
         <div style={{
           color: '#ff6b6b',
           fontSize: '13px',
@@ -154,7 +168,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
         </div>
       )}
 
-      {walletAddress && (
+      {effectiveWalletAddress && (
         <>
           <div style={{ marginBottom: '20px' }}>
             <label style={{
@@ -190,7 +204,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
           <div style={{ display: 'flex', gap: '15px' }}>
             <button
               onClick={handleEnableConsultationDelegation}
-              disabled={!walletAddress || !delegateAddress || isDelegating}
+              disabled={!effectiveWalletAddress || !delegateAddress || isDelegating}
               style={{
                 flex: 1,
                 background: isDelegating ? 'rgba(85, 85, 85, 0.8)' : 'linear-gradient(135deg, #4ecdc4, #44a08d)',
@@ -203,7 +217,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
                 fontWeight: 'bold',
                 transition: 'all 0.3s ease',
                 boxShadow: isDelegating ? 'none' : '0 4px 15px rgba(78, 205, 196, 0.3)',
-                opacity: (!walletAddress || !delegateAddress) ? 0.5 : 1
+                opacity: (!effectiveWalletAddress || !delegateAddress) ? 0.5 : 1
               }}
             >
               {isDelegating ? '🔄 Setting up...' : '🔐 Enable Gasless Transactions'}
@@ -211,7 +225,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
 
             <button
               onClick={handleShareMedicalData}
-              disabled={!walletAddress || !delegateAddress || isDelegating}
+              disabled={!effectiveWalletAddress || !delegateAddress || isDelegating}
               style={{
                 flex: 1,
                 background: isDelegating ? 'rgba(85, 85, 85, 0.8)' : 'linear-gradient(135deg, #f39c12, #e67e22)',
@@ -224,7 +238,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
                 fontWeight: 'bold',
                 transition: 'all 0.3s ease',
                 boxShadow: isDelegating ? 'none' : '0 4px 15px rgba(243, 156, 18, 0.3)',
-                opacity: (!walletAddress || !delegateAddress) ? 0.5 : 1
+                opacity: (!effectiveWalletAddress || !delegateAddress) ? 0.5 : 1
               }}
             >
               📊 Share Progress

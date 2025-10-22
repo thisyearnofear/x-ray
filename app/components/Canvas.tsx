@@ -311,6 +311,8 @@ const CanvasComponent = () => {
           
           <DelegationPanel
             walletAddress={walletAddress || null}
+            isConnected={isConnected}
+            gaslessEnabled={true} // Since we know the smart account is active as shown in SmartAccountHUD
             isVisible={showDelegationPanel}
             onClose={() => setShowDelegationPanel(false)}
           />
