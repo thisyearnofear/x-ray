@@ -12,6 +12,7 @@ import { useWeb3 } from '../../hooks/web3/useWeb3';
 import { BudgetHUD } from '../../src/components/BudgetHUD';
 import { CaseSelectionHub } from '../../src/components/CaseSelectionHub';
 import { TreatmentMenu } from '../../src/components/TreatmentMenu';
+import { SmartAccountHUD } from '../../src/domains/web3/SmartAccountHUD';
 
 const CanvasComponent = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -42,7 +43,10 @@ const CanvasComponent = () => {
   const [executedActions, setExecutedActions] = useState<string[]>([]);
 
   // Web3 integration
-  const { isConnected, address: walletAddress, web3Facade } = useWeb3();
+  const { isConnected, address: walletAddress, web3Facade, getMonBalance } = useWeb3();
+  
+  // State for MON balance
+  const [monBalance, setMonBalance] = useState<string>('0.00');
 
   // ENHANCEMENT FIRST: Get smart account address when wallet connects
   useEffect(() => {
@@ -52,8 +56,13 @@ const CanvasComponent = () => {
       if (smartAccount?.address) {
         setSmartAccountAddress(smartAccount.address)
       }
+      
+      // Fetch MON balance when wallet is connected
+      getMonBalance()
+        .then(balance => setMonBalance(balance.toFixed(4)))
+        .catch(() => setMonBalance('0.00'))
     }
-  }, [isConnected, walletAddress, web3Facade])
+  }, [isConnected, walletAddress, web3Facade, getMonBalance])
 
   // ENHANCEMENT FIRST: Show onboarding on first wallet connect (once per session)
   useEffect(() => {
@@ -257,6 +266,22 @@ const CanvasComponent = () => {
 
           <WalletConnection
             onConnected={() => {}} // Handled by useWeb3 hook internally
+          />
+          
+          {/* ENHANCEMENT FIRST: Smart Account HUD showing persistent status and balance */}
+          <SmartAccountHUD 
+            smartAccountAddress={smartAccountAddress || undefined}
+            walletAddress={walletAddress || undefined}
+            monBalance={monBalance}
+            activeDelegations={0} // TODO: Implement delegation count
+            onManagePermissions={() => {
+              // Trigger delegation panel to open
+              document.dispatchEvent(new CustomEvent('showDelegationPanel'));
+            }}
+            onViewActivity={() => {
+              // TODO: Implement activity view
+              console.log('Viewing activity...');
+            }}
           />
           
           {/* ENHANCEMENT FIRST: Post-Login Onboarding with AI case choice */}

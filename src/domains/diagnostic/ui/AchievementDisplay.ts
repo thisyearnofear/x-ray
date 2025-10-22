@@ -18,16 +18,24 @@ export interface AchievementData {
 }
 
 export interface PerformanceMetrics {
-  accuracy: number
-  efficiency: number
-  streak: number
-  achievementsCount: number
+accuracy: number
+efficiency: number
+streak: number
+discoveryStreak?: number
+achievementsCount: number
   totalAchievements: number
 }
 
 export class AchievementDisplay {
   private element: HTMLElement | null = null
   private isMinimized: boolean = false
+  private onRevealConditions?: () => void
+  private onCaseHub?: () => void
+
+  setCallbacks(callbacks: { onRevealConditions?: () => void; onCaseHub?: () => void }): void {
+    this.onRevealConditions = callbacks.onRevealConditions
+    this.onCaseHub = callbacks.onCaseHub
+  }
 
   create(): HTMLElement {
     this.element = document.createElement('div')
@@ -65,6 +73,9 @@ export class AchievementDisplay {
     if (accuracyElement) accuracyElement.textContent = `${Math.round(metrics.accuracy * 100)}%`
     if (efficiencyElement) efficiencyElement.textContent = `${Math.round(metrics.efficiency * 100)}%`
     if (streakElement) streakElement.textContent = metrics.streak.toString()
+
+    const discoveryStreakElement = this.element.querySelector('#discovery-streak-value')
+    if (discoveryStreakElement) discoveryStreakElement.textContent = (metrics.discoveryStreak || 0).toString()
     if (progressElement) {
       progressElement.textContent = `${metrics.achievementsCount}/${metrics.totalAchievements}`
     }
@@ -188,6 +199,44 @@ export class AchievementDisplay {
           </div>
         </div>
 
+        <div class="quick-actions" style="
+        background: rgba(100,100,255,0.05);
+        border-radius: ${borders.radius.md};
+        padding: ${spacing.sm};
+          margin-bottom: ${spacing.sm};
+        ">
+        <div style="display: flex; flex-direction: column; gap: ${spacing.xs};">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="color: ${colors.neutral.light}; font-size: ${typography.fontSize.xs};">🔥 Discovery Streak</div>
+              <div id="discovery-streak-value" style="color: ${colors.accent.base}; font-weight: ${typography.fontWeight.bold};">0</div>
+            </div>
+            <button id="reveal-conditions-btn" style="
+              background: linear-gradient(135deg, ${colors.primary.base} 0%, ${colors.primary.dark} 100%);
+              color: ${colors.neutral.black};
+              border: none;
+              padding: ${spacing.xs} ${spacing.sm};
+              border-radius: ${borders.radius.md};
+              font-size: ${typography.fontSize.sm};
+              cursor: pointer;
+              width: 100%;
+            ">
+              🔍 Reveal Conditions
+            </button>
+            <button id="case-hub-btn" style="
+              background: rgba(255,255,255,0.1);
+              color: ${colors.neutral.white};
+              border: ${borders.width.thin} solid rgba(255,255,255,0.3);
+              padding: ${spacing.xs} ${spacing.sm};
+              border-radius: ${borders.radius.md};
+              font-size: ${typography.fontSize.sm};
+              cursor: pointer;
+              width: 100%;
+            ">
+              🎯 Case Hub
+            </button>
+          </div>
+        </div>
+
         <div class="recent-achievements" style="
           background: rgba(0,255,136,0.05);
           border-radius: ${borders.radius.md};
@@ -214,6 +263,8 @@ export class AchievementDisplay {
 
     const header = this.element.querySelector('.panel-header') as HTMLElement
     const minimizeBtn = this.element.querySelector('.minimize-btn') as HTMLElement
+    const revealBtn = this.element.querySelector('#reveal-conditions-btn') as HTMLElement
+    const caseHubBtn = this.element.querySelector('#case-hub-btn') as HTMLElement
 
     if (header) {
       header.addEventListener('click', () => {
@@ -223,6 +274,14 @@ export class AchievementDisplay {
           this.minimize()
         }
       })
+    }
+
+    if (revealBtn && this.onRevealConditions) {
+      revealBtn.addEventListener('click', this.onRevealConditions)
+    }
+
+    if (caseHubBtn && this.onCaseHub) {
+      caseHubBtn.addEventListener('click', this.onCaseHub)
     }
   }
 

@@ -3,6 +3,7 @@ import { SmartAccountService } from './smart-account'
 import { DelegationService } from './delegation'
 import { ContractClient } from './contract-client'
 import { PaymasterIntegrationService } from './paymaster-integration'
+import { MetaMaskSmartAccount } from '../../src/components/MetaMaskSmartAccount'
 
 export interface Web3State {
   isConnected: boolean
@@ -18,6 +19,7 @@ export class Web3Facade {
   private delegationService: DelegationService
   private contractClient: ContractClient
   private paymasterService: PaymasterIntegrationService
+  private metaMaskSmartAccount: MetaMaskSmartAccount
   private state: Web3State
 
   constructor() {
@@ -25,8 +27,11 @@ export class Web3Facade {
     this.delegationService = new DelegationService(this.smartAccountService)
     this.contractClient = new ContractClient()
     this.paymasterService = new PaymasterIntegrationService(this.smartAccountService)
+    this.metaMaskSmartAccount = new MetaMaskSmartAccount()
 
-    this.state = {
+    // Restore persisted state
+    const persistedState = this.loadPersistedState()
+    this.state = persistedState || {
       isConnected: false,
       delegations: [],
       gaslessEnabled: false
@@ -70,6 +75,7 @@ export class Web3Facade {
         chainId: 10143
       })
 
+      this.persistState()
       return this.state
     } catch (error: any) {
       console.error('Failed to connect wallet:', error)
@@ -90,6 +96,7 @@ export class Web3Facade {
       isConnected: false,
       delegations: []
     }
+    this.persistState()
   }
 
   async createMedicalConsultationDelegation(delegateAddress: Address) {
@@ -215,7 +222,54 @@ export class Web3Facade {
     return this.contractClient
   }
 
+  async getMonBalanceForAddress(address: Address): Promise<number> {
+    // Use the meta mask smart account to get MON balance
+    try {
+      return await this.metaMaskSmartAccount.getMonBalance(address);
+    } catch (error) {
+      console.error('❌ Failed to get MON balance:', error);
+      // Fallback to mock balance if real balance check fails
+      return 0;
+    }
+  }
+
   getPaymasterService(): PaymasterIntegrationService {
     return this.paymasterService
+  }
+
+  async getMonBalance(): Promise<bigint> {
+    if (!this.state.address) {
+      throw new Error('Wallet not connected')
+    }
+    return this.smartAccountService.getBalance(this.state.address)
+  }
+
+  // Persistence methods
+  private persistState(): void {
+    try {
+      const stateToPersist = {
+        ...this.state,
+        smartAccount: undefined // Don't persist smart account object
+      }
+      localStorage.setItem('xrai_wallet_state', JSON.stringify(stateToPersist))
+    } catch (error) {
+      console.warn('Failed to persist wallet state:', error)
+    }
+  }
+
+  private loadPersistedState(): Web3State | null {
+    try {
+      const persisted = localStorage.getItem('xrai_wallet_state')
+      if (persisted) {
+        const parsed = JSON.parse(persisted)
+        // Validate the persisted state
+        if (parsed.isConnected && parsed.address) {
+          return parsed as Web3State
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load persisted wallet state:', error)
+    }
+    return null
   }
 }

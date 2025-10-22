@@ -105,4 +105,8 @@ export class SmartAccountService {
   getWalletClient() {
     return this.walletClient
   }
+
+  async getBalance(address: Address): Promise<bigint> {
+    return this.publicClient.getBalance({ address })
+  }
 }

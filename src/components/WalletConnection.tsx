@@ -16,10 +16,28 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
     isConnecting,
     error,
     connectWallet,
-    disconnectWallet
+    disconnectWallet,
+    web3Facade,
+    getMonBalance
   } = useWeb3()
 
   const [showSettings, setShowSettings] = React.useState(false)
+  const [monBalance, setMonBalance] = React.useState<string | null>(null)
+
+  const fetchMonBalance = React.useCallback(async () => {
+    try {
+      if (!address) {
+        setMonBalance('0.00')
+        return
+      }
+      // Try to get MON balance using the web3 hook function
+      const balance = await getMonBalance()
+      setMonBalance(balance.toFixed(4))
+    } catch (err) {
+      console.error('Failed to fetch MON balance:', err)
+      setMonBalance('Error')
+    }
+  }, [address, getMonBalance])
 
   // PERFORMANT: Track last dispatched address to prevent duplicate events
   const lastDispatchedAddress = React.useRef<string | null>(null)
@@ -38,6 +56,9 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
         }
       })
       document.dispatchEvent(event)
+      
+      // Fetch MON balance when wallet is connected
+      fetchMonBalance()
     } else if (!isConnected && lastDispatchedAddress.current !== null) {
       lastDispatchedAddress.current = null
       
@@ -50,7 +71,7 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
       })
       document.dispatchEvent(event)
     }
-  }, [isConnected, address, onConnected])
+  }, [isConnected, address, onConnected, fetchMonBalance])
 
   const handleResetOnboarding = () => {
     localStorage.removeItem('xrai_onboarding_completed')
@@ -63,6 +84,8 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
     // Trigger delegation panel to open
     document.dispatchEvent(new CustomEvent('showDelegationPanel'))
   }
+
+
 
   return (
     <div style={{
@@ -107,13 +130,18 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
             }}>
               <div style={{ fontSize: '12px', opacity: 0.8 }}>Smart Account Active</div>
               <button
-                onClick={() => setShowSettings(!showSettings)}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid rgba(78, 205, 196, 0.3)',
-                  color: 'white',
+              onClick={() => {
+                setShowSettings(!showSettings)
+              if (!showSettings) {
+                fetchMonBalance()
+              }
+              }}
+              style={{
+              background: 'transparent',
+              border: '1px solid rgba(78, 205, 196, 0.3)',
+                color: 'white',
                   padding: '4px 8px',
-                  borderRadius: '4px',
+                borderRadius: '4px',
                   cursor: 'pointer',
                   fontSize: '11px'
                 }}
@@ -144,6 +172,12 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
               fontSize: '12px'
             }}>
               <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#4ecdc4' }}>Account Settings</div>
+              <div style={{ marginBottom: '10px', padding: '8px', background: 'rgba(78, 205, 196, 0.1)', borderRadius: '4px' }}>
+                <div style={{ fontSize: '11px', opacity: 0.8, marginBottom: '4px' }}>MON Balance</div>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#4ecdc4' }}>
+                  {monBalance ? `${monBalance} MON` : 'Loading...'}
+                </div>
+              </div>
               <button
                 onClick={handleManageDelegations}
                 style={{

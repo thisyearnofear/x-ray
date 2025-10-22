@@ -13,6 +13,7 @@ import { AudioManager } from "./components/AudioManager"
 import { SoundType } from "./components/AudioManager"
 import { ScanFeedbackSystem } from "./components/ScanFeedbackSystem"
 import { DiagnosticUIFacade } from "./domains/diagnostic/DiagnosticUIFacade"
+import { AchievementDisplay } from "./domains/diagnostic/ui/AchievementDisplay"
 import { GameManager, GameState } from "./domains/diagnostic/GameManager"
 import { MedicalServiceFacade } from "./domains/medical/MedicalServiceFacade"
 import { MedicalCase } from "./domains/medical/types"
@@ -52,6 +53,7 @@ export default class Canvas {
 
   // ENHANCEMENT FIRST: Diagnostic UI system
   diagnosticUI: DiagnosticUIFacade | null = null
+  achievementDisplay: AchievementDisplay | null = null
 
   // ENHANCEMENT FIRST: Game systems
   gameManager: GameManager | null = null
@@ -554,7 +556,30 @@ export default class Canvas {
     // Store AI panel reference for milestone responses
     this.aiPanel = this.diagnosticUI.getUIManager()?.getAIPanel();
 
+    // Create achievement display
+    this.achievementDisplay = new AchievementDisplay()
+    const achievementElement = this.achievementDisplay.create()
+    document.body.appendChild(achievementElement)
+
+    // Set callbacks for buttons
+    this.achievementDisplay.setCallbacks({
+      onRevealConditions: () => this.toggleConditionsReveal(),
+      onCaseHub: () => this.xRayEffect?.showCaseSelectionHub()
+    })
+
     console.log('🏥 DiagnosticUI initialized')
+  }
+
+  // ENHANCEMENT FIRST: Toggle conditions reveal
+  private toggleConditionsReveal(): void {
+    this.xRayEffect?.toggleConditions()
+  }
+
+  // ENHANCEMENT FIRST: Update achievement display with metrics
+  public updateAchievementDisplay(metrics: any): void {
+    if (this.achievementDisplay) {
+      this.achievementDisplay.updatePerformance(metrics)
+    }
   }
 
   // ENHANCEMENT FIRST: Connect voice consultation to diagnostic UI
@@ -708,12 +733,8 @@ export default class Canvas {
     this.economicBridge = new EconomicEventBridge(this.gameManager);
     this.economicBridge.initialize();
 
-    // Add UI buttons for economic system
-    const caseSelectionBtn = createCaseSelectionButton(this.economicBridge);
-    const treatmentMenuBtn = createTreatmentMenuButton(this.economicBridge);
-
-    document.body.appendChild(caseSelectionBtn);
-    document.body.appendChild(treatmentMenuBtn);
+    // Buttons have been moved to the instructions panel (key bindings 12 and 13)
+    // No need to create left panel buttons anymore
 
     console.log('💰 Economic system initialized');
   }
@@ -1250,17 +1271,17 @@ export default class Canvas {
         <div style="margin-bottom: ${spacing.xl};">
           <div style="font-size: 4rem; margin-bottom: ${spacing.md};">⏰</div>
           <h1 style="
-            color: ${colors.primary.base};
-            margin: 0;
-            font-size: ${typography.fontSize['4xl']};
-            font-weight: ${typography.fontWeight.bold};
-            text-shadow: ${effects.textShadow.base};
-          ">Time's Up!</h1>
+          color: ${colors.primary.base};
+          margin: 0;
+          font-size: ${typography.fontSize['4xl']};
+          font-weight: ${typography.fontWeight.bold};
+          text-shadow: ${effects.textShadow.base};
+          ">⏰ Time's Up!</h1>
           <p style="
-            margin: ${spacing.md} 0 0 0;
-            opacity: 0.8;
-            font-size: ${typography.fontSize.lg};
-          ">Great diagnostic effort! Let's review your performance.</p>
+          margin: ${spacing.md} 0 0 0;
+          opacity: 0.8;
+          font-size: ${typography.fontSize.lg};
+          ">Review your diagnostic performance.</p>
         </div>
 
         <!-- Stats Grid -->
@@ -1326,15 +1347,17 @@ export default class Canvas {
           text-align: left;
         ">
           <h3 style="
-            margin: 0 0 ${spacing.md} 0;
-            color: ${colors.primary.base};
-            font-size: ${typography.fontSize.lg};
-          ">📊 Performance Insights</h3>
+          margin: 0 0 ${spacing.md} 0;
+          color: ${colors.primary.base};
+          font-size: ${typography.fontSize.lg};
+          ">📊 Insights</h3>
           <div style="font-size: ${typography.fontSize.sm}; line-height: 1.6;">
-            <div>• <strong>Accuracy:</strong> ${Math.round(stats.accuracy * 100)}% - ${stats.accuracy > 0.7 ? 'Excellent diagnostic precision!' : 'Keep practicing for better accuracy'}</div>
-            <div>• <strong>Efficiency:</strong> ${Math.round(stats.efficiency * 100)}% - ${stats.efficiency > 0.6 ? 'Great time management!' : 'Consider faster scanning techniques'}</div>
-            <div>• <strong>Difficulty:</strong> ${stats.difficulty.charAt(0).toUpperCase() + stats.difficulty.slice(1)} - ${stats.difficulty === 'hard' ? 'Impressive challenge conquered!' : stats.difficulty === 'medium' ? 'Solid performance!' : 'Great foundation building!'}</div>
-            <div>• <strong>Conditions Found:</strong> ${stats.conditionsFound} - ${stats.conditionsFound > 2 ? 'Comprehensive diagnostic work!' : 'Keep exploring all possible conditions'}</div>
+          <div>🎯 Accuracy: ${Math.round(stats.accuracy * 100)}% ${stats.accuracy > 0.7 ? 'Excellent!' : 'Practice more'}</div>
+          <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; margin: 4px 0;"><div style="background: ${colors.primary.base}; height: 100%; width: ${Math.round(stats.accuracy * 100)}%; border-radius: 4px;"></div></div>
+          <div>⚡ Efficiency: ${Math.round(stats.efficiency * 100)}% ${stats.efficiency > 0.6 ? 'Great!' : 'Scan faster'}</div>
+          <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; margin: 4px 0;"><div style="background: ${colors.primary.base}; height: 100%; width: ${Math.round(stats.efficiency * 100)}%; border-radius: 4px;"></div></div>
+            <div>🛡️ Difficulty: ${stats.difficulty.charAt(0).toUpperCase() + stats.difficulty.slice(1)} ${stats.difficulty === 'hard' ? 'Impressive!' : stats.difficulty === 'medium' ? 'Solid!' : 'Building foundation'}</div>
+            <div>🔍 Conditions: ${stats.conditionsFound} ${stats.conditionsFound > 2 ? 'Comprehensive!' : 'Explore more'}</div>
           </div>
         </div>
         <!-- Personalized Recommendations -->
@@ -1347,27 +1370,27 @@ export default class Canvas {
           text-align: left;
         ">
           <h3 style="
-            margin: 0 0 ${spacing.md} 0;
-            color: #6464ff;
-            font-size: ${typography.fontSize.lg};
-          ">🎯 Personalized Recommendations</h3>
+          margin: 0 0 ${spacing.md} 0;
+          color: #6464ff;
+          font-size: ${typography.fontSize.lg};
+          ">🎯 Tips</h3>
           <div style="font-size: ${typography.fontSize.sm}; line-height: 1.6;">
-            ${stats.conditionsFound === 0 ? 
-              `<div>• <strong>🔍 Scanning:</strong> Focus on glowing markers first - they indicate high-probability areas</div>
-               <div>• <strong>🖱️ Investigation:</strong> Try using the investigation tools panel for detailed analysis</div>
-               <div>• <strong>🎙️ AI Consultation:</strong> Press 'V' to get expert diagnostic guidance from Nurse Amy</div>` : 
-              stats.accuracy < 0.5 ? 
-              `<div>• <strong>🖱️ Investigation:</strong> Use investigation tools to confirm suspected conditions before submitting</div>
-               <div>• <strong>🎙️ AI Consultation:</strong> Get expert guidance from Nurse Amy to improve diagnostic accuracy</div>
-               <div>• <strong>📋 Evidence:</strong> Collect more evidence before finalizing your diagnosis</div>` : 
-              stats.efficiency < 0.5 ? 
-              `<div>• <strong>⏰ Time Management:</strong> Prioritize high-probability areas early in the case</div>
-               <div>• <strong>🖱️ Quick Tools:</strong> Use keyboard shortcuts: [C] for conditions, [V] for voice consultation</div>
-               <div>• <strong>🎙️ AI Guidance:</strong> Get rapid diagnostic tips from Nurse Amy</div>` : 
-              `<div>• <strong>🏆 Great Work:</strong> You're mastering the diagnostic process!</div>
-               <div>• <strong>📈 Next Challenge:</strong> Try a more difficult case to continue improving</div>
-               <div>• <strong>💎 Premium:</strong> Unlock unlimited AI-generated cases for varied practice</div>`
-            }
+          ${stats.conditionsFound === 0 ? 
+          `<div>🔍 Focus on glowing markers</div>
+          <div>🖱️ Use investigation tools</div>
+          <div>🎙️ Press 'V' for Nurse Amy</div>` : 
+          stats.accuracy < 0.5 ? 
+          `<div>🖱️ Confirm with investigation tools</div>
+          <div>🎙️ Consult Nurse Amy</div>
+          <div>📋 Gather more evidence</div>` : 
+          stats.efficiency < 0.5 ? 
+          `<div>⏰ Prioritize high-prob areas</div>
+          <div>⌨️ Use shortcuts [C], [V]</div>
+          <div>🎙️ Get AI tips</div>` : 
+          `<div>🏆 Great work!</div>
+          <div>📈 Try harder cases</div>
+          <div>💎 Upgrade for more cases</div>`
+          }
           </div>
         </div>
         <!-- Feature Discovery -->
@@ -1380,15 +1403,15 @@ export default class Canvas {
           text-align: left;
         ">
           <h3 style="
-            margin: 0 0 ${spacing.md} 0;
-            color: #ff6464;
-            font-size: ${typography.fontSize.lg};
-          ">🌟 Features You Might Have Missed</h3>
+          margin: 0 0 ${spacing.md} 0;
+          color: #ff6464;
+          font-size: ${typography.fontSize.lg};
+          ">🌟 Missed Features</h3>
           <div style="font-size: ${typography.fontSize.sm}; line-height: 1.6;">
-            <div>• <strong>🖱️ Investigation Tools:</strong> Click the toolkit icon to access advanced diagnostic tools</div>
-            <div>• <strong>🎙️ Voice Consultation:</strong> Press 'V' to consult Nurse Amy for expert guidance</div>
-            <div>• <strong>⌨️ Keyboard Shortcuts:</strong> [C] toggles conditions, [E] expands view</div>
-            <div>• <strong>📊 Progress Tracking:</strong> Watch the progress ring while scanning conditions</div>
+          <div>🖱️ Investigation Tools</div>
+          <div>🎙️ Voice Consultation 'V'</div>
+          <div>⌨️ Shortcuts [C], [E]</div>
+          <div>📊 Progress Ring</div>
           </div>
         </div>
 

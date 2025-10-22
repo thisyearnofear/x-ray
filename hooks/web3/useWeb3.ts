@@ -208,6 +208,20 @@ export function useWeb3() {
     }
   }, [web3Facade])
 
+  const getMonBalance = useCallback(async () => {
+    try {
+      if (!state.address) {
+        throw new Error('Wallet not connected')
+      }
+      setError(null)
+      const result = await web3Facade.getMonBalanceForAddress(state.address)
+      return result
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get MON balance')
+      throw err
+    }
+  }, [web3Facade, state.address])
+
   // Listen for account changes
   useEffect(() => {
     if (window.ethereum) {
@@ -253,6 +267,9 @@ export function useWeb3() {
     executeGaslessTransaction,
     mintCertificateGasless,
     checkGaslessQuota,
+
+    // Balance methods
+    getMonBalance,
 
     // Services
     web3Facade

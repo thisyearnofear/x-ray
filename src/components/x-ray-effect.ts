@@ -566,14 +566,7 @@ export default class XRayEffect {
         this.expanded = true
       }
     }
-    // INTEGRATION: Keyboard shortcuts for model switching
-    else if (event.key === "1") {
-      this.switchAnatomicalModel('head')
-    } else if (event.key === "2") {
-      this.switchAnatomicalModel('torso')
-    } else if (event.key === "3") {
-      this.switchAnatomicalModel('fullbody')
-    }
+    
   }
 
   createLeePerry() {
@@ -920,9 +913,8 @@ export default class XRayEffect {
     `;
 
     this.scoreDisplay.innerHTML = `
-      <span style="font-size: 18px;">🏆</span>
-      <span id="score-value">0</span>
-      <span id="streak-info" style="font-size: 12px; opacity: 0.9;">Streak: 0</span>
+    <span style="font-size: 18px;">🏆</span>
+    <span id="score-value">0</span>
     `;
 
     document.body.appendChild(this.scoreDisplay);
@@ -953,76 +945,7 @@ export default class XRayEffect {
     progressRing.innerHTML = '<div id="progress-text">0/16</div>';
     document.body.appendChild(progressRing);
 
-    // Create achievement preview widget
-    const achievementPreview = document.createElement('div');
-    achievementPreview.className = 'achievement-preview';
-    achievementPreview.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: white;
-      padding: 15px;
-      border-radius: 10px;
-      font-family: 'Arial', sans-serif;
-      font-size: 12px;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-      max-width: 200px;
-      opacity: 0.8;
-      transition: opacity 0.3s ease;
-      cursor: pointer;
-    `;
 
-    achievementPreview.innerHTML = `
-      <div style="font-weight: bold; margin-bottom: 5px;">🎯 Next Achievement</div>
-      <div id="next-achievement">🔥 Hot Streak: 5 in a row</div>
-      <div style="font-size: 10px; opacity: 0.7; margin-top: 5px;">Click for Case Hub</div>
-    `;
-
-    achievementPreview.addEventListener('click', () => this.showCaseSelectionHub());
-    document.body.appendChild(achievementPreview);
-
-    // HACKATHON: Add AI delegation setup button
-    const aiDelegateButton = document.createElement('div');
-    aiDelegateButton.id = 'ai-delegation-button';
-    aiDelegateButton.style.cssText = `
-      position: fixed;
-      top: 100px;
-      right: 20px;
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-family: 'Arial', sans-serif;
-      font-size: 12px;
-      font-weight: bold;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-      cursor: pointer;
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      opacity: 0.8;
-      transition: all 0.3s ease;
-    `;
-
-    aiDelegateButton.innerHTML = `
-      <span style="font-size: 14px;">🤖</span>
-      <span>AI Delegate</span>
-    `;
-
-    aiDelegateButton.addEventListener('mouseenter', () => {
-      aiDelegateButton.style.opacity = '1';
-      aiDelegateButton.style.transform = 'translateY(-2px)';
-    });
-
-    aiDelegateButton.addEventListener('mouseleave', () => {
-      aiDelegateButton.style.opacity = '0.8';
-      aiDelegateButton.style.transform = 'translateY(0)';
-    });
-
-    aiDelegateButton.addEventListener('click', () => this.setupAIDelegation());
-    document.body.appendChild(aiDelegateButton);
 
     // Add CSS animation for score display
     const style = document.createElement('style');
@@ -1049,16 +972,8 @@ export default class XRayEffect {
     if (!this.scoreDisplay) return;
 
     const scoreElement = this.scoreDisplay.querySelector('#score-value');
-    const streakElement = this.scoreDisplay.querySelector('#streak-info');
 
     if (scoreElement) scoreElement.textContent = this.totalScore.toString();
-    if (streakElement) {
-      let streakText = `Streak: ${this.discoveryStreak}`;
-      if (this.timePressureMultiplier > 1) {
-        streakText += ` ⏰${this.timePressureMultiplier.toFixed(1)}x`;
-      }
-      streakElement.textContent = streakText;
-    }
 
     // Animate score increase
     this.scoreDisplay.style.animation = 'none';
@@ -1067,6 +982,7 @@ export default class XRayEffect {
         this.scoreDisplay.style.animation = 'scorePulse 2s ease-in-out infinite';
       }
     }, 10);
+
   }
 
   updateOverallProgressRing(): void {
@@ -1084,29 +1000,10 @@ export default class XRayEffect {
       }
     }
 
-    // Update achievement preview
-    this.updateAchievementPreview();
+
   }
 
-  updateAchievementPreview(): void {
-    const nextAchievementElement = document.getElementById('next-achievement');
-    if (!nextAchievementElement) return;
 
-    const streak = this.discoveryStreak;
-    const score = this.totalScore;
-
-    if (streak < 5) {
-      nextAchievementElement.textContent = `🔥 Hot Streak: ${streak}/5 in a row`;
-    } else if (streak < 10) {
-      nextAchievementElement.textContent = `🌟 Unstoppable: ${streak}/10 in a row`;
-    } else if (this.comboMultiplier < 3.0) {
-      nextAchievementElement.textContent = `💫 Combo Master: ${this.comboMultiplier.toFixed(1)}/3.0x`;
-    } else if (score < 1000) {
-      nextAchievementElement.textContent = `🏆 Point Collector: ${score}/1000 points`;
-    } else {
-      nextAchievementElement.textContent = `🎖️ Master Diagnostician`;
-    }
-  }
 
   private discoverCondition(conditionId: string) {
     console.log('Discovering condition:', conditionId)
@@ -1943,38 +1840,16 @@ export default class XRayEffect {
   }
 
   administerTreatment(treatment: any): void {
-    // HACKATHON: Check if AI delegation is available for autonomous treatment
-    const activeDelegations = this.smartAccount.getActiveDelegations();
-    const treatmentDelegation = activeDelegations.find(d => d.type === 'treatment_execution' && d.active);
-
     let treatmentCost = 0;
+    
+    // Manual treatment execution
+    const riskMultipliers = { low: 1.0, medium: 1.5, high: 2.0 };
+    const baseCost = treatment.timeCost * 0.01; // 0.01 MON per second of time cost
+    treatmentCost = Math.round((baseCost * riskMultipliers[treatment.riskLevel as keyof typeof riskMultipliers]) * 1000) / 1000;
 
-    if (treatmentDelegation) {
-      // AI agent can execute autonomously
-      const riskMultipliers = { low: 1.0, medium: 1.5, high: 2.0 };
-      const baseCost = treatment.timeCost * 0.01; // 0.01 MON per second of time cost
-      treatmentCost = Math.round((baseCost * riskMultipliers[treatment.riskLevel as keyof typeof riskMultipliers]) * 1000) / 1000;
-
-      // Check delegation budget
-      if (treatmentDelegation.budgetLimit < treatmentCost) {
-        this.audioManager?.showFeedback('❌ AI delegation budget insufficient for this treatment', 'error');
-        return;
-      }
-
-      // Execute via AI delegation (no time cost to player)
-      this.smartAccount.executeDelegatedTreatment(treatment.id, this.patientState.name, treatmentCost);
-      this.audioManager?.showFeedback(`🤖 AI Agent administered ${treatment.name} (${treatmentCost} MON)`, 'info');
-
-    } else {
-      // Manual treatment execution
-      const riskMultipliers = { low: 1.0, medium: 1.5, high: 2.0 };
-      const baseCost = treatment.timeCost * 0.01; // 0.01 MON per second of time cost
-      treatmentCost = Math.round((baseCost * riskMultipliers[treatment.riskLevel as keyof typeof riskMultipliers]) * 1000) / 1000;
-
-      // Check budget first
-      if (!this.spendBudget(treatmentCost, treatment.name)) {
-        return; // Budget check failed
-      }
+    // Check budget first
+    if (!this.spendBudget(treatmentCost, treatment.name)) {
+      return; // Budget check failed
     }
 
     // Check if player has enough time
@@ -2319,71 +2194,86 @@ export default class XRayEffect {
     hub.id = 'case-selection-hub';
     hub.style.cssText = `
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 600px;
+      max-height: 85vh;
+      background: linear-gradient(135deg, rgba(0, 20, 40, 0.95) 0%, rgba(0, 40, 80, 0.95) 100%);
+      border: 2px solid rgba(0, 255, 136, 0.3);
+      border-radius: 16px;
       z-index: 3000;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 255, 136, 0.3);
+      backdrop-filter: blur(10px);
       overflow-y: auto;
     `;
 
     const userProgress = this.getUserProgress(); // Mock user progress for now
 
     hub.innerHTML = `
-      <div style="text-align: center; margin-bottom: 40px;">
-        <h1 style="color: white; font-size: 2.5em; margin: 0 0 10px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
-          🏥 Case Selection Hub
-        </h1>
-        <p style="color: rgba(255,255,255,0.8); font-size: 1.2em; margin: 0;">
-          Choose your next medical challenge
-        </p>
-        <div style="margin-top: 20px; color: white; font-size: 1.1em;">
-        <div>🏆 Level ${userProgress.level} Doctor</div>
-        <div>💰 Total Earnings: ${userProgress.totalEarnings.toFixed(1)} MON</div>
-        <div>🎯 Accuracy: ${userProgress.diagnosticAccuracy}%</div>
+      <div style="padding: 20px; border-bottom: 1px solid rgba(0, 255, 136, 0.2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h2 style="
+            color: #00ff88;
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+          ">
+            🏥 Case Selection
+          </h2>
+          <button id="close-case-hub" style="
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(0,255,136,0.3);
+            color: #00ff88;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+          ">✕</button>
+        </div>
+        
+        <div style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 10px;
+          margin-top: 10px;
+          padding: 10px;
+          background: rgba(0, 255, 136, 0.05);
+          border-radius: 8px;
+          border: 1px solid rgba(0, 255, 136, 0.1);
+        ">
+          <div style="text-align: center; color: #00ff88; font-size: 0.9em;">
+            <div style="font-weight: bold;">🏆 Level</div>
+            <div>${userProgress.level}</div>
+          </div>
+          <div style="text-align: center; color: #ffaa00; font-size: 0.9em;">
+            <div style="font-weight: bold;">💰 Earnings</div>
+            <div>${userProgress.totalEarnings.toFixed(1)} MON</div>
+          </div>
+          <div style="text-align: center; color: #00d4ff; font-size: 0.9em;">
+            <div style="font-weight: bold;">🎯 Accuracy</div>
+            <div>${userProgress.diagnosticAccuracy}%</div>
+          </div>
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1200px; width: 100%;">
-        ${cases.map(caseProfile => this.renderCaseCard(caseProfile, userProgress)).join('')}
+      <div style="flex: 1; overflow-y: auto; padding: 15px;">
+        <div style="
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        ">
+          ${cases.map(caseProfile => this.renderCompactCaseCard(caseProfile, userProgress)).join('')}
+        </div>
       </div>
-
-      <button id="close-case-hub" style="
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        background: rgba(255,255,255,0.2);
-        border: 2px solid white;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 25px;
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: bold;
-        transition: all 0.3s ease;
-      ">Close Hub</button>
     `;
 
     document.body.appendChild(hub);
-
-    // Add hover effects for case cards
-    const caseCards = hub.querySelectorAll('.case-card');
-    caseCards.forEach(card => {
-      card.addEventListener('mouseenter', () => {
-        (card as HTMLElement).style.transform = 'translateY(-5px)';
-        (card as HTMLElement).style.boxShadow = '0 15px 35px rgba(0,0,0,0.3)';
-      });
-      card.addEventListener('mouseleave', () => {
-        (card as HTMLElement).style.transform = 'translateY(0)';
-        (card as HTMLElement).style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)';
-      });
-    });
 
     // Event listeners
     const closeBtn = hub.querySelector('#close-case-hub') as HTMLButtonElement;
@@ -2529,6 +2419,117 @@ export default class XRayEffect {
     return requirementMap[requirement] || requirement;
   }
 
+  renderCompactCaseCard(caseProfile: CaseProfile, userProgress: UserProgression): string {
+    const isUnlocked = this.isCaseUnlocked(caseProfile, userProgress);
+    
+    const difficultyStyles = {
+      beginner: { color: '#00ff88', bg: 'rgba(0, 255, 136, 0.1)' },
+      intermediate: { color: '#ffaa00', bg: 'rgba(255, 170, 0, 0.1)' },
+      advanced: { color: '#00d4ff', bg: 'rgba(0, 212, 255, 0.1)' },
+      expert: { color: '#ff4444', bg: 'rgba(255, 68, 68, 0.1)' }
+    };
+
+    const style = difficultyStyles[caseProfile.difficulty];
+    const totalPotential = caseProfile.potentialEarnings.basePayment * caseProfile.potentialEarnings.complexityMultiplier +
+                          caseProfile.potentialEarnings.accuracyBonus +
+                          caseProfile.potentialEarnings.efficiencyBonus +
+                          caseProfile.potentialEarnings.treatmentBonus;
+
+    return `
+      <div class="compact-case-card" style="
+        background: ${isUnlocked ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'};
+        border: 1px solid ${isUnlocked ? style.bg : 'rgba(255,255,255,0.1)'};
+        border-radius: 8px;
+        padding: 12px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        ${isUnlocked ? 'cursor: pointer;' : ''}
+      ">
+        ${!isUnlocked ? `
+          <div style="
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-weight: bold;
+            font-size: 0.9em;
+            z-index: 1;
+          ">
+            🔒 Locked
+          </div>
+        ` : ''}
+        
+        <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div style="flex: 1;">
+            <div style="
+              font-weight: bold;
+              color: ${isUnlocked ? style.color : '#666'};
+              font-size: 1.1em;
+              margin-bottom: 3px;
+            ">${caseProfile.name}</div>
+            
+            <div style="
+              display: flex;
+              gap: 10px;
+              font-size: 0.85em;
+              color: #999;
+              margin-bottom: 5px;
+            ">
+              <span style="color: ${style.color}; font-weight: 500;">${caseProfile.difficulty}</span>
+              <span>⏰ ${Math.floor(caseProfile.timeLimit / 60)}:${(caseProfile.timeLimit % 60).toString().padStart(2, '0')}</span>
+            </div>
+          </div>
+          
+          <div style="text-align: right; font-size: 0.9em;">
+            <div style="color: #00ff88; font-weight: bold;">${caseProfile.budget.toFixed(1)} MON</div>
+            <div style="color: #ffaa00; font-size: 0.8em;">${totalPotential.toFixed(1)} MON</div>
+          </div>
+        </div>
+        
+        ${caseProfile.unlockRequirements && !isUnlocked ? `
+          <div style="
+            font-size: 0.75em;
+            color: #999;
+            padding: 5px 8px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 4px;
+            margin-top: 5px;
+            border: 1px solid rgba(52, 152, 219, 0.2);
+          ">
+            <div style="font-weight: bold; color: #00d4ff; margin-bottom: 2px;">Requirements:</div>
+            <div>${caseProfile.unlockRequirements.map(req => this.formatRequirement(req)).join(', ')}</div>
+          </div>
+        ` : ''}
+        
+        ${isUnlocked ? `
+          <button id="select-case-${caseProfile.id}"
+            style="
+              width: 100%;
+              padding: 8px;
+              background: ${style.bg};
+              border: 1px solid ${style.color};
+              border-radius: 4px;
+              color: ${style.color};
+              font-size: 0.9em;
+              font-weight: bold;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              margin-top: 8px;
+            ">
+            Select Case
+          </button>
+        ` : ''}
+      </div>
+    `;
+  }
+
   selectCase(caseProfile: CaseProfile): void {
     this.currentCaseProfile = caseProfile;
     this.hospitalBudget = caseProfile.budget;
@@ -2539,10 +2540,7 @@ export default class XRayEffect {
     // Reset game state for new case
     this.resetCaseState();
 
-    // HACKATHON: Auto-setup AI delegation for premium cases
-    if (caseProfile.difficulty !== 'beginner') {
-      this.setupAIDelegation();
-    }
+
 
     this.audioManager?.showFeedback(`🎯 Selected: ${caseProfile.name}`, 'success');
   }
@@ -2579,26 +2577,7 @@ export default class XRayEffect {
     this.initializePatientState();
   }
 
-  // HACKATHON: Set up AI delegation for autonomous medical decisions
-  async setupAIDelegation(): Promise<void> {
-    try {
-      // Grant AI agent permission to execute treatments
-      const treatmentDelegation = await this.smartAccount.delegateTreatmentAuthority(
-        this.currentCaseProfile.id,
-        this.hospitalBudget * 0.5 // Allow AI to spend up to 50% of budget
-      );
 
-      if (treatmentDelegation) {
-        // Grant AI permission to complete cases
-        await this.smartAccount.delegateCaseCompletion(this.currentCaseProfile.id);
-
-        this.audioManager?.showFeedback('🤖 AI Medical Assistant activated! Can now autonomously administer treatments and complete cases.', 'success');
-      }
-    } catch (error) {
-      console.error('Failed to setup AI delegation:', error);
-      this.audioManager?.showFeedback('⚠️ AI delegation setup failed - operating in manual mode', 'warning');
-    }
-  }
 
   // HACKATHON: Envio integration for blockchain indexing
   async indexCaseDataToEnvio(caseId: string, diagnosis: any, earnings: number): Promise<void> {
@@ -2629,70 +2608,9 @@ export default class XRayEffect {
   }
 
   // INTEGRATION: Switch between anatomical models with reality shift effects
-  switchAnatomicalModel(modelType: 'head' | 'torso' | 'fullbody') {
-    if (this.currentModel === modelType) return
 
-    console.log(`Switching from ${this.currentModel} to ${modelType} model`)
 
-    // Play transition sound through audio management system
-    this.audioManagementSystem.playSound(SoundTypeType.DISCOVERY);
-
-    // Create a transition effect
-    this.performRealityShift(modelType);
-
-    this.currentModel = modelType
-
-    // Update visible anatomy based on model
-    switch (modelType) {
-      case 'head':
-        this.visibleAnatomy = ['head', 'neck', 'cervical_spine', 'jaw', 'face', 'temporomandibular_joint']
-        break
-      case 'torso':
-        this.visibleAnatomy = ['spine', 'back', 'torso', 'chest', 'ribs']
-        break
-      case 'fullbody':
-        this.visibleAnatomy = ['legs', 'lower_body', 'thigh', 'knee', 'spine', 'back', 'torso']
-        break
-    }
-
-    // Update markers for new model
-    this.updateMarkersForCurrentModel()
-
-    // Reset discovery progress for new model
-    this.discoveredConditions.clear()
-
-    console.log(`Model switched. Visible anatomy:`, this.visibleAnatomy)
-    console.log(`Active markers: ${this.medicalMarkers.size}`)
-  }
-
-  // NEW: Perform reality shift transition effect
-  private performRealityShift(newModelType: 'head' | 'torso' | 'fullbody'): void {
-    // Create a brief fade effect during transition
-    const originalExpandValue = this.xRayPass.uniforms.expand.value;
-
-    // Fade out effect
-    gsap.to(this.xRayPass.uniforms.expand, {
-      value: originalExpandValue - 0.5,
-      duration: 0.3,
-      ease: "power2.in",
-      onComplete: () => {
-        // Fade back in with new model
-        gsap.to(this.xRayPass.uniforms.expand, {
-          value: originalExpandValue,
-          duration: 0.3,
-          ease: "power2.out"
-        });
-
-        // Create visual feedback for model switch
-        this.visualFeedbackSystem.createModelSwitchFeedback(
-          new THREE.Vector3(0, 0, 0) // Center of scene for model switch feedback
-        );
-      }
-    });
-
-    // Play transition sound through audio management system
-    this.audioManagementSystem.playSound(SoundTypeType.CONDITION_FOUND);
-  }
+  
 
   // ENHANCEMENT: Visual scanning feedback systems
   createScanningVFX(conditionId: string, position: THREE.Vector3): THREE.Mesh {

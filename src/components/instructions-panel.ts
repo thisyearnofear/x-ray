@@ -12,22 +12,41 @@ export class InstructionsPanel {
     this.panel.className = 'instructions-panel'
     this.panel.innerHTML = `
       <div class="instructions-content">
+      <div class="instruction-group">
+      <kbd class="key">e</kbd>
+      <span class="instruction-text">Expand</span>
+      </div>
+        
         <div class="instruction-group">
-          <kbd class="key">1</kbd>
-          <span class="instruction-icon">🔬</span>
-          <span class="instruction-text">Scan patients</span>
+          <kbd class="key">c</kbd>
+          <span class="instruction-text">Conditions</span>
+        </div>
+        
+        <div class="instruction-group">
+          <kbd class="key">h</kbd>
+          <span class="instruction-text">Hint</span>
+        </div>
+        
+        <div class="instruction-group">
+          <kbd class="key">v</kbd>
+          <span class="instruction-text">Voice</span>
         </div>
         
         <div class="instruction-divider"></div>
         
         <div class="instruction-group">
-          <kbd class="key">3</kbd>
-          <span class="instruction-text">expand</span>
+          <kbd class="key">i</kbd>
+          <span class="instruction-text">Investigate</span>
         </div>
         
         <div class="instruction-group">
-          <kbd class="key">4</kbd>
-          <span class="instruction-text">conditions</span>
+          <kbd class="key">n</kbd>
+          <span class="instruction-text">Narrative</span>
+        </div>
+        
+        <div class="instruction-group">
+          <kbd class="key">d</kbd>
+          <span class="instruction-text">Difficulty</span>
         </div>
         
         <div class="instruction-divider"></div>
@@ -45,22 +64,20 @@ export class InstructionsPanel {
         <div class="instruction-divider"></div>
         
         <div class="instruction-group" id="start-new-case-btn">
-          <kbd class="key">12</kbd>
-          <span class="instruction-icon">🎮</span>
-          <span class="instruction-text">Start New Case</span>
+        <span class="instruction-icon">🎮</span>
+        <span class="instruction-text">New Case</span>
         </div>
-        
+
         <div class="instruction-group" id="medical-actions-btn">
-          <kbd class="key">13</kbd>
           <span class="instruction-icon">🏥</span>
-          <span class="instruction-text">Medical Actions</span>
+        <span class="instruction-text">Actions</span>
         </div>
         
         <div class="instruction-divider"></div>
         
         <div class="instruction-group">
           <span class="instruction-icon">👆</span>
-          <span class="instruction-text">Click glowing markers to scan</span>
+          <span class="instruction-text">Click glowing markers</span>
         </div>
       </div>
     `

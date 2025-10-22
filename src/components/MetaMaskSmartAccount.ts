@@ -25,7 +25,7 @@ import { ethers } from 'ethers';
 // Delegation types for medical workflows
 export interface MedicalDelegation {
   id: string;
-  type: 'diagnosis_automation' | 'treatment_execution' | 'case_completion';
+  type: 'case_completion';
   permissions: string[]; // Specific actions allowed
   timeLimit: number; // How long delegation lasts
   budgetLimit: number; // Max MON that can be spent
@@ -67,60 +67,7 @@ export class MetaMaskSmartAccount {
     }
   }
 
-  // DELEGATION: Grant AI agent permission to make treatment decisions
-  async delegateTreatmentAuthority(caseId: string, budgetLimit: number = 1.0): Promise<boolean> {
-    try {
-      const delegation: MedicalDelegation = {
-        id: `treatment_${caseId}_${Date.now()}`,
-        type: 'treatment_execution',
-        permissions: [
-          'administer_medication',
-          'order_tests',
-          'initiate_treatments',
-          'pause_timer'
-        ],
-        timeLimit: 24 * 60 * 60 * 1000, // 24 hours
-        budgetLimit: budgetLimit,
-        active: true
-      };
 
-      // In production: Use Delegation Toolkit to create delegation
-      // For hackathon demo: Simulate delegation
-      this.delegations.set(delegation.id, delegation);
-
-      console.log(`🤖 Treatment delegation granted: ${budgetLimit} MON budget`);
-      return true;
-    } catch (error) {
-      console.error('❌ Failed to create treatment delegation:', error);
-      return false;
-    }
-  }
-
-  // DELEGATION: Grant AI agent permission to complete case automatically
-  async delegateCaseCompletion(caseId: string): Promise<boolean> {
-    try {
-      const delegation: MedicalDelegation = {
-        id: `completion_${caseId}_${Date.now()}`,
-        type: 'case_completion',
-        permissions: [
-          'submit_diagnosis',
-          'process_payment',
-          'generate_report'
-        ],
-        timeLimit: 60 * 60 * 1000, // 1 hour
-        budgetLimit: 0, // No spending authority, only completion
-        active: true
-      };
-
-      this.delegations.set(delegation.id, delegation);
-
-      console.log(`🏥 Case completion delegation granted for case: ${caseId}`);
-      return true;
-    } catch (error) {
-      console.error('❌ Failed to create case completion delegation:', error);
-      return false;
-    }
-  }
 
   // EXECUTE: Process MON payment for case completion
   async processCasePayment(caseId: string, earnings: number, recipient: string): Promise<boolean> {
@@ -158,35 +105,11 @@ export class MetaMaskSmartAccount {
     }
   }
 
-  // EXECUTE: AI agent autonomously executes treatment (delegated action)
-  async executeDelegatedTreatment(treatmentId: string, patientId: string, cost: number): Promise<boolean> {
-    try {
-      const treatmentDelegation = Array.from(this.delegations.values())
-        .find(d => d.type === 'treatment_execution' && d.active && d.budgetLimit >= cost);
 
-      if (!treatmentDelegation) {
-        console.warn('⚠️ No valid treatment delegation found or insufficient budget');
-        return false;
-      }
-
-      // Reduce delegation budget
-      treatmentDelegation.budgetLimit -= cost;
-
-      // In production: Execute treatment transaction
-      // For hackathon demo: Simulate execution
-      console.log(`🤖 AI Agent executed treatment: ${treatmentId} for patient ${patientId}`);
-      console.log(`💸 Cost: ${cost} MON (remaining budget: ${treatmentDelegation.budgetLimit} MON)`);
-
-      return true;
-    } catch (error) {
-      console.error('❌ Failed to execute delegated treatment:', error);
-      return false;
-    }
-  }
 
   // MONITOR: Check delegation status and permissions
   getActiveDelegations(): MedicalDelegation[] {
-    return Array.from(this.delegations.values()).filter(d => d.active);
+    return Array.from(this.delegations.values()).filter(d => d.active && d.type === 'case_completion');
   }
 
   // MONITOR: Get pending payments for Envio indexing

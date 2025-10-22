@@ -82,15 +82,6 @@ export class XRayControls {
           <button class="scale-btn" id="scale-up">+</button>
         </div>
       </div>
-      
-      <div class="control-divider"></div>
-      
-      <div class="control-section">
-        <button class="toggle-btn" id="conditions-toggle">
-          <span class="btn-icon">🔍</span>
-          <span class="btn-text">REVEAL CONDITIONS</span>
-        </button>
-      </div>
     `
     
     this.controlsPanel.style.cssText = `
