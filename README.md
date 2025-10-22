@@ -35,7 +35,7 @@ Open [http://localhost:3000](http://localhost:3000) - Connect MetaMask to enable
 
 ### 🦊 MetaMask Smart Accounts
 - ✅ **ERC-4337 Account Abstraction** - Hybrid implementation with gasless transactions
-- ✅ **ERC-7710 Delegation** - Granular AI consultation permissions
+- ✅ **ERC-7710 Delegation** - Granular permissions for gasless NFT minting
 - ✅ **Visual Onboarding Flow** - 3-step setup with delegation diagram
 - ✅ **Smart Account HUD** - Persistent status badge with $MON balance
 
@@ -53,8 +53,10 @@ Open [http://localhost:3000](http://localhost:3000) - Connect MetaMask to enable
 ## ✨ Features
 
 - **3D X-Ray Visualization** - WebGL shaders, face-swapping, interactive scanning
-- **AI Medical Analysis** - Voice consultation, diagnostic markers, treatment suggestions  
-- **Gasless Smart Accounts** - ERC-4337 + ERC-7710 delegation for zero-fee AI consultations
+- **AI-Assisted Diagnosis** - Nurse Amy provides hints, not autonomous decisions
+- **Strategic Budget Management** - Spend MON tokens on tests/treatments, earn rewards for accuracy  
+- **Gasless Smart Accounts** - ERC-4337 + ERC-7710 delegation for zero-fee NFT minting
+- **MON Token Economy** - Real economic incentives for diagnostic performance
 - **NFT Achievements** - Mint verifiable diagnostic certificates onchain
 
 ## 🚀 Technology Stack

@@ -49,8 +49,8 @@ export class InstructionsPanel {
         <div class="instruction-divider"></div>
         
         <div class="instruction-group">
-          <span class="instruction-icon">👆</span>
-          <span class="instruction-text">Click markers to diagnose</span>
+        <span class="instruction-icon">👆</span>
+        <span class="instruction-text">Click glowing markers to scan</span>
         </div>
       </div>
     `

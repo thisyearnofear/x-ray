@@ -1,6 +1,8 @@
 import { MedicalServiceFacade } from '../medical/MedicalServiceFacade';
 import { PatientCase } from '../medical/types';
 import { AchievementSystem } from './AchievementSystem';
+import { BudgetManager, DIFFICULTY_CONFIGS } from '../medical/BudgetManager';
+import { HospitalAdministrator } from '../medical/HospitalAdministrator';
 
 // MODULAR: Game state management and progression system
 export interface GameState {
@@ -19,6 +21,15 @@ export interface GameState {
     patientCase: PatientCase | null
     specialization: MedicalSpecialization
     unlockedTechniques: Set<string>
+    
+    // ENHANCEMENT: MON Token Economy
+    budget?: {
+        remaining: number
+        spent: number
+        startingAmount: number
+        difficultyTier: 'beginner' | 'intermediate' | 'advanced' | 'expert'
+    }
+    patientCriticality?: 'stable' | 'deteriorating' | 'critical'
 }
 
 export interface MedicalSpecialization {
@@ -43,6 +54,10 @@ export class GameManager {
     private achievementSystem: AchievementSystem;
     public diagnosticUIManager: any; // DiagnosticUIManager reference (public to allow updates)
     private smartAccount: any = null; // For wallet address tracking
+    
+    // ENHANCEMENT: MON Token Economy
+    private budgetManager: BudgetManager | null = null;
+    private hospitalAdmin: HospitalAdministrator | null = null;
 
     constructor(config?: GameManagerConfig) {
         this.medicalService = new MedicalServiceFacade();
@@ -187,14 +202,10 @@ export class GameManager {
 
             if (this.gameState.timeRemaining <= 0) {
                 clearInterval(timerInterval)
-                this.emit('timer_expired', { 
+                this.emit('timer_expired', {
                     finalScore: this.gameState.score,
                     message: '⏰ Time\'s up! Great effort!'
                 })
-                
-                if (this.diagnosticUIManager) {
-                    this.diagnosticUIManager.showTimerExpired();
-                }
             }
         }, 1000)
     }
@@ -544,6 +555,106 @@ export class GameManager {
         ]
     }
 
+
+    // ============================================================================
+    // ENHANCEMENT: BUDGET MANAGEMENT INTEGRATION
+    // ============================================================================
+
+    /**
+     * Initialize budget system for a case
+     * MODULAR: Creates BudgetManager and HospitalAdministrator
+     */
+    public initializeBudget(
+        difficultyTier: 'beginner' | 'intermediate' | 'advanced' | 'expert',
+        adminStyle: 'strict' | 'flexible' | 'generous' = 'flexible',
+        hasWallet: boolean = false
+    ): void {
+        const config = DIFFICULTY_CONFIGS[difficultyTier];
+        
+        // Create budget manager
+        this.budgetManager = new BudgetManager(config.startingBudget, difficultyTier);
+        
+        // Create hospital administrator
+        this.hospitalAdmin = new HospitalAdministrator(
+            this.budgetManager,
+            adminStyle,
+            hasWallet
+        );
+
+        // Update game state
+        this.gameState.budget = {
+            remaining: config.startingBudget,
+            spent: 0,
+            startingAmount: config.startingBudget,
+            difficultyTier
+        };
+        this.gameState.timeRemaining = config.timeLimit;
+        this.gameState.patientCriticality = 'stable';
+
+        // Wire budget events
+        this.budgetManager.on('budgetUpdated', (budgetState: any) => {
+            this.gameState.budget = {
+                remaining: budgetState.remainingBudget,
+                spent: budgetState.totalSpent,
+                startingAmount: budgetState.startingBudget,
+                difficultyTier: budgetState.difficultyTier
+            };
+            this.emit('gameStateUpdated', this.gameState);
+            this.emit('budgetUpdated', this.gameState.budget);
+        });
+
+        this.budgetManager.on('insufficientFunds', (data: any) => {
+            this.emit('insufficientFunds', data);
+            
+            // Trigger hospital admin warning
+            if (this.hospitalAdmin) {
+                const status = this.hospitalAdmin.checkBudgetStatus();
+                this.emit('administratorMessage', status);
+            }
+        });
+
+        // Get initial briefing from administrator
+        if (this.hospitalAdmin) {
+            const briefing = this.hospitalAdmin.getInitialBriefing('Doctor');
+            this.emit('administratorMessage', {
+                message: briefing,
+                urgency: 'normal'
+            });
+        }
+
+        console.log(`💰 Budget initialized: ${config.startingBudget} MON for ${difficultyTier} case`);
+    }
+
+    /**
+     * Get budget manager instance
+     */
+    public getBudgetManager(): BudgetManager | null {
+        return this.budgetManager;
+    }
+
+    /**
+     * Get hospital administrator instance
+     */
+    public getHospitalAdministrator(): HospitalAdministrator | null {
+        return this.hospitalAdmin;
+    }
+
+    /**
+     * Update patient criticality (affects budget negotiation)
+     */
+    public updatePatientCriticality(criticality: 'stable' | 'deteriorating' | 'critical'): void {
+        this.gameState.patientCriticality = criticality;
+        
+        if (criticality === 'critical' && this.hospitalAdmin) {
+            const emergencyMessage = this.hospitalAdmin.getEmergencyDialogue();
+            this.emit('administratorMessage', {
+                message: emergencyMessage,
+                urgency: 'critical'
+            });
+        }
+        
+        this.emit('gameStateUpdated', this.gameState);
+    }
 
     // Getters for game state
     public getGameState(): GameState {

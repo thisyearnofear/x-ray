@@ -5,7 +5,7 @@ export class VisualFeedbackSystem {
   private scene: THREE.Scene;
   private feedbackElements: THREE.Group[] = [];
   private maxElements: number = 8; // Reduced limit for better performance
-  private activeAnimations: gsap.core.Tween[] = [];
+  private activeAnimations: (gsap.core.Tween | gsap.core.Timeline)[] = [];
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -22,41 +22,84 @@ export class VisualFeedbackSystem {
 
     const feedbackGroup = new THREE.Group();
     feedbackGroup.position.copy(position);
-    
-    // Create a visual text element to indicate the condition discovery
-    const textGeometry = new THREE.SphereGeometry(0.01, 4, 4); // Placeholder for text
-    const textMaterial = new THREE.MeshBasicMaterial({ 
+
+    // Create a large, obvious pulsing sphere at discovery location
+    const pulseGeometry = new THREE.SphereGeometry(0.08, 16, 16);
+    const pulseMaterial = new THREE.MeshBasicMaterial({
       color: this.getSeverityColor(severity),
       transparent: true,
-      opacity: 0.8
+      opacity: 0.9
     });
-    
+
+    const pulseSphere = new THREE.Mesh(pulseGeometry, pulseMaterial);
+    pulseSphere.position.set(0, 0, 0);
+    feedbackGroup.add(pulseSphere);
+
+    // Pulse animation - much more obvious
+    const pulseAnimation = gsap.timeline();
+    pulseAnimation.to(pulseSphere.scale, {
+      x: 2.5,
+      y: 2.5,
+      z: 2.5,
+      duration: 0.6,
+      ease: "power2.out"
+    })
+    .to(pulseSphere.material, {
+      opacity: 0,
+      duration: 0.4,
+      ease: "power2.out"
+    }, "-=0.2");
+
+    this.activeAnimations.push(pulseAnimation);
+
+    // Create upward floating text indicator
+    const textGeometry = new THREE.PlaneGeometry(0.3, 0.1);
+    const textMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 1
+    });
+
     const textElement = new THREE.Mesh(textGeometry, textMaterial);
-    textElement.position.set(0, 0.3, 0); // Above the position
+    textElement.position.set(0, 0.4, 0);
     feedbackGroup.add(textElement);
-    
-    // Create expanding rings to indicate the discovery event
-    for (let i = 0; i < 2; i++) { // Reduced from 3 to 2 for better performance
-      const ringGeometry = new THREE.RingGeometry(0.02, 0.03, 16);
+
+    // Animate text floating up and fading
+    const textAnimation = gsap.timeline();
+    textAnimation.to(textElement.position, {
+      y: 0.8,
+      duration: 2,
+      ease: "power2.out"
+    })
+    .to(textElement.material, {
+      opacity: 0,
+      duration: 1
+    }, "-=1");
+
+    this.activeAnimations.push(textAnimation);
+
+    // Create multiple expanding rings for dramatic effect
+    for (let i = 0; i < 3; i++) {
+      const ringGeometry = new THREE.RingGeometry(0.05, 0.08, 32);
       const ringMaterial = new THREE.MeshBasicMaterial({
         color: this.getSeverityColor(severity),
         transparent: true,
-        opacity: 0.6 - (i * 0.3), // Adjusted opacity reduction
+        opacity: 0.8 - (i * 0.2),
         side: THREE.DoubleSide
       });
-      
+
       const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-      ring.rotation.x = -Math.PI / 2; // Face upward
-      ring.position.set(0, 0.01 * i, 0); // Stacked slightly
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(0, 0.02 * i, 0);
       feedbackGroup.add(ring);
-      
-      // Animate the ring to expand
+
+      // Animate rings expanding dramatically
       const scaleAnimation = gsap.to(ring.scale, {
-        x: 2.0, // Reduced from 2.5 for better performance
-        y: 2.0,
-        z: 2.0,
-        duration: 1.2, // Slightly faster for better UX
-        delay: i * 0.2,
+        x: 4.0,
+        y: 4.0,
+        z: 4.0,
+        duration: 1.5,
+        delay: i * 0.1,
         ease: "power2.out",
         onComplete: () => {
           if (ring.parent) {
@@ -65,17 +108,16 @@ export class VisualFeedbackSystem {
         }
       });
       this.activeAnimations.push(scaleAnimation);
-      
-      // Fade out the ring
-      const fadeAnimation = gsap.to(ring.material as THREE.MeshBasicMaterial, {
+
+      const fadeAnimation = gsap.to(ring.material, {
         opacity: 0,
-        duration: 1.2,
-        delay: i * 0.2,
+        duration: 1.5,
+        delay: i * 0.1,
         ease: "power2.out"
       });
       this.activeAnimations.push(fadeAnimation);
     }
-    
+
     this.scene.add(feedbackGroup);
     this.feedbackElements.push(feedbackGroup);
 
@@ -88,7 +130,7 @@ export class VisualFeedbackSystem {
       if (feedbackGroup.parent) {
         feedbackGroup.parent.remove(feedbackGroup);
       }
-    }, 2000);
+    }, 3000);
   }
 
   private getSeverityColor(severity: 'low' | 'medium' | 'high'): number {

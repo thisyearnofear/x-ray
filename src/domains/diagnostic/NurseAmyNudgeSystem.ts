@@ -8,6 +8,7 @@
 import { VoiceConsultationManager } from '../voice/VoiceConsultationManager'
 import { AIPanel } from './ui/AIPanel'
 import { CaseAccessManager } from '../medical/CaseAccessManager'
+import { NurseAmyPersonality } from '../character/NurseAmyPersonality'
 
 // Define DiagnosticPhase enum locally since it's not exported from game-phase-manager
 export enum DiagnosticPhase {
@@ -83,42 +84,28 @@ export class NurseAmyNudgeSystem {
     }, 3000) // Wait a few seconds for user to get oriented
   }
 
-  // NEW: Send initial introduction to Nurse Amy
+  // CLEAN: Send initial introduction using NurseAmyPersonality
   private sendInitialIntroduction(): void {
     const userStatus = this.accessManager.getUserStatus()
+    const isPremiumUser = userStatus.isAuthenticated
     
-    if (userStatus.isAuthenticated) {
-      this.sendNudge({
-        message: "👩‍⚕️ Nurse Amy: Hello Doctor! I'm here to assist you throughout this case. If you need help or have questions, just ask me! I can provide insights, suggest next steps, or help with patient management. Try clicking the 'Consult Nurse' button anytime.",
-        urgency: 'normal',
-        type: 'progress_positive'
-      })
-    } else {
-      this.sendNudge({
-        message: "👩‍⚕️ Nurse Amy: Hello Doctor! I'm here to assist you throughout this case. As a premium feature, I can provide personalized insights and guidance. Connect your wallet to unlock my full capabilities!",
-        urgency: 'normal',
-        type: 'progress_positive'
-      })
-    }
+    this.sendNudge({
+      message: NurseAmyPersonality.getIntroductionMessage(isPremiumUser),
+      urgency: 'normal',
+      type: 'progress_positive'
+    })
   }
 
-  // NEW: Proactive prompting for nurse consultation
+  // CLEAN: Proactive prompting using NurseAmyPersonality
   public sendConsultationPrompt(): void {
     const userStatus = this.accessManager.getUserStatus()
+    const isPremiumUser = userStatus.isAuthenticated
     
-    if (userStatus.isAuthenticated) {
-      this.sendNudge({
-        message: "👩‍⚕️ Nurse Amy: Feeling stuck? I can help! Click the 'Consult Nurse' button to ask me questions about the case, get guidance on next steps, or discuss patient management strategies.",
-        urgency: 'normal',
-        type: 'tool_suggestion'
-      })
-    } else {
-      this.sendNudge({
-        message: "👩‍⚕️ Nurse Amy: Feeling stuck? I can provide personalized guidance and insights. Connect your wallet to unlock full nurse consultation capabilities!",
-        urgency: 'normal',
-        type: 'tool_suggestion'
-      })
-    }
+    this.sendNudge({
+      message: NurseAmyPersonality.getConsultationPrompt(isPremiumUser),
+      urgency: 'normal',
+      type: 'tool_suggestion'
+    })
   }
 
   // IMMERSIVE: Time-pressure nudging system with phase transitions
@@ -158,32 +145,29 @@ export class NurseAmyNudgeSystem {
     }
   }
 
-  // MODULAR: Handle phase transitions based on timer milestones
+  // CLEAN: Handle phase transitions using NurseAmyPersonality
   private handlePhaseTransitions(timeRemaining: number): void {
     if (!this.phaseManager) return
 
     const currentPhase = this.phaseManager.getCurrentPhase()
+    const conditionsFound = 0 // Will be passed from game state in full implementation
 
-    // Transition to diagnosis ready phase at 1 minute
+    // Use NurseAmyPersonality for consistent messaging
     if (timeRemaining === 60 && currentPhase !== GamePhase.COMPLETE) {
       this.sendNudge({
-        message: "👩‍⚕️ Nurse Amy: Doctor, we're approaching the end of our time. Please prepare your final diagnosis - the patient is waiting for your assessment.",
+        message: NurseAmyPersonality.getTimePressureMessage(60, conditionsFound),
         urgency: 'critical',
         type: 'time_pressure'
       })
-    }
-    // Transition to analysis phase at 2 minutes
-    else if (timeRemaining === 120 && currentPhase === GamePhase.ACTIVE) {
+    } else if (timeRemaining === 120 && currentPhase === GamePhase.ACTIVE) {
       this.sendNudge({
-        message: "👩‍⚕️ Nurse Amy: Doctor, we're halfway through. Time to start analyzing your findings and forming a diagnosis.",
+        message: NurseAmyPersonality.getTimePressureMessage(120, conditionsFound),
         urgency: 'high',
         type: 'time_pressure'
       })
-    }
-    // Initial investigation phase at 3 minutes
-    else if (timeRemaining === 180 && currentPhase === GamePhase.ACTIVE) {
+    } else if (timeRemaining === 180 && currentPhase === GamePhase.ACTIVE) {
       this.sendNudge({
-        message: "👩‍⚕️ Nurse Amy: Doctor, we have 3 minutes remaining. Let's focus on the most critical areas for investigation.",
+        message: NurseAmyPersonality.getTimePressureMessage(180, conditionsFound),
         urgency: 'moderate',
         type: 'tool_suggestion'
       })

@@ -49,7 +49,8 @@ export class DiagnosticUIFacade {
       onHintClick: config.onHintClick,
       onConsultationClick: config.onConsultationClick,
       onDiagnosisSubmit: config.onDiagnosisSubmit,
-      onError: config.onError || this.showError.bind(this)
+      onError: config.onError || this.showError.bind(this),
+      xRayEffect: this.xRayEffect // MYSTERY ELEMENTS: Pass xRayEffect for conversation/treatment callbacks
     })
 
     this.gamePhaseManager = new GamePhaseManager(config.gameManager, this.uiManager, this.audioManager, config.canvas);

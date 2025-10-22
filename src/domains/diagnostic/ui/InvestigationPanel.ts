@@ -31,6 +31,8 @@ export interface InvestigationPanelConfig {
   onInvestigationClick: (toolId: string) => void
   onDiagnosisSubmit: (selectedConditions: string[]) => void
   onEvidenceReview: () => void
+  onPatientConversation?: () => void
+  onTreatmentOptions?: () => void
 }
 
 type PanelTab = 'tools' | 'evidence' | 'diagnosis'
@@ -105,6 +107,25 @@ export class InvestigationPanel {
       status: 'available',
       premium: true
     })
+
+    // MYSTERY ELEMENTS: Add conversation and treatment tools
+    this.tools.set('conversation', {
+      id: 'conversation',
+      name: 'Patient Interview',
+      icon: '💬',
+      description: 'Talk to patient to learn about symptoms',
+      status: 'available',
+      premium: false
+    })
+
+    this.tools.set('treatment', {
+      id: 'treatment',
+      name: 'Treatment Options',
+      icon: '💊',
+      description: 'Administer treatments with risk/reward',
+      status: 'available',
+      premium: false
+    })
   }
 
   create(): HTMLElement {
@@ -124,8 +145,8 @@ export class InvestigationPanel {
       top: ${spacing.lg};
       left: 50%;
       transform: translateX(-50%);
-      width: 90%;
-      max-width: 900px;
+      width: 80%;
+      max-width: 800px;
       z-index: ${zIndex.panel};
       transition: all 0.3s ease;
     `
@@ -520,7 +541,14 @@ export class InvestigationPanel {
       btn.addEventListener('click', () => {
         const toolId = (btn as HTMLElement).dataset.toolId
         if (toolId) {
-          this.config.onInvestigationClick(toolId)
+          // Handle special mystery tools
+          if (toolId === 'conversation' && this.config.onPatientConversation) {
+            this.config.onPatientConversation()
+          } else if (toolId === 'treatment' && this.config.onTreatmentOptions) {
+            this.config.onTreatmentOptions()
+          } else {
+            this.config.onInvestigationClick(toolId)
+          }
         }
       })
     })

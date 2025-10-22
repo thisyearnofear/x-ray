@@ -2,6 +2,7 @@ import { MedicalDataService } from './services/MedicalDataService';
 import { AIAnalysisService } from './services/AIAnalysisService';
 import { MedicalCase } from './types';
 import { CaseAccessManager } from './CaseAccessManager';
+import { AIGeneratedCaseValidator } from './services/AIGeneratedCaseValidator';
 
 export class MedicalServiceFacade {
   private medicalDataService: MedicalDataService;
@@ -97,6 +98,21 @@ export class MedicalServiceFacade {
 
       const aiCase = await response.json();
       
+      // MODULAR: Validate AI-generated case before accepting
+      const validationResult = AIGeneratedCaseValidator.validateFully(aiCase);
+      
+      // Log validation results
+      if (validationResult.warnings.length > 0 || !validationResult.isValid) {
+        console.warn(AIGeneratedCaseValidator.getValidationReport(validationResult));
+      } else {
+        console.log(`✅ AI case validated successfully (score: ${validationResult.score}/100)`);
+      }
+      
+      // If validation fails, throw error to trigger fallback
+      if (!validationResult.isValid) {
+        throw new Error(`AI case validation failed (score: ${validationResult.score}/100). Using fallback case.`);
+      }
+      
       // Enhance with access-aware features
       const enhancedCase: MedicalCase = {
         ...aiCase,
@@ -110,7 +126,8 @@ export class MedicalServiceFacade {
           originalDifficulty: difficulty,
           generationTimestamp: Date.now(),
           generatedByAI: true,
-          userWallet: this.smartAccount?.address
+          userWallet: this.smartAccount?.address,
+          validationScore: validationResult.score
         }
       };
 

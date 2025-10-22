@@ -8,6 +8,11 @@ import { MedicalNFTMinter } from '../../src/components/MedicalNFTMinter';
 import { PostLoginOnboardingFlow } from '../../src/domains/web3/PostLoginOnboardingFlow';
 import { useWeb3 } from '../../hooks/web3/useWeb3';
 
+// ENHANCEMENT: MON Token Economy Components
+import { BudgetHUD } from '../../src/components/BudgetHUD';
+import { CaseSelectionHub } from '../../src/components/CaseSelectionHub';
+import { TreatmentMenu } from '../../src/components/TreatmentMenu';
+
 const CanvasComponent = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -20,6 +25,21 @@ const CanvasComponent = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
   const hasShownOnboarding = useRef(false);
+
+  // ENHANCEMENT: MON Token Economy State
+  const [showCaseSelection, setShowCaseSelection] = useState(false);
+  const [showTreatmentMenu, setShowTreatmentMenu] = useState(false);
+  const [budgetState, setBudgetState] = useState({
+    remaining: 0,
+    spent: 0,
+    startingAmount: 0,
+    difficultyTier: 'beginner' as 'beginner' | 'intermediate' | 'advanced' | 'expert'
+  });
+  const [adminMessage, setAdminMessage] = useState<{
+    message: string;
+    urgency: 'normal' | 'warning' | 'critical';
+  } | undefined>(undefined);
+  const [executedActions, setExecutedActions] = useState<string[]>([]);
 
   // Web3 integration
   const { isConnected, address: walletAddress, web3Facade } = useWeb3();
@@ -60,12 +80,43 @@ const CanvasComponent = () => {
       setShowDelegationPanel(true);
     };
 
+    // ENHANCEMENT: Economic system events
+    const handleShowCaseSelection = () => {
+      setShowCaseSelection(true);
+    };
+
+    const handleShowTreatmentMenu = () => {
+      setShowTreatmentMenu(true);
+    };
+
+    const handleBudgetUpdate = (event: CustomEvent) => {
+      setBudgetState(event.detail);
+    };
+
+    const handleAdminMessage = (event: CustomEvent) => {
+      setAdminMessage(event.detail);
+    };
+
+    const handleActionExecuted = (event: CustomEvent) => {
+      setExecutedActions(prev => [...prev, event.detail.actionId]);
+    };
+
     window.addEventListener('diagnosis-complete' as any, handleDiagnosisComplete);
     document.addEventListener('showDelegationPanel', handleShowDelegationPanel);
+    document.addEventListener('showCaseSelection', handleShowCaseSelection);
+    document.addEventListener('showTreatmentMenu', handleShowTreatmentMenu);
+    document.addEventListener('budgetUpdated', handleBudgetUpdate as any);
+    document.addEventListener('administratorMessage', handleAdminMessage as any);
+    document.addEventListener('actionExecuted', handleActionExecuted as any);
     
     return () => {
       window.removeEventListener('diagnosis-complete' as any, handleDiagnosisComplete);
       document.removeEventListener('showDelegationPanel', handleShowDelegationPanel);
+      document.removeEventListener('showCaseSelection', handleShowCaseSelection);
+      document.removeEventListener('showTreatmentMenu', handleShowTreatmentMenu);
+      document.removeEventListener('budgetUpdated', handleBudgetUpdate as any);
+      document.removeEventListener('administratorMessage', handleAdminMessage as any);
+      document.removeEventListener('actionExecuted', handleActionExecuted as any);
     };
   }, []);
 
@@ -146,6 +197,64 @@ const CanvasComponent = () => {
 
       {isLoaded && (
         <>
+          {/* ENHANCEMENT: Economic System UI */}
+          {budgetState.startingAmount > 0 && (
+            <BudgetHUD
+              remaining={budgetState.remaining}
+              spent={budgetState.spent}
+              startingAmount={budgetState.startingAmount}
+              difficultyTier={budgetState.difficultyTier}
+              administratorMessage={adminMessage}
+              onRequestFunds={() => {
+                // Trigger negotiation dialog
+                document.dispatchEvent(new CustomEvent('requestAdditionalFunds'));
+              }}
+              onContributeFunds={() => {
+                // Trigger personal contribution dialog
+                document.dispatchEvent(new CustomEvent('contributePersonalFunds'));
+              }}
+              hasWallet={isConnected}
+            />
+          )}
+
+          <CaseSelectionHub
+            isVisible={showCaseSelection}
+            hasWallet={isConnected}
+            onConnectWallet={() => {
+              // Trigger wallet connection
+              const connectBtn = document.querySelector('[data-wallet-connect]');
+              if (connectBtn instanceof HTMLElement) {
+                connectBtn.click();
+              }
+            }}
+            onSelectCase={(tier) => {
+              setShowCaseSelection(false);
+              // Dispatch event to GameManager to initialize budget
+              document.dispatchEvent(new CustomEvent('caseSelected', {
+                detail: {
+                  difficultyTier: tier.id,
+                  startingBudget: tier.startingBudget,
+                  maxEarnings: tier.maxEarnings,
+                  timeLimit: tier.timeLimit
+                }
+              }));
+            }}
+          />
+
+          <TreatmentMenu
+            isOpen={showTreatmentMenu}
+            onClose={() => setShowTreatmentMenu(false)}
+            currentBudget={budgetState.remaining}
+            executedActions={executedActions}
+            onSelectAction={(action) => {
+              // Dispatch event to GameManager to execute action
+              document.dispatchEvent(new CustomEvent('executeAction', {
+                detail: { action }
+              }));
+              setShowTreatmentMenu(false);
+            }}
+          />
+
           <WalletConnection
             onConnected={() => {}} // Handled by useWeb3 hook internally
           />

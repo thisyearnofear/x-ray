@@ -330,7 +330,7 @@ export class AudioManager {
           : type === 'warning'
             ? 'linear-gradient(135deg, #ffaa00, #ff8800)'
             : 'linear-gradient(135deg, #6c5ce7, #341f97)'};
-      color: white; padding: 16px 24px; border-radius: 12px;
+      color: white; padding: 12px 16px; border-radius: 8px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 15px; font-weight: 500; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
       transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);

@@ -18,6 +18,7 @@ import { CaseAccessManager } from '../../medical/CaseAccessManager'
 import { GaslessConsultationFlow } from '../../web3/GaslessConsultationFlow'
 import { DelegationPermissionsUI } from '../../web3/DelegationPermissionsUI'
 import { CaseRevelationService } from '../../medical/services/CaseRevelationService'
+import { NurseAmyPersonality } from '../../character/NurseAmyPersonality'
 
 export interface DiagnosticUIConfig {
   onSolveClick?: () => void
@@ -25,6 +26,7 @@ export interface DiagnosticUIConfig {
   onConsultationClick?: () => void
   onDiagnosisSubmit?: (selectedConditions: string[]) => void
   onError?: (message: string) => void
+  xRayEffect?: any // Reference to x-ray effect for mystery system callbacks
 }
 
 export class DiagnosticUIManager {
@@ -393,6 +395,17 @@ export class DiagnosticUIManager {
       },
       onEvidenceReview: () => {
         console.log('🔍 Evidence review requested')
+      },
+      // MYSTERY ELEMENTS: Add conversation and treatment callbacks
+      onPatientConversation: () => {
+        if (this.config.xRayEffect?.initiatePatientConversation) {
+          this.config.xRayEffect.initiatePatientConversation();
+        }
+      },
+      onTreatmentOptions: () => {
+        if (this.config.xRayEffect?.showTreatmentOptions) {
+          this.config.xRayEffect.showTreatmentOptions();
+        }
       }
     }
 
@@ -2170,21 +2183,15 @@ export class DiagnosticUIManager {
     return 'symptoms'
   }
 
-  // DRY: Generate context-aware Nurse Amy guidance
+  // CLEAN: Generate context-aware Nurse Amy guidance using NurseAmyPersonality
   private getNurseAmyGuidance(investigationType: 'interview' | 'labs' | 'imaging' | 'physical'): string {
     const chiefComplaint = this.getChiefComplaint()
-    const isAI = this.isAIGeneratedCase()
     
-    const guidanceMap: Record<string, string> = {
-      interview: isAI 
-        ? `Based on ${chiefComplaint}, I recommend focused physical examination. Check your Investigation Panel for all collected evidence!`
-        : `Based on the history, I recommend physical examination focusing on TMJ and palpation. Check your Investigation Panel at the top for all collected evidence!`,
-      labs: `Lab findings reveal important clues about ${chiefComplaint}. Your Investigation Panel now has multiple pieces of evidence - keep investigating!`,
-      imaging: `Imaging studies complete for ${chiefComplaint}. Great work! Review your Investigation Panel to see all evidence - you may be ready to diagnose soon.`,
-      physical: `Physical findings added to your Investigation Panel. Combine this with labs and imaging for a complete picture!`
-    }
+    // Use NurseAmyPersonality as single source of truth
+    const guidance = NurseAmyPersonality.getInvestigationGuidance(chiefComplaint, investigationType)
     
-    return `💡 <strong>Nurse Amy:</strong> ${guidanceMap[investigationType] || 'Continue your investigation.'}`
+    // Format for UI with HTML
+    return `💡 <strong>${guidance.split(':')[0]}:</strong> ${guidance.split(':').slice(1).join(':')}`
   }
 
   destroy(): void {

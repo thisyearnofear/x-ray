@@ -19,6 +19,14 @@ export interface PatientInfo {
   age: number
   gender: string
   chiefComplaint: string
+  vitalSigns?: {
+    bloodPressure: string
+    heartRate: number
+    respiratoryRate: number
+    temperature: number
+    oxygenSaturation: number
+    painLevel: number
+  }
 }
 
 // Web3 Types

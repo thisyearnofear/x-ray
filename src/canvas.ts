@@ -21,6 +21,7 @@ import { VoiceConsultationManager } from "./domains/voice/VoiceConsultationManag
 import { NurseAmyNudgeSystem } from "./domains/diagnostic/NurseAmyNudgeSystem"
 import { colors, spacing, typography, borders, effects, zIndex } from './styles/design-tokens'
 import { payForAICase } from "./domains/web3/services/mon-payment"
+import { EconomicEventBridge, createCaseSelectionButton, createTreatmentMenuButton } from "./domains/economic/EconomicEventBridge"
 
 export default class Canvas {
   element: HTMLCanvasElement
@@ -62,6 +63,9 @@ export default class Canvas {
   nurseAmyNudges: NurseAmyNudgeSystem | null = null
   aiPanel: any = null // AI Panel reference for milestone responses
 
+  // ENHANCEMENT: Economic Event Bridge
+  economicBridge: EconomicEventBridge | null = null
+
   // Control RAF and listeners
   private _rafId: number | null = null
   private _disposed = false
@@ -96,6 +100,9 @@ export default class Canvas {
     
     // Listen for wallet connection events to update MedicalServiceFacade
     this.setupWalletEventListeners();
+    
+    // ENHANCEMENT: Initialize economic event bridge
+    this.initializeEconomicSystem();
     
     // Remove loading screen and start render after a brief delay to ensure everything is initialized
     setTimeout(() => {
@@ -687,7 +694,28 @@ export default class Canvas {
     // Always show tutorial on page load
     setTimeout(() => this.tutorial?.start(), 2000) // Start after model loads
 
-    console.log('📚 Tutorial and Voice systems initialized')
+    console.log('✨ Tutorial and Voice systems initialized')
+  }
+
+  // ENHANCEMENT: Initialize economic event bridge and UI buttons
+  private initializeEconomicSystem() {
+    if (!this.gameManager) {
+      console.warn('⚠️ GameManager not initialized, skipping economic system');
+      return;
+    }
+
+    // Create economic event bridge
+    this.economicBridge = new EconomicEventBridge(this.gameManager);
+    this.economicBridge.initialize();
+
+    // Add UI buttons for economic system
+    const caseSelectionBtn = createCaseSelectionButton(this.economicBridge);
+    const treatmentMenuBtn = createTreatmentMenuButton(this.economicBridge);
+
+    document.body.appendChild(caseSelectionBtn);
+    document.body.appendChild(treatmentMenuBtn);
+
+    console.log('💰 Economic system initialized');
   }
 
   // ENHANCEMENT FIRST: Start the game when tutorial completes
@@ -1525,6 +1553,7 @@ export default class Canvas {
     try { this.diagnosticUI?.destroy() } catch { }
     try { this.tutorial?.destroy() } catch { }
     try { this.xRayEffect?.destroy() } catch { }
+    try { this.economicBridge?.dispose() } catch { }
     try { this.renderer?.dispose() } catch { }
     // Clean up scene resources
     if (this.scene) {
