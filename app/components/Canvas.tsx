@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { WalletConnection } from '../../src/components/WalletConnection';
 import { DelegationPanel } from '../../src/components/DelegationPanel';
 import { MedicalNFTMinter } from '../../src/components/MedicalNFTMinter';
+import { SmartAccountOnboarding } from '../../src/domains/web3/SmartAccountOnboarding';
 import { useWeb3 } from '../../hooks/web3/useWeb3';
 
 const CanvasComponent = () => {
@@ -16,9 +17,22 @@ const CanvasComponent = () => {
   const [diagnosisCompleted, setDiagnosisCompleted] = useState(false);
   const [lastDiagnosis, setLastDiagnosis] = useState<{conditions: string[], accuracy: number} | null>(null);
   const [showDelegationPanel, setShowDelegationPanel] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const hasShownOnboarding = useRef(false);
 
   // Web3 integration
   const { isConnected, address: walletAddress } = useWeb3();
+
+  // ENHANCEMENT FIRST: Show onboarding on first wallet connect (once per session)
+  useEffect(() => {
+    if (isConnected && walletAddress && !hasShownOnboarding.current) {
+      const hasCompletedOnboarding = localStorage.getItem('xrai_onboarding_completed')
+      if (!hasCompletedOnboarding) {
+        setShowOnboarding(true)
+        hasShownOnboarding.current = true
+      }
+    }
+  }, [isConnected, walletAddress])
 
   // Listen for diagnosis completion events
   useEffect(() => {
@@ -123,6 +137,23 @@ const CanvasComponent = () => {
           <WalletConnection
             onConnected={() => {}} // Handled by useWeb3 hook internally
           />
+          
+          {/* ENHANCEMENT FIRST: Smart Account Onboarding on first connect */}
+          {showOnboarding && (
+            <SmartAccountOnboarding
+              onComplete={() => {
+                setShowOnboarding(false)
+                localStorage.setItem('xrai_onboarding_completed', 'true')
+                // Trigger wallet connection and show delegation panel
+                setTimeout(() => setShowDelegationPanel(true), 500)
+              }}
+              onSkip={() => {
+                setShowOnboarding(false)
+                localStorage.setItem('xrai_onboarding_completed', 'true')
+              }}
+            />
+          )}
+          
           <DelegationPanel
             walletAddress={walletAddress || null}
             isVisible={showDelegationPanel}

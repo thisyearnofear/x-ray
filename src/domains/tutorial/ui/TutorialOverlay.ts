@@ -99,6 +99,152 @@ export class TutorialOverlay {
     }
   }
 
+  // ENHANCEMENT FIRST: Show special centered completion modal
+  showCompletionModal(): void {
+    // Remove existing overlay
+    this.destroy()
+
+    // Create special completion modal
+    this.element = document.createElement('div')
+    this.element.className = 'tutorial-completion-overlay'
+    this.element.style.cssText = `
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: ${zIndex.modal + 20};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      animation: fadeIn 0.5s ease-out;
+    `
+
+    this.element.innerHTML = `
+      <div class="completion-modal" style="
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border: 2px solid #00ff88;
+        border-radius: 20px;
+        padding: 3rem;
+        max-width: 600px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 255, 136, 0.4);
+        text-align: center;
+        animation: celebrationPulse 2s ease-in-out infinite;
+      ">
+        <div style="font-size: 5rem; margin-bottom: 1.5rem; animation: bounce 1s ease-in-out infinite;">🎓</div>
+        
+        <h1 style="
+          color: #00ff88;
+          font-size: 2.5rem;
+          font-weight: bold;
+          margin-bottom: 1rem;
+          text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        ">
+          Tutorial Complete!
+        </h1>
+        
+        <p style="
+          color: white;
+          font-size: 1.2rem;
+          line-height: 1.6;
+          margin-bottom: 2rem;
+          opacity: 0.9;
+        ">
+          You've mastered the basics of X-Ray AI diagnostics.
+          Ready to put your skills to the test?
+        </p>
+
+        <div style="
+          background: rgba(0, 255, 136, 0.1);
+          border: 1px solid rgba(0, 255, 136, 0.3);
+          border-radius: 15px;
+          padding: 1.5rem;
+          margin-bottom: 2rem;
+        ">
+          <h3 style="color: #00ff88; margin-bottom: 1rem; font-size: 1.1rem;">What You Learned:</h3>
+          <div style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            text-align: left;
+            color: white;
+            font-size: 0.95rem;
+          ">
+            <div>✅ Camera Navigation</div>
+            <div>✅ Scanning Bodies</div>
+            <div>✅ Finding Conditions</div>
+            <div>✅ AI Assistance</div>
+          </div>
+        </div>
+
+        <div style="
+          background: rgba(0, 212, 255, 0.1);
+          border: 1px solid rgba(0, 212, 255, 0.3);
+          border-radius: 15px;
+          padding: 1.5rem;
+          margin-bottom: 2rem;
+        ">
+          <h3 style="color: #00d4ff; margin-bottom: 0.75rem; font-size: 1.1rem;">Next Up:</h3>
+          <p style="color: white; font-size: 0.95rem; margin: 0; opacity: 0.9;">
+            🏥 Your first patient case is waiting<br>
+            ⏰ Race against time to diagnose conditions<br>
+            🏆 Earn achievements and unlock new cases
+          </p>
+        </div>
+
+        <button id="start-game-btn" style="
+          width: 100%;
+          background: linear-gradient(45deg, #00ff88, #00cc6a);
+          color: black;
+          border: none;
+          padding: 1.25rem 2rem;
+          border-radius: 15px;
+          cursor: pointer;
+          font-size: 1.3rem;
+          font-weight: bold;
+          box-shadow: 0 8px 25px rgba(0, 255, 136, 0.4);
+          transition: all 0.3s ease;
+        ">
+          🎮 Start Your First Case
+        </button>
+
+        <div style="
+          margin-top: 1.5rem;
+          font-size: 0.85rem;
+          opacity: 0.6;
+          color: white;
+        ">
+          💡 Tip: Connect your wallet later to earn NFT achievements!
+        </div>
+      </div>
+    `
+
+    document.body.appendChild(this.element)
+
+    // Setup event listener
+    const startBtn = this.element.querySelector('#start-game-btn')
+    if (startBtn) {
+      startBtn.addEventListener('click', () => {
+        this.config.onComplete()
+      })
+
+      // Add hover effect
+      startBtn.addEventListener('mouseenter', (e: Event) => {
+        const target = e.target as HTMLElement
+        target.style.transform = 'translateY(-4px) scale(1.02)'
+        target.style.boxShadow = '0 12px 35px rgba(0, 255, 136, 0.6)'
+      })
+
+      startBtn.addEventListener('mouseleave', (e: Event) => {
+        const target = e.target as HTMLElement
+        target.style.transform = 'translateY(0) scale(1)'
+        target.style.boxShadow = '0 8px 25px rgba(0, 255, 136, 0.4)'
+      })
+    }
+
+    console.log('✨ Tutorial completion modal shown')
+  }
+
   private generateHTML(): string {
     return `
       <div class="tutorial-modal" style="
@@ -305,6 +451,21 @@ export class TutorialOverlay {
           width: 100% !important;
           justify-content: center !important;
         }
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+
+      @keyframes celebrationPulse {
+        0%, 100% { box-shadow: 0 20px 60px rgba(0, 255, 136, 0.4); }
+        50% { box-shadow: 0 25px 70px rgba(0, 255, 136, 0.6); }
+      }
+
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
       }
     `
     document.head.appendChild(style)

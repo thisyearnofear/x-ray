@@ -83,6 +83,7 @@ export class MedicalServiceFacade {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          model: 'head', // Default to head scan - could be made dynamic based on case type
           difficulty,
           smartAccount: this.smartAccount?.address,
           delegationEnabled: this.delegationEnabled,

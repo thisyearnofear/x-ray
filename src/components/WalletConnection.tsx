@@ -19,31 +19,50 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
     disconnectWallet
   } = useWeb3()
 
+  const [showSettings, setShowSettings] = React.useState(false)
+
+  // PERFORMANT: Track last dispatched address to prevent duplicate events
+  const lastDispatchedAddress = React.useRef<string | null>(null)
+
   React.useEffect(() => {
-    if (isConnected && address) {
+    if (isConnected && address && lastDispatchedAddress.current !== address) {
       onConnected(address)
+      lastDispatchedAddress.current = address
       
-      // ENHANCEMENT FIRST: Dispatch wallet connection event for tier system
+      // ENHANCEMENT FIRST: Dispatch wallet connection event for tier system (once per address)
       const event = new CustomEvent('walletConnected', {
         detail: { 
           address, 
           isConnected: true,
-          // Include default preferred difficulty for authenticated users
           preferredDifficulty: 'medium' 
         }
       })
       document.dispatchEvent(event)
-    } else if (!isConnected) {
+    } else if (!isConnected && lastDispatchedAddress.current !== null) {
+      lastDispatchedAddress.current = null
+      
       // Dispatch disconnection event
       const event = new CustomEvent('walletDisconnected', {
         detail: { 
           isConnected: false,
-          preferredDifficulty: 'medium' // Default for unauthenticated users
+          preferredDifficulty: 'medium'
         }
       })
       document.dispatchEvent(event)
     }
   }, [isConnected, address, onConnected])
+
+  const handleResetOnboarding = () => {
+    localStorage.removeItem('xrai_onboarding_completed')
+    setShowSettings(false)
+    alert('Onboarding reset! Disconnect and reconnect your wallet to see it again.')
+  }
+
+  const handleManageDelegations = () => {
+    setShowSettings(false)
+    // Trigger delegation panel to open
+    document.dispatchEvent(new CustomEvent('showDelegationPanel'))
+  }
 
   return (
     <div style={{
@@ -80,7 +99,28 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
       {isConnected && address ? (
         <div>
           <div style={{ marginBottom: '15px' }}>
-            <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '5px' }}>Smart Account Active</div>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '5px' 
+            }}>
+              <div style={{ fontSize: '12px', opacity: 0.8 }}>Smart Account Active</div>
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(78, 205, 196, 0.3)',
+                  color: 'white',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                ⚙️ Settings
+              </button>
+            </div>
             <div style={{
               fontSize: '12px',
               fontFamily: 'monospace',
@@ -92,6 +132,53 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
               {address.slice(0, 8)}...{address.slice(-6)}
             </div>
           </div>
+
+          {/* ENHANCEMENT FIRST: Settings dropdown */}
+          {showSettings && (
+            <div style={{
+              background: 'rgba(0, 0, 0, 0.95)',
+              border: '1px solid rgba(78, 205, 196, 0.3)',
+              borderRadius: '8px',
+              padding: '10px',
+              marginBottom: '15px',
+              fontSize: '12px'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#4ecdc4' }}>Account Settings</div>
+              <button
+                onClick={handleManageDelegations}
+                style={{
+                  width: '100%',
+                  background: 'rgba(78, 205, 196, 0.1)',
+                  border: '1px solid rgba(78, 205, 196, 0.3)',
+                  color: 'white',
+                  padding: '8px',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  marginBottom: '6px',
+                  textAlign: 'left'
+                }}
+              >
+                🔐 Manage Delegations
+              </button>
+              <button
+                onClick={handleResetOnboarding}
+                style={{
+                  width: '100%',
+                  background: 'rgba(255, 170, 0, 0.1)',
+                  border: '1px solid rgba(255, 170, 0, 0.3)',
+                  color: 'white',
+                  padding: '8px',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  textAlign: 'left'
+                }}
+              >
+                🔄 Reset Onboarding
+              </button>
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: '10px' }}>
             <button

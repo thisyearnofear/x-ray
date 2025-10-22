@@ -71,7 +71,8 @@ export class TutorialFacade {
     if (nextStep) {
       this.showCurrentStep()
     } else {
-      this.complete()
+      // ENHANCEMENT FIRST: Show special completion modal instead of just completing
+      this.showCompletionCelebration()
     }
   }
 
@@ -90,8 +91,15 @@ export class TutorialFacade {
 
   complete(): void {
     this.isActive = false
-    this.overlay?.hide()
+    this.overlay?.destroy()
     this.config.onTutorialComplete?.()
+  }
+
+  // ENHANCEMENT FIRST: Show special centered completion celebration
+  private showCompletionCelebration(): void {
+    if (this.overlay) {
+      this.overlay.showCompletionModal()
+    }
   }
 
   // MODULAR: Action handling
