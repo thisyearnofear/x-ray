@@ -7,6 +7,7 @@ interface DelegationPanelProps {
   walletAddress: string | null
   isConnected?: boolean
   gaslessEnabled?: boolean
+  defaultDelegateAddress?: string
   isVisible: boolean
   onClose: () => void
 }
@@ -15,6 +16,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
   walletAddress: propWalletAddress, // Renamed to indicate it's a prop
   isConnected = false,
   gaslessEnabled = false,
+  defaultDelegateAddress,
   isVisible,
   onClose
 }) => {
@@ -29,7 +31,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
   // Use the context wallet address instead of prop to ensure consistency
   const effectiveWalletAddress = contextWalletAddress || propWalletAddress
   const effectiveIsConnected = contextIsConnected || isConnected
-  const [delegateAddress, setDelegateAddress] = useState('')
+  const [delegateAddress, setDelegateAddress] = useState(defaultDelegateAddress || '')
   const [isDelegating, setIsDelegating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)

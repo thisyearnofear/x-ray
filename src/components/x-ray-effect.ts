@@ -1006,6 +1006,26 @@ export default class XRayEffect {
 
 
   private discoverCondition(conditionId: string) {
+    // Check if condition is valid for current case
+    let isConditionValidForCase = true; // Default to true for backward compatibility
+
+    if (this.gameManager) {
+      const gameState = this.gameManager.getGameState();
+      const patientCase = gameState.patientCase;
+      
+      if (patientCase && patientCase.conditions) {
+        // Only allow discovery if the condition is in the current case's conditions
+        isConditionValidForCase = patientCase.conditions.includes(conditionId);
+      }
+    }
+
+    // Skip discovery if condition is not valid for the current case
+    if (!isConditionValidForCase) {
+      console.log('Condition not valid for current case, skipping discovery:', conditionId);
+      // Optional: provide feedback to user that this condition isn't relevant
+      return;
+    }
+
     console.log('Discovering condition:', conditionId)
 
     // GAMIFICATION: Calculate scoring and streaks

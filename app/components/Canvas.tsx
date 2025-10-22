@@ -313,6 +313,7 @@ const CanvasComponent = () => {
             walletAddress={walletAddress || null}
             isConnected={isConnected}
             gaslessEnabled={true} // Since we know the smart account is active as shown in SmartAccountHUD
+            defaultDelegateAddress={process.env.NEXT_PUBLIC_AI_DELEGATE_ADDRESS || undefined}
             isVisible={showDelegationPanel}
             onClose={() => setShowDelegationPanel(false)}
           />

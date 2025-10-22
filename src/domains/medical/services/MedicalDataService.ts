@@ -29,7 +29,7 @@ const sampleCase: MedicalCase = {
   difficulty: 'medium',
   caseComplexity: 'complex',
   requiredModel: 'head',
-  conditions: ['tmj_disorder', 'tension_headache'],
+  conditions: ['temporomandibular_disorder', 'tension_headache'],
   aiGenerated: false,
   estimatedStudyTime: 300,
   timestamp: Date.now(),
