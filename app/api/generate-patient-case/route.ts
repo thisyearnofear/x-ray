@@ -78,46 +78,61 @@ export async function POST(request: NextRequest) {
 
         const prompt = createPatientGenerationPrompt(model, difficulty, specialty, caseNumber);
 
-        const response = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.CEREBRAS_API_KEY}`,
-            },
-            body: JSON.stringify({
-                model: 'llama3.1-70b',
-                messages: [
-                    {
-                        role: 'system',
-                        content: `You are an expert medical educator creating realistic, unpredictable patient cases for emergency medicine training.
+        let generatedCaseRaw: string | undefined;
+        
+        try {
+            // First, try Cerebras API
+            const cerebrasResponse = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.CEREBRAS_API_KEY}`,
+                },
+                body: JSON.stringify({
+                    model: 'llama3.1-70b',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `You are an expert medical educator creating realistic, unpredictable patient cases for emergency medicine training.
 
 CRITICAL: Generate ENTIRELY UNPREDICTABLE cases that cannot be guessed from symptoms or initial presentation. Include rare conditions, atypical presentations, and complex multi-system pathology.
 
 Focus on EMERGENCY MEDICINE scenarios appropriate for a PGY-2 resident level. Include time-sensitive decisions, complications, and realistic clinical judgment calls.
 
 Structure your response as valid JSON matching the GeneratedPatientCase interface. Ensure all fields are populated with medically accurate, varied content.`
-                    },
-                    {
-                        role: 'user',
-                        content: prompt
-                    }
-                ],
-                temperature: 0.8, // Higher temperature for more unpredictability
-                max_tokens: 1200,
-                top_p: 0.9
-            }),
-        });
+                        },
+                        {
+                            role: 'user',
+                            content: prompt
+                        }
+                    ],
+                    temperature: 0.8, // Higher temperature for more unpredictability
+                    max_tokens: 1200,
+                    top_p: 0.9
+                }),
+            });
 
-        if (!response.ok) {
-            console.error(`Cerebras API error: ${response.status}`, await response.text());
-            throw new Error(`Cerebras API error: ${response.status}`);
-        }
+            if (!cerebrasResponse.ok) {
+                console.error(`Cerebras API error: ${cerebrasResponse.status}`, await cerebrasResponse.text());
+                throw new Error(`Cerebras API error: ${cerebrasResponse.status}`);
+            }
 
-        const data = await response.json();
-        const generatedCaseRaw = data.choices[0]?.message?.content;
+            const cerebrasData = await cerebrasResponse.json();
+            generatedCaseRaw = cerebrasData.choices[0]?.message?.content;
 
-        if (!generatedCaseRaw) {
-            throw new Error('No content received from Cerebras API');
+            if (!generatedCaseRaw) {
+                throw new Error('No content received from Cerebras API');
+            }
+        } catch (cerebrasError) {
+            console.error('Cerebras API failed, attempting Gemini fallback:', cerebrasError);
+            
+            // Fallback to Gemini if Cerebras fails
+            try {
+                generatedCaseRaw = await generateCaseWithGemini(prompt);
+            } catch (geminiError) {
+                console.error('Gemini API also failed:', geminiError);
+                throw new Error('Both Cerebras and Gemini APIs failed');
+            }
         }
 
         console.log('Raw AI response:', generatedCaseRaw);
@@ -329,4 +344,52 @@ function getFallbackCase(): GeneratedPatientCase {
         estimatedCaseLength: 600,
         timestamp: Date.now()
     };
+}
+
+// ENHANCEMENT: Gemini API fallback for improved reliability
+async function generateCaseWithGemini(prompt: string): Promise<string> {
+    if (!process.env.GEMINI_API_KEY) {
+        throw new Error('GEMINI_API_KEY not configured');
+    }
+
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            contents: [{
+                parts: [{
+                    text: `You are an expert medical educator creating realistic, unpredictable patient cases for emergency medicine training.
+
+CRITICAL: Generate ENTIRELY UNPREDICTABLE cases that cannot be guessed from symptoms or initial presentation. Include rare conditions, atypical presentations, and complex multi-system pathology.
+
+Focus on EMERGENCY MEDICINE scenarios appropriate for a PGY-2 resident level. Include time-sensitive decisions, complications, and realistic clinical judgment calls.
+
+Structure your response as valid JSON matching the GeneratedPatientCase interface. Ensure all fields are populated with medically accurate, varied content.
+
+${prompt}`
+                }]
+            }],
+            generationConfig: {
+                temperature: 0.8,
+                maxOutputTokens: 1200,
+                topP: 0.9
+            }
+        }),
+    });
+
+    if (!geminiResponse.ok) {
+        console.error(`Gemini API error: ${geminiResponse.status}`, await geminiResponse.text());
+        throw new Error(`Gemini API error: ${geminiResponse.status}`);
+    }
+
+    const geminiData = await geminiResponse.json();
+    const generatedCaseRaw = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!generatedCaseRaw) {
+        throw new Error('No content received from Gemini API');
+    }
+
+    return generatedCaseRaw;
 }
