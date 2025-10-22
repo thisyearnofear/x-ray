@@ -371,6 +371,10 @@ export class DiagnosticUIManager {
 
     const aiPanelElement = this.aiPanel.create()
     document.body.appendChild(aiPanelElement)
+    
+    // Set initial premium status
+    const userStatus = this.accessManager.getUserStatus()
+    this.aiPanel.setPremiumStatus(userStatus.currentTier === 'premium')
   }
 
   // ENHANCEMENT FIRST: Create tier status indicator
@@ -524,6 +528,9 @@ export class DiagnosticUIManager {
   private setupAccessManagerListeners(): void {
     this.accessManager.on('accessStatusChanged', () => {
       this.renderTierStatusIndicator()
+      // Update AI panel premium status
+      const userStatus = this.accessManager.getUserStatus()
+      this.aiPanel?.setPremiumStatus(userStatus.currentTier === 'premium')
     })
 
     this.accessManager.on('caseUsageRecorded', () => {
@@ -1471,7 +1478,7 @@ export class DiagnosticUIManager {
                 margin-bottom: ${spacing.sm};
                 text-transform: uppercase;
                 letter-spacing: ${typography.letterSpacing.wider};
-              ">📋 CASE #${patientCase.id}: ${(patientCase as any).title || 'Unknown Case'}</div>
+              ">📋 ${this.getCleanCaseTitle(patientCase)}</div>
               <div id="case-complaint" style="font-size: ${typography.fontSize.sm}; color: ${colors.neutral.light};">
                 <strong>Presenting Complaint:</strong> ${(patientCase as any).presentingComplaint || 'Not specified'}
               </div>
@@ -1769,6 +1776,19 @@ export class DiagnosticUIManager {
       }
     `
     document.head.appendChild(style)
+  }
+
+  // UTILITY: Get clean case title without debug info
+  private getCleanCaseTitle(patientCase: MedicalCase | PatientCase | null): string {
+    if (!patientCase) return 'Unknown Case'
+    
+    const title = (patientCase as any).title || 'Medical Case'
+    
+    // Remove debug/fallback prefixes from title
+    return title
+      .replace(/^Premium Case \(Fallback\):\s*/i, '')
+      .replace(/^Premium Case \(AI Generation Failed\):\s*/i, '')
+      .replace(/^Fallback:\s*/i, '')
   }
 
   // UTILITY: Show inline feedback message

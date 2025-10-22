@@ -44,6 +44,7 @@ export class AIPanel {
   private voiceSilenceTimer: NodeJS.Timeout | null = null // Timer for automatic voice timeout
   private onVoiceResultCallbacks: Array<(text: string) => void> = []
   private onVoiceErrorCallbacks: Array<(error: any) => void> = []
+  private isPremiumUser: boolean = false // Track premium status for voice access
 
   constructor(config: AIPanelConfig) {
     this.config = {
@@ -53,6 +54,22 @@ export class AIPanel {
       maxWidth: '500px',
       maxHeight: '55vh',
       ...config
+    }
+  }
+
+  // Set premium status for voice access control
+  setPremiumStatus(isPremium: boolean): void {
+    this.isPremiumUser = isPremium
+    this.updateVoiceControlVisibility()
+  }
+
+  private updateVoiceControlVisibility(): void {
+    if (!this.voiceContainer) return
+    
+    if (this.isPremiumUser) {
+      this.voiceContainer.style.display = 'flex'
+    } else {
+      this.voiceContainer.style.display = 'none'
     }
   }
 
@@ -199,6 +216,18 @@ export class AIPanel {
   }
 
   private toggleVoice(): void {
+    // Check premium access first
+    if (!this.isPremiumUser) {
+      this.addInsight({
+        id: `premium_required_${Date.now()}`,
+        timestamp: Date.now(),
+        content: '🔒 Voice consultation requires premium access. Connect your wallet to upgrade!',
+        type: 'premium',
+        confidence: 1.0
+      })
+      return
+    }
+
     if (!this.voiceCallbacks) {
       console.warn('Voice callbacks not registered')
       return
@@ -329,6 +358,7 @@ export class AIPanel {
   addInsight(insight: AIInsight): void {
     this.insights.push(insight)
     this.renderInsights()
+    this.flashPanel() // Flash to catch user's attention
   }
 
   updateInsights(insights: AIInsight[]): void {
@@ -644,8 +674,41 @@ export class AIPanel {
       .ai-panel:not(.expanded) {
         max-height: 70px !important;
       }
+      
+      @keyframes flashAttention {
+        0%, 100% {
+          box-shadow: ${effects.shadow.md}, ${effects.shadow.primaryGlow};
+          border-color: ${colors.border.primary};
+        }
+        25% {
+          box-shadow: 0 0 30px ${colors.primary.base}, 0 0 60px ${colors.primary.base};
+          border-color: ${colors.primary.base};
+        }
+        50% {
+          box-shadow: 0 0 40px ${colors.accent.base}, 0 0 80px ${colors.accent.base};
+          border-color: ${colors.accent.base};
+        }
+        75% {
+          box-shadow: 0 0 30px ${colors.primary.base}, 0 0 60px ${colors.primary.base};
+          border-color: ${colors.primary.base};
+        }
+      }
+      
+      .ai-panel.flash-attention {
+        animation: flashAttention 0.8s ease-in-out;
+      }
     `
     document.head.appendChild(style)
+  }
+
+  // Flash the panel to catch user's attention
+  private flashPanel(): void {
+    if (!this.panel) return
+    
+    this.panel.classList.add('flash-attention')
+    setTimeout(() => {
+      this.panel?.classList.remove('flash-attention')
+    }, 800)
   }
 
   // Make the panel draggable

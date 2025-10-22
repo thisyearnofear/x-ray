@@ -116,18 +116,24 @@ export class MedicalServiceFacade {
 
       return enhancedCase;
     } catch (error) {
-      console.error('AI case generation failed:', error);
-      // Fallback to static case with upgrade prompt
+      console.error('AI case generation failed - falling back to static case:', error);
+      // Fallback to static case
       const staticCase = this.getCase('case-x487');
       if (!staticCase) {
         throw new Error('No fallback case available. Please try again later.');
       }
       
-      // Modify static case to indicate it's a fallback for premium users
+      // Log fallback details but keep title clean for user
+      console.warn('Using fallback case:', {
+        originalDifficulty: difficulty,
+        generationFailed: true,
+        userWallet: this.smartAccount?.address
+      });
+      
+      // Return static case with clean title
       return {
         ...staticCase,
-        id: `fallback_ai_case_${Date.now()}`,
-        title: `Premium Case (Fallback): ${staticCase.title}`,
+        id: staticCase.id, // Keep original ID for static case
         caseGenerationContext: {
           originalDifficulty: difficulty,
           generationTimestamp: Date.now(),
@@ -156,16 +162,23 @@ export class MedicalServiceFacade {
           });
           return aiCase;
         } catch (aiError) {
-          console.warn('AI case generation failed for premium user, falling back to static case:', aiError);
+          console.warn('AI case generation failed for premium user - falling back to static case:', aiError);
           // Even for premium users, fallback to static case if AI generation fails
           const staticCase = this.getCase('case-x487');
           if (!staticCase) {
             throw new Error('No fallback case available');
           }
+          
+          // Log fallback context for debugging
+          console.warn('Premium user fallback context:', {
+            originalDifficulty: userStatus.preferredDifficulty || 'medium',
+            generationFailed: true,
+            userWallet: this.smartAccount?.address
+          });
+          
           return {
             ...staticCase,
-            id: `premium_fallback_${Date.now()}`,
-            title: `Premium Case (AI Generation Failed): ${staticCase.title}`,
+            id: staticCase.id, // Keep original static case ID
             isAIGenerated: false,
             caseGenerationContext: {
               originalDifficulty: userStatus.preferredDifficulty || 'medium',
