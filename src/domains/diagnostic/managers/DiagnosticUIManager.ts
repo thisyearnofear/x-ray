@@ -9,6 +9,7 @@
 import { SoundType } from '../../../components/AudioManager'
 import { PatientInfoSection, type PatientInfo } from '../ui/PatientInfoSection'
 import { AIPanel, type AIInsight } from '../ui/AIPanel'
+import { InvestigationPanel, type Evidence, type InvestigationPanelConfig } from '../ui/InvestigationPanel'
 import { MedicalCase, PatientCase } from '../../medical/types'
 import { colors, spacing, typography, borders, effects, zIndex } from '../../../styles/design-tokens'
 import { TierStatusIndicator } from '../../medical/ui/TierStatusIndicator'
@@ -31,6 +32,7 @@ export class DiagnosticUIManager {
   private uiElement: HTMLElement | null = null
   private patientInfoSection: PatientInfoSection | null = null
   private aiPanel: AIPanel | null = null
+  private investigationPanel: InvestigationPanel | null = null // ENHANCEMENT: New unified panel
   private audioEnabled: boolean = false // Track audio state
   private currentPatientCase: MedicalCase | PatientCase | null = null // Store current patient case
   private accessManager: CaseAccessManager
@@ -96,6 +98,7 @@ export class DiagnosticUIManager {
 
     this.createUI()
     this.createAIPanel()
+    this.createInvestigationPanel() // ENHANCEMENT: Initialize new unified panel
     this.createTierStatusIndicator()
     this.setupAccessManagerListeners()
     this.addTimerStyles()
@@ -375,6 +378,26 @@ export class DiagnosticUIManager {
     // Set initial premium status
     const userStatus = this.accessManager.getUserStatus()
     this.aiPanel.setPremiumStatus(userStatus.currentTier === 'premium')
+  }
+
+  // ENHANCEMENT FIRST: Create unified investigation panel
+  private createInvestigationPanel(): void {
+    const panelConfig: InvestigationPanelConfig = {
+      onInvestigationClick: (toolId: string) => this.handleInvestigationTool(toolId),
+      onDiagnosisSubmit: (selectedConditions: string[]) => {
+        console.log('📋 Diagnosis submitted:', selectedConditions)
+        this.config.onDiagnosisSubmit?.(selectedConditions)
+      },
+      onEvidenceReview: () => {
+        console.log('🔍 Evidence review requested')
+      }
+    }
+
+    this.investigationPanel = new InvestigationPanel(panelConfig)
+    const panelElement = this.investigationPanel.create()
+    document.body.appendChild(panelElement)
+
+    console.log('🔍 Investigation Panel initialized')
   }
 
   // ENHANCEMENT FIRST: Create tier status indicator
@@ -970,6 +993,47 @@ export class DiagnosticUIManager {
     })
   }
 
+  // ENHANCEMENT: Handle investigation tool clicks
+  private handleInvestigationTool(toolId: string): void {
+    console.log('🔬 Investigation tool clicked:', toolId)
+
+    // Update tool status to in_progress
+    this.investigationPanel?.updateToolStatus(toolId, 'in_progress')
+
+    switch (toolId) {
+      case 'interview':
+        this.showPatientInterview()
+        break
+      case 'labs':
+        this.showLabOrders()
+        break
+      case 'imaging':
+        this.showImagingOptions()
+        break
+      case 'physical':
+        this.showPhysicalExam()
+        break
+      case 'consultation':
+        this.startGaslessConsultation()
+        break
+      case 'scanning':
+        // Scanning is always active (3D model interaction)
+        this.investigationPanel?.updateToolStatus('scanning', 'in_progress')
+        if (this.aiPanel) {
+          this.aiPanel.addInsight({
+            id: `scanning_active_${Date.now()}`,
+            timestamp: Date.now(),
+            content: '🔬 3D scanning active - hover over the body to discover conditions',
+            type: 'procedural',
+            confidence: 1.0
+          })
+        }
+        break
+      default:
+        console.warn('Unknown investigation tool:', toolId)
+    }
+  }
+
   // NEW: Enhanced Patient interview functionality with immersive experience
   private showPatientInterview(): void {
     if (this.aiPanel) {
@@ -1051,6 +1115,32 @@ export class DiagnosticUIManager {
             type: 'educational',
             confidence: 0.9
           });
+
+          // ENHANCEMENT: Add evidence to Investigation Panel
+          this.addEvidence({
+            id: `evidence_interview_${Date.now()}`,
+            source: 'interview',
+            content: 'Chronic jaw pain for 3 weeks, worse with chewing and stress',
+            abnormal: false,
+            timestamp: Date.now()
+          })
+          this.addEvidence({
+            id: `evidence_interview_clicking_${Date.now()}`,
+            source: 'interview',
+            content: 'Morning stiffness and audible clicking when opening mouth',
+            abnormal: false,
+            timestamp: Date.now()
+          })
+          this.addEvidence({
+            id: `evidence_interview_history_${Date.now()}`,
+            source: 'interview',
+            content: 'No prior history of TMJ issues',
+            abnormal: false,
+            timestamp: Date.now()
+          })
+
+          // Mark interview as complete
+          this.investigationPanel?.updateToolStatus('interview', 'complete')
           
           // Suggest next steps
           setTimeout(() => {
@@ -1184,6 +1274,25 @@ export class DiagnosticUIManager {
             type: 'educational',
             confidence: 0.85
           });
+
+          // ENHANCEMENT: Add lab evidence
+          this.addEvidence({
+            id: `evidence_labs_esr_${Date.now()}`,
+            source: 'labs',
+            content: 'ESR: 18 mm/hr (Elevated - indicates inflammation)',
+            abnormal: true,
+            timestamp: Date.now()
+          })
+          this.addEvidence({
+            id: `evidence_labs_crp_${Date.now()}`,
+            source: 'labs',
+            content: 'CRP: 2.8 mg/L (Elevated - acute inflammatory marker)',
+            abnormal: true,
+            timestamp: Date.now()
+          })
+
+          // Mark labs as complete
+          this.investigationPanel?.updateToolStatus('labs', 'complete')
           
           setTimeout(() => {
             if (this.aiPanel) {
@@ -1757,6 +1866,59 @@ export class DiagnosticUIManager {
     return Math.min(100, baseProgress + progressFromConditions + progressFromInvestigations);
   }
 
+  // ENHANCEMENT: Add physical examination
+  private showPhysicalExam(): void {
+    if (this.aiPanel) {
+      this.aiPanel.addInsight({
+        id: `physical_exam_${Date.now()}`,
+        timestamp: Date.now(),
+        content: "🩺 <strong>Physical Examination:</strong> Conducting systematic physical assessment...",
+        type: 'procedural',
+        confidence: 0.9
+      })
+
+      setTimeout(() => {
+        if (this.aiPanel) {
+          this.aiPanel.addInsight({
+            id: `physical_findings_${Date.now()}`,
+            timestamp: Date.now(),
+            content: "📋 <strong>Physical Findings:</strong> Tenderness on TMJ palpation, limited jaw range of motion, clicking with lateral movement. No cervical lymphadenopathy.",
+            type: 'diagnostic',
+            confidence: 0.85
+          })
+
+          // Add evidence
+          this.addEvidence({
+            id: `evidence_physical_${Date.now()}`,
+            source: 'physical',
+            content: 'TMJ tenderness on palpation with limited range of motion',
+            abnormal: true,
+            timestamp: Date.now()
+          })
+
+          // Mark physical exam as complete
+          this.investigationPanel?.updateToolStatus('physical', 'complete')
+        }
+      }, 1500)
+    }
+  }
+
+  // ENHANCEMENT: Add evidence to Investigation Panel
+  private addEvidence(evidence: Evidence): void {
+    if (this.investigationPanel) {
+      this.investigationPanel.addEvidence(evidence)
+      console.log('📋 Evidence added:', evidence.content)
+    }
+  }
+
+  // ENHANCEMENT: Public method to add discovered condition from scanning
+  public addDiscoveredCondition(conditionId: string): void {
+    if (this.investigationPanel) {
+      this.investigationPanel.addDiscoveredCondition(conditionId)
+      console.log('✓ Condition discovered:', conditionId)
+    }
+  }
+
   // CLEAN: Add pulse animation styles
   private addTimerStyles(): void {
     if (document.querySelector('#timer-animation-styles')) return
@@ -1843,7 +2005,17 @@ export class DiagnosticUIManager {
       this.aiPanel.destroy()
       this.aiPanel = null
     }
+    // ENHANCEMENT: Clean up Investigation Panel
+    if (this.investigationPanel) {
+      this.investigationPanel.destroy()
+      this.investigationPanel = null
+    }
     this.uiElement = null
     this.isInitialized = false
+  }
+
+  // ENHANCEMENT: Public getter for Investigation Panel
+  public getInvestigationPanel(): InvestigationPanel | null {
+    return this.investigationPanel
   }
 }
