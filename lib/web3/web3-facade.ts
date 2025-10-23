@@ -28,8 +28,13 @@ export class Web3Facade {
     this.contractClient = new ContractClient()
     this.paymasterService = new PaymasterIntegrationService(this.smartAccountService)
     
-    // Defer instantiation to client-side
-    this.metaMaskSmartAccount = {} as MetaMaskSmartAccount;
+    // Properly initialize MetaMaskSmartAccount
+    if (typeof window !== 'undefined') {
+      this.metaMaskSmartAccount = new MetaMaskSmartAccount();
+    } else {
+      // Defer instantiation to client-side
+      this.metaMaskSmartAccount = {} as MetaMaskSmartAccount;
+    }
 
     // Restore persisted state only on client
     if (typeof window !== 'undefined') {
@@ -122,14 +127,26 @@ export class Web3Facade {
     // Get wallet client for signing
     const walletClient = this.smartAccountService.getWalletClient()
     if (!walletClient) {
-      throw new Error('Wallet client not initialized')
+      // Try to initialize wallet client if not already done
+      try {
+        await this.smartAccountService.initializeWalletClient()
+      } catch (error) {
+        console.error('Failed to initialize wallet client:', error)
+        throw new Error('Wallet client not initialized')
+      }
+      
+      // Try to get wallet client again after initialization
+      const retryWalletClient = this.smartAccountService.getWalletClient()
+      if (!retryWalletClient) {
+        throw new Error('Wallet client not initialized')
+      }
     }
 
     const delegation = await this.delegationService.createMedicalConsultationDelegation({
       delegator: this.state.address,
       delegate: delegateAddress,
       expiry: Math.floor(Date.now() / 1000) + 3600, // 1 hour
-      walletClient
+      walletClient: walletClient || this.smartAccountService.getWalletClient()
     })
 
     this.state.delegations.push(delegation)
@@ -144,7 +161,19 @@ export class Web3Facade {
     // Get wallet client for signing
     const walletClient = this.smartAccountService.getWalletClient()
     if (!walletClient) {
-      throw new Error('Wallet client not initialized')
+      // Try to initialize wallet client if not already done
+      try {
+        await this.smartAccountService.initializeWalletClient()
+      } catch (error) {
+        console.error('Failed to initialize wallet client:', error)
+        throw new Error('Wallet client not initialized')
+      }
+      
+      // Try to get wallet client again after initialization
+      const retryWalletClient = this.smartAccountService.getWalletClient()
+      if (!retryWalletClient) {
+        throw new Error('Wallet client not initialized')
+      }
     }
 
     const delegation = await this.delegationService.createDataSharingDelegation({
@@ -152,7 +181,7 @@ export class Web3Facade {
       delegate: delegateAddress,
       allowedData,
       expiry: Math.floor(Date.now() / 1000) + 86400, // 24 hours
-      walletClient
+      walletClient: walletClient || this.smartAccountService.getWalletClient()
     })
 
     this.state.delegations.push(delegation)
