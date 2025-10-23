@@ -260,7 +260,21 @@ export function useWeb3() {
       const handleAccountsChanged = (accounts: string[]) => {
         if (!web3Facade) return;
         if (accounts.length === 0) {
-          disconnectWallet()
+          // Don't immediately disconnect - wait a bit to see if accounts come back
+          // This can happen during network switches or temporary MetaMask issues
+          setTimeout(() => {
+            // Check if accounts are still empty
+            window.ethereum.request({ method: 'eth_accounts' }).then((currentAccounts: string[]) => {
+              if (currentAccounts.length === 0 && state.isConnected) {
+                disconnectWallet()
+              }
+            }).catch(() => {
+              // If we can't get accounts, only disconnect if we were previously connected
+              if (state.isConnected) {
+                disconnectWallet()
+              }
+            });
+          }, 1000); // Wait 1 second before disconnecting
         } else if (accounts[0] !== state.address) {
           connectWallet()
         }
@@ -272,7 +286,7 @@ export function useWeb3() {
         window.ethereum?.removeListener('accountsChanged', handleAccountsChanged)
       }
     }
-  }, [state.address, connectWallet, disconnectWallet, web3Facade])
+  }, [state.address, state.isConnected, connectWallet, disconnectWallet, web3Facade])
 
   return {
     // State

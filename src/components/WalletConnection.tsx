@@ -60,16 +60,25 @@ export const WalletConnection: React.FC<WalletConnectionProps> = ({
       // Fetch MON balance when wallet is connected
       fetchMonBalance()
     } else if (!isConnected && lastDispatchedAddress.current !== null) {
-      lastDispatchedAddress.current = null
-      
-      // Dispatch disconnection event
-      const event = new CustomEvent('walletDisconnected', {
-        detail: { 
-          isConnected: false,
-          preferredDifficulty: 'medium'
+      // Add a small delay before dispatching disconnection event to handle temporary disconnections
+      const disconnectTimer = setTimeout(() => {
+        // Double-check that we're still disconnected
+        if (!isConnected) {
+          lastDispatchedAddress.current = null
+          
+          // Dispatch disconnection event
+          const event = new CustomEvent('walletDisconnected', {
+            detail: { 
+              isConnected: false,
+              preferredDifficulty: 'medium'
+            }
+          })
+          document.dispatchEvent(event)
         }
-      })
-      document.dispatchEvent(event)
+      }, 1500); // Wait 1.5 seconds before confirming disconnection
+      
+      // Clear the timer if component unmounts or connection state changes
+      return () => clearTimeout(disconnectTimer);
     }
   }, [isConnected, address, onConnected, fetchMonBalance])
 
