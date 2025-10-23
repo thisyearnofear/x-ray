@@ -240,6 +240,11 @@ export class Web3Facade {
   async getMonBalanceForAddress(address: Address): Promise<number> {
     // Use the meta mask smart account to get MON balance
     try {
+      // Check if metaMaskSmartAccount is properly initialized
+      if (!this.metaMaskSmartAccount || typeof this.metaMaskSmartAccount.getMonBalance !== 'function') {
+        console.warn('MetaMask Smart Account not properly initialized, using fallback');
+        return 0;
+      }
       return await this.metaMaskSmartAccount.getMonBalance(address);
     } catch (error) {
       console.error('❌ Failed to get MON balance:', error);
