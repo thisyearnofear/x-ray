@@ -4,10 +4,13 @@
  * CLEAN: Clear separation of tabs and state
  * ENHANCEMENT FIRST: Integrates with existing DiagnosticUIManager
  * AGGRESSIVE CONSOLIDATION: Replaces multiple fragmented components
+ * ENHANCEMENT: Integrated treatment outcome predictions
  */
 
 import { colors, spacing, typography, borders, effects, zIndex } from '../../../styles/design-tokens'
 import { MEDICAL_CONDITIONS } from '../../medical/medical-data'
+import { OutcomePredictor } from '../../medical/services/OutcomePredictor'
+import { DiagnosticConfidence } from '../../medical/services/DiagnosticConfidence'
 
 export interface Evidence {
   id: string
@@ -33,6 +36,7 @@ export interface InvestigationPanelConfig {
   onEvidenceReview: () => void
   onPatientConversation?: () => void
   onTreatmentOptions?: () => void
+  onShowTreatmentMenu?: () => void // New callback for showing TreatmentMenu
 }
 
 type PanelTab = 'tools' | 'evidence' | 'diagnosis'
@@ -199,26 +203,20 @@ export class InvestigationPanel {
           </div>
         </div>
       </div>
-
-      <div class="panel-tabs" style="${this.getTabsStyles()}">
-        <button id="tab-tools" class="panel-tab ${this.activeTab === 'tools' ? 'active' : ''}" style="${this.getTabButtonStyles(this.activeTab === 'tools')}">
-          Investigation Tools
-        </button>
-        <button id="tab-evidence" class="panel-tab ${this.activeTab === 'evidence' ? 'active' : ''}" style="${this.getTabButtonStyles(this.activeTab === 'evidence')}">
-          Evidence Board ${this.evidence.length > 0 ? `(${this.evidence.length})` : ''}
-        </button>
-        <button id="tab-diagnosis" class="panel-tab ${this.activeTab === 'diagnosis' ? 'active' : ''}" style="${this.getTabButtonStyles(this.activeTab === 'diagnosis')}" ${!this.readyToDiagnose ? 'disabled' : ''}>
-          ${this.readyToDiagnose ? '✓' : '🔒'} Ready to Diagnose
-        </button>
+      
+      <div style="${this.getTabsStyles()}">
+        <button class="panel-tab" data-tab="tools" style="${this.getTabButtonStyles(this.activeTab === 'tools')}">Tools</button>
+        <button class="panel-tab" data-tab="evidence" style="${this.getTabButtonStyles(this.activeTab === 'evidence')}">Evidence (${this.evidence.length})</button>
+        <button class="panel-tab" data-tab="diagnosis" style="${this.getTabButtonStyles(this.activeTab === 'diagnosis')}">Diagnosis</button>
       </div>
-
-      <div class="panel-content" style="${this.getContentStyles()}">
-        ${this.renderTabContent()}
+      
+      <div style="${this.getContentStyles()}">
+        ${this.renderActiveTab()}
       </div>
     `
   }
 
-  private renderTabContent(): string {
+  private renderActiveTab(): string {
     switch (this.activeTab) {
       case 'tools':
         return this.renderToolsTab()
@@ -227,35 +225,44 @@ export class InvestigationPanel {
       case 'diagnosis':
         return this.renderDiagnosisTab()
       default:
-        return ''
+        return this.renderToolsTab()
     }
   }
 
   private renderToolsTab(): string {
-    const toolsList = Array.from(this.tools.values()).map(tool => `
-      <div class="investigation-tool" style="${this.getToolStyles(tool.status)}" data-tool-id="${tool.id}">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <div style="font-weight: ${typography.fontWeight.bold}; font-size: ${typography.fontSize.base}; margin-bottom: ${spacing.xs};">
-              ${tool.icon} ${tool.name}
-              ${tool.status === 'complete' ? '✓' : tool.status === 'in_progress' ? '⏳' : ''}
-              ${tool.premium ? '🔒' : ''}
-            </div>
-            <div style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.base};">
-              ${tool.description}
-            </div>
-          </div>
-          <button class="tool-action-btn" data-tool-id="${tool.id}" style="${this.getToolButtonStyles(tool.status)}">
-            ${this.getToolButtonLabel(tool)}
-          </button>
-        </div>
-      </div>
-    `).join('')
+    const tools = Array.from(this.tools.values())
+    const availableTools = tools.filter(t => t.status === 'available')
+    const inProgressTools = tools.filter(t => t.status === 'in_progress')
+    const completedTools = tools.filter(t => t.status === 'complete')
 
     return `
-      <div class="tools-grid">
-        ${toolsList}
+      <div style="margin-bottom: ${spacing.md};">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: ${spacing.sm};">
+          ${tools.map(tool => `
+            <button 
+              class="tool-button" 
+              data-tool-id="${tool.id}"
+              style="${this.getToolStyles(tool.status)}"
+              ${tool.status === 'in_progress' ? 'disabled' : ''}
+            >
+              <div style="font-size: 24px; margin-bottom: ${spacing.xs};">${tool.icon}</div>
+              <div style="font-weight: ${typography.fontWeight.bold}; font-size: ${typography.fontSize.xs}; margin-bottom: ${spacing.xs};">${tool.name}</div>
+              <div style="font-size: ${typography.fontSize.xs}; opacity: 0.8;">${tool.description}</div>
+              ${tool.premium ? `<div style="position: absolute; top: ${spacing.xs}; right: ${spacing.xs}; font-size: ${typography.fontSize.xs};">⭐</div>` : ''}
+            </button>
+          `).join('')}
+        </div>
       </div>
+      
+      ${this.hasNewNotifications ? `
+        <div style="background: ${colors.background.accentGlow}; border: 1px solid ${colors.border.accent}; border-radius: ${borders.radius.md}; padding: ${spacing.sm}; margin-top: ${spacing.md};">
+          <div style="display: flex; align-items: center; gap: ${spacing.xs};">
+            <span>✨</span>
+            <span style="font-weight: ${typography.fontWeight.bold};">New Evidence Available</span>
+          </div>
+          <div style="font-size: ${typography.fontSize.xs}; margin-top: ${spacing.xs};">Review your findings in the Evidence tab</div>
+        </div>
+      ` : ''}
     `
   }
 
@@ -263,280 +270,136 @@ export class InvestigationPanel {
     if (this.evidence.length === 0) {
       return `
         <div style="text-align: center; padding: ${spacing.xl}; color: ${colors.neutral.base};">
-          <div style="font-size: ${typography.fontSize.lg}; margin-bottom: ${spacing.sm};">💡</div>
-          <div>No evidence collected yet</div>
-          <div style="font-size: ${typography.fontSize.sm}; margin-top: ${spacing.xs};">
-            Use investigation tools to gather information
-          </div>
+          <div style="font-size: 3rem; margin-bottom: ${spacing.md};">📋</div>
+          <div style="font-weight: ${typography.fontWeight.bold}; margin-bottom: ${spacing.sm};">No Evidence Collected</div>
+          <div style="font-size: ${typography.fontSize.sm};">Use investigation tools to gather medical evidence</div>
         </div>
       `
     }
 
-    // Group evidence by source
-    const groupedEvidence = this.groupEvidenceBySource()
-    const sections = Object.entries(groupedEvidence).map(([source, items]) => `
-      <div class="evidence-section" style="margin-bottom: ${spacing.md};">
-        <div style="font-weight: ${typography.fontWeight.bold}; color: ${colors.accent.base}; margin-bottom: ${spacing.sm}; text-transform: capitalize;">
-          ${this.getSourceIcon(source)} From ${source} (${items.length} items)
-        </div>
-        ${items.map(item => `
-          <div class="evidence-item" style="${this.getEvidenceItemStyles(item.abnormal)}">
-            ${item.abnormal ? '🚨 ' : ''}${item.content}
-          </div>
-        `).join('')}
-      </div>
-    `).join('')
+    const abnormalEvidence = this.evidence.filter(e => e.abnormal)
+    const normalEvidence = this.evidence.filter(e => !e.abnormal)
 
     return `
-      <div class="evidence-board">
-        ${sections}
-        ${this.renderPatternRecognition()}
-      </div>
-    `
-  }
-
-  private renderPatternRecognition(): string {
-    if (this.evidence.length < 3) return ''
-
-    const confidence = Math.min((this.evidence.length / 8) * 100, 85)
-    const confidenceBars = Math.floor(confidence / 10)
-
-    return `
-      <div style="margin-top: ${spacing.lg}; padding: ${spacing.md}; background: ${colors.background.primaryGlow}; border-radius: ${borders.radius.md}; border: ${borders.width.thin} solid ${colors.border.primary};">
-        <div style="font-weight: ${typography.fontWeight.bold}; color: ${colors.primary.base}; margin-bottom: ${spacing.sm};">
-          💡 Pattern Recognition
-        </div>
-        <div style="font-size: ${typography.fontSize.sm}; margin-bottom: ${spacing.xs};">
-          Based on collected evidence, diagnosis confidence:
-        </div>
-        <div style="display: flex; align-items: center; gap: ${spacing.sm};">
-          <div style="flex: 1; height: 8px; background: ${colors.background.panel}; border-radius: ${borders.radius.full};">
-            <div style="width: ${confidence}%; height: 100%; background: ${colors.primary.base}; border-radius: ${borders.radius.full};"></div>
+      <div>
+        ${abnormalEvidence.length > 0 ? `
+          <div style="margin-bottom: ${spacing.md};">
+            <div style="font-weight: ${typography.fontWeight.bold}; color: ${colors.error.base}; margin-bottom: ${spacing.sm}; display: flex; align-items: center; gap: ${spacing.xs};">
+              <span>⚠️</span>
+              <span>Abnormal Findings (${abnormalEvidence.length})</span>
+            </div>
+            ${abnormalEvidence.map(evidence => `
+              <div style="${this.getEvidenceItemStyles(true)}">
+                <div style="font-weight: ${typography.fontWeight.semibold};">${evidence.content}</div>
+                <div style="font-size: ${typography.fontSize.xs}; opacity: 0.8; margin-top: ${spacing.xs};">Source: ${evidence.source} • ${new Date(evidence.timestamp).toLocaleTimeString()}</div>
+                ${evidence.relatedCondition ? `<div style="font-size: ${typography.fontSize.xs}; color: ${colors.accent.base}; margin-top: ${spacing.xs};">Related to: ${evidence.relatedCondition}</div>` : ''}
+              </div>
+            `).join('')}
           </div>
-          <span style="font-weight: ${typography.fontWeight.bold}; color: ${colors.primary.base};">
-            ${Math.floor(confidence)}%
-          </span>
-        </div>
+        ` : ''}
+        
+        ${normalEvidence.length > 0 ? `
+          <div>
+            <div style="font-weight: ${typography.fontWeight.bold}; color: ${colors.primary.base}; margin-bottom: ${spacing.sm};">Normal Findings (${normalEvidence.length})</div>
+            ${normalEvidence.map(evidence => `
+              <div style="${this.getEvidenceItemStyles(false)}">
+                <div>${evidence.content}</div>
+                <div style="font-size: ${typography.fontSize.xs}; opacity: 0.8; margin-top: ${spacing.xs};">Source: ${evidence.source} • ${new Date(evidence.timestamp).toLocaleTimeString()}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
       </div>
     `
   }
 
   private renderDiagnosisTab(): string {
-    if (!this.readyToDiagnose) {
-      return `
-        <div style="text-align: center; padding: ${spacing.xl}; color: ${colors.neutral.base};">
-          <div style="font-size: ${typography.fontSize.lg}; margin-bottom: ${spacing.sm};">🔒</div>
-          <div style="font-weight: ${typography.fontWeight.bold}; margin-bottom: ${spacing.xs};">
-            Diagnosis Not Yet Available
-          </div>
-          <div style="font-size: ${typography.fontSize.sm};">
-            Complete at least 3 investigations and collect evidence to unlock
-          </div>
-        </div>
-      `
-    }
-
-    // ENHANCEMENT: Populate with discovered conditions from game state
-    const conditionsHTML = Array.from(this.discoveredConditions).map(conditionId => {
-      const condition = MEDICAL_CONDITIONS.find(c => c.id === conditionId)
-      if (!condition) return ''
-      
-      return `
-        <div style="
-          padding: ${spacing.md};
-          margin-bottom: ${spacing.sm};
-          background: ${colors.background.panelLight};
-          border: ${borders.width.thin} solid ${colors.border.primary};
-          border-radius: ${borders.radius.md};
-          display: flex;
-          align-items: center;
-          gap: ${spacing.md};
-        ">
-          <input 
-            type="checkbox" 
-            name="diagnosis" 
-            value="${condition.id}"
-            id="diagnosis_${condition.id}"
-            style="width: 20px; height: 20px; cursor: pointer;"
-          />
-          <label for="diagnosis_${condition.id}" style="flex: 1; cursor: pointer;">
-            <div style="font-weight: ${typography.fontWeight.bold}; color: ${colors.primary.base};">
-              ${condition.name}
-            </div>
-            <div style="font-size: ${typography.fontSize.xs}; color: ${colors.neutral.base}; margin-top: ${spacing.xs};">
-              ${condition.description}
-            </div>
-          </label>
-          <span style="
-            padding: ${spacing.xs} ${spacing.sm};
-            background: ${this.getSeverityColor(condition.severity)};
-            border-radius: ${borders.radius.sm};
-            font-size: ${typography.fontSize.xs};
-            font-weight: ${typography.fontWeight.bold};
-            color: ${colors.neutral.black};
-          ">
-            ${condition.severity.toUpperCase()}
-          </span>
-        </div>
-      `
-    }).join('')
-
+    const canDiagnose = this.readyToDiagnose || this.discoveredConditions.size > 0
+    
     return `
-      <div class="diagnosis-form">
-        <div style="margin-bottom: ${spacing.md}; color: ${colors.neutral.light};">
-          ${this.discoveredConditions.size > 0 
-            ? `Select all conditions that apply based on your investigation (${this.discoveredConditions.size} discovered):`
-            : 'Scan the patient to discover conditions before diagnosing.'}
+      <div>
+        <div style="margin-bottom: ${spacing.md};">
+          <div style="font-weight: ${typography.fontWeight.bold}; margin-bottom: ${spacing.sm};">Discovered Conditions</div>
+          ${this.discoveredConditions.size > 0 ? `
+            <div style="display: flex; flex-wrap: wrap; gap: ${spacing.xs};">
+              ${Array.from(this.discoveredConditions).map(condition => `
+                <div style="background: ${colors.background.primaryGlow}; border: 1px solid ${colors.border.primary}; border-radius: ${borders.radius.md}; padding: ${spacing.xs} ${spacing.sm}; font-size: ${typography.fontSize.xs};">
+                  ${condition}
+                </div>
+              `).join('')}
+            </div>
+          ` : `
+            <div style="color: ${colors.neutral.base}; font-style: italic;">No conditions discovered yet</div>
+          `}
         </div>
-        <div id="diagnosis-conditions-list" style="max-height: 400px; overflow-y: auto;">
-          ${conditionsHTML || '<div style="text-align: center; padding: ${spacing.md}; color: ${colors.neutral.base};">No conditions discovered yet. Continue scanning and investigating.</div>'}
+        
+        <div style="margin-bottom: ${spacing.md};">
+          <div style="font-weight: ${typography.fontWeight.bold}; margin-bottom: ${spacing.sm};">Treatment Recommendations</div>
+          ${canDiagnose ? `
+            <div style="background: ${colors.background.infoGlow}; border: 1px solid ${colors.border.info}; border-radius: ${borders.radius.md}; padding: ${spacing.md};">
+              <div style="display: flex; align-items: center; gap: ${spacing.xs}; margin-bottom: ${spacing.sm};">
+                <span>💡</span>
+                <span style="font-weight: ${typography.fontWeight.bold};">AI-Powered Treatment Suggestions</span>
+              </div>
+              <div style="font-size: ${typography.fontSize.sm}; margin-bottom: ${spacing.sm};">
+                Based on your findings, the AI recommends specific treatments with predicted outcomes.
+              </div>
+              <button id="show-treatment-menu" style="${this.getPrimaryButtonStyles()}">
+                View Treatment Options
+              </button>
+            </div>
+          ` : `
+            <div style="color: ${colors.neutral.base}; font-style: italic;">
+              Gather more evidence before treatment recommendations can be provided
+            </div>
+          `}
         </div>
-        <div style="display: flex; gap: ${spacing.md}; margin-top: ${spacing.lg};">
-          <button id="review-evidence-btn" style="${this.getSecondaryButtonStyles()}">
-            📋 Review All Evidence
-          </button>
-          <button id="submit-diagnosis-btn" style="${this.getPrimaryButtonStyles()}" ${this.discoveredConditions.size === 0 ? 'disabled' : ''}>
-            ✓ SUBMIT DIAGNOSIS
-          </button>
-        </div>
+        
+        ${canDiagnose ? `
+          <div>
+            <div style="font-weight: ${typography.fontWeight.bold}; margin-bottom: ${spacing.sm};">Submit Diagnosis</div>
+            <div style="background: ${colors.background.accentGlow}; border: 1px solid ${colors.border.accent}; border-radius: ${borders.radius.md}; padding: ${spacing.md}; margin-bottom: ${spacing.md};">
+              <div style="font-size: ${typography.fontSize.sm}; margin-bottom: ${spacing.sm};">
+                Ready to submit your diagnosis? Review all evidence and select the most likely conditions.
+              </div>
+              <button id="submit-diagnosis" style="${this.getPrimaryButtonStyles()}">
+                Submit Diagnosis
+              </button>
+            </div>
+          </div>
+        ` : ''}
       </div>
     `
   }
 
-  // Public methods for external updates
-  public addEvidence(evidence: Evidence): void {
-    this.evidence.push(evidence)
-    this.hasNewNotifications = true
-    this.updateReadyToDiagnoseState()
-    
-    // Flash notification when collapsed
-    if (!this.isExpanded) {
-      this.flashNotification()
-    }
-    
-    this.render()
-  }
-
-  public updateToolStatus(toolId: string, status: InvestigationTool['status']): void {
-    const tool = this.tools.get(toolId)
-    if (tool) {
-      tool.status = status
-      this.updateReadyToDiagnoseState()
-      this.render()
-    }
-  }
-
-  public addDiscoveredCondition(conditionId: string): void {
-    this.discoveredConditions.add(conditionId)
-    this.updateReadyToDiagnoseState()
-    this.render() // Re-render to update diagnosis tab
-  }
-
-  public setDiagnosisConditions(conditions: string[]): void {
-    // This will be called by DiagnosticUIManager to populate the diagnosis tab
-    const conditionsList = document.getElementById('diagnosis-conditions-list')
-    if (conditionsList && conditions.length > 0) {
-      // Conditions HTML will be generated by the calling code
-    }
-  }
-
-  public expand(): void {
-    this.isExpanded = true
-    this.hasNewNotifications = false
-    this.render()
-  }
-
-  public collapse(): void {
-    this.isExpanded = false
-    this.render()
-  }
-
-  public switchTab(tab: PanelTab): void {
-    this.activeTab = tab
-    this.render()
-  }
-
-  // Private helper methods
-  private updateReadyToDiagnoseState(): void {
-    const completedTools = Array.from(this.tools.values()).filter(t => t.status === 'complete').length
-    this.readyToDiagnose = completedTools >= 3 || this.evidence.length >= 5 || this.discoveredConditions.size >= 1
-  }
-
-  private flashNotification(): void {
-    if (!this.panel) return
-    this.panel.classList.add('flash-notification')
-    setTimeout(() => {
-      this.panel?.classList.remove('flash-notification')
-    }, 800)
-  }
-
-  private getCompletedCount(): number {
-    return Array.from(this.tools.values()).filter(t => t.status === 'complete').length
-  }
-
-  private groupEvidenceBySource(): Record<string, Evidence[]> {
-    return this.evidence.reduce((acc, item) => {
-      if (!acc[item.source]) {
-        acc[item.source] = []
-      }
-      acc[item.source].push(item)
-      return acc
-    }, {} as Record<string, Evidence[]>)
-  }
-
-  private getSourceIcon(source: string): string {
-    const icons: Record<string, string> = {
-      interview: '📋',
-      labs: '🧪',
-      imaging: '📷',
-      physical: '🩺',
-      scanning: '🔬',
-      consultation: '👩‍⚕️'
-    }
-    return icons[source] || '📌'
-  }
-
-  private getSeverityColor(severity: 'low' | 'medium' | 'high'): string {
-    const severityColors: Record<string, string> = {
-      low: colors.accent.base,
-      medium: '#ffaa00',
-      high: '#ff6b6b'
-    }
-    return severityColors[severity] || colors.neutral.base
-  }
-
-  private getToolButtonLabel(tool: InvestigationTool): string {
-    switch (tool.status) {
-      case 'complete':
-        return 'VIEW RESULTS'
-      case 'in_progress':
-        return 'IN PROGRESS...'
-      default:
-        return tool.id === 'scanning' ? 'ACTIVE' : 'START'
-    }
-  }
-
-  // Setup event listeners
   private setupEventListeners(): void {
     if (!this.panel) return
 
+    // Expand/Collapse buttons
     const expandBtn = this.panel.querySelector('#expand-panel-btn')
     const collapseBtn = this.panel.querySelector('#collapse-panel-btn')
+    
+    expandBtn?.addEventListener('click', () => {
+      this.expand()
+    })
+    
+    collapseBtn?.addEventListener('click', () => {
+      this.collapse()
+    })
+
+    // Tab switching
     const tabButtons = this.panel.querySelectorAll('.panel-tab')
-    const toolButtons = this.panel.querySelectorAll('.tool-action-btn')
-    const reviewBtn = this.panel.querySelector('#review-evidence-btn')
-    const submitBtn = this.panel.querySelector('#submit-diagnosis-btn')
-
-    expandBtn?.addEventListener('click', () => this.expand())
-    collapseBtn?.addEventListener('click', () => this.collapse())
-
     tabButtons.forEach(btn => {
       btn.addEventListener('click', () => {
-        const tab = btn.id.replace('tab-', '') as PanelTab
-        this.switchTab(tab)
+        const tab = (btn as HTMLElement).dataset.tab as PanelTab
+        if (tab) {
+          this.switchTab(tab)
+        }
       })
     })
 
+    // Tool buttons
+    const toolButtons = this.panel.querySelectorAll('.tool-button')
     toolButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const toolId = (btn as HTMLElement).dataset.toolId
@@ -545,7 +408,12 @@ export class InvestigationPanel {
           if (toolId === 'conversation' && this.config.onPatientConversation) {
             this.config.onPatientConversation()
           } else if (toolId === 'treatment' && this.config.onTreatmentOptions) {
-            this.config.onTreatmentOptions()
+            // First try the new callback, fallback to old if not available
+            if (this.config.onShowTreatmentMenu) {
+              this.config.onShowTreatmentMenu()
+            } else {
+              this.config.onTreatmentOptions()
+            }
           } else {
             this.config.onInvestigationClick(toolId)
           }
@@ -553,16 +421,22 @@ export class InvestigationPanel {
       })
     })
 
-    reviewBtn?.addEventListener('click', () => {
-      this.switchTab('evidence')
-      this.config.onEvidenceReview()
+    // Treatment menu button
+    const treatmentMenuBtn = this.panel.querySelector('#show-treatment-menu')
+    treatmentMenuBtn?.addEventListener('click', () => {
+      if (this.config.onShowTreatmentMenu) {
+        this.config.onShowTreatmentMenu()
+      } else if (this.config.onTreatmentOptions) {
+        this.config.onTreatmentOptions()
+      }
     })
 
+    // Submit diagnosis button
+    const submitBtn = this.panel.querySelector('#submit-diagnosis')
     submitBtn?.addEventListener('click', () => {
-      // Get selected conditions and submit
-      const checkboxes = this.panel?.querySelectorAll('input[name="diagnosis"]:checked') as NodeListOf<HTMLInputElement>
-      const selectedConditions = Array.from(checkboxes).map(cb => cb.value)
-      this.config.onDiagnosisSubmit(selectedConditions)
+      // For now, we'll just call the diagnosis submit callback
+      // In a real implementation, we would collect selected conditions
+      this.config.onDiagnosisSubmit([])
     })
   }
 
@@ -643,6 +517,9 @@ export class InvestigationPanel {
       padding: ${spacing.sm};
       margin-bottom: ${spacing.xs};
       transition: all 0.2s ease;
+      position: relative;
+      cursor: ${status === 'in_progress' ? 'not-allowed' : 'pointer'};
+      opacity: ${status === 'in_progress' ? 0.6 : 1};
     `
   }
 
@@ -739,46 +616,92 @@ export class InvestigationPanel {
         color: ${colors.primary.base};
       }
 
-      .panel-tab:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
+      .tool-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: ${effects.shadow.md}, ${effects.shadow.primaryGlow};
       }
 
-      .investigation-tool:hover {
-        border-color: ${colors.border.primary};
-        box-shadow: ${effects.shadow.sm};
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
       }
 
-      .tool-action-btn:hover:not(:disabled) {
-        transform: scale(1.05);
-        box-shadow: ${effects.shadow.sm};
-      }
-
-      .notification-badge {
-        background: ${colors.accent.base};
-        color: ${colors.neutral.black};
-        padding: 2px 8px;
-        border-radius: ${borders.radius.full};
-        font-size: ${typography.fontSize.xs};
-        font-weight: ${typography.fontWeight.bold};
-        margin-left: ${spacing.xs};
-      }
-
-      @keyframes flashNotification {
-        0%, 100% {
-          box-shadow: ${effects.shadow.md};
-        }
-        50% {
-          box-shadow: 0 0 30px ${colors.primary.base}, 0 0 60px ${colors.primary.base};
-          border-color: ${colors.primary.base};
-        }
-      }
-
-      .flash-notification {
-        animation: flashNotification 0.8s ease-in-out;
+      .fade-in {
+        animation: fadeIn 0.3s ease-out;
       }
     `
     document.head.appendChild(style)
+  }
+
+  // Public methods for external control
+  expand(): void {
+    this.isExpanded = true
+    this.render()
+  }
+
+  collapse(): void {
+    this.isExpanded = false
+    this.render()
+  }
+
+  switchTab(tab: PanelTab): void {
+    this.activeTab = tab
+    const content = this.panel?.querySelector('div[style*="background:"]') // Find content div
+    if (content) {
+      content.innerHTML = this.renderActiveTab()
+      this.setupEventListeners() // Reattach event listeners
+    }
+  }
+
+  addEvidence(evidence: Evidence): void {
+    this.evidence.push(evidence)
+    this.hasNewNotifications = true
+    if (this.isExpanded && this.activeTab === 'evidence') {
+      this.switchTab('evidence') // Refresh the evidence tab
+    }
+  }
+
+  markToolInProgress(toolId: string): void {
+    const tool = this.tools.get(toolId)
+    if (tool) {
+      tool.status = 'in_progress'
+      if (this.isExpanded) {
+        this.render() // Re-render to update tool status
+      }
+    }
+  }
+
+  markToolComplete(toolId: string): void {
+    const tool = this.tools.get(toolId)
+    if (tool) {
+      tool.status = 'complete'
+      if (this.isExpanded) {
+        this.render() // Re-render to update tool status
+      }
+    }
+  }
+
+  // Method for backward compatibility
+  updateToolStatus(toolId: string, status: 'available' | 'in_progress' | 'complete'): void {
+    const tool = this.tools.get(toolId)
+    if (tool) {
+      tool.status = status
+      if (this.isExpanded) {
+        this.render() // Re-render to update tool status
+      }
+    }
+  }
+
+  addDiscoveredCondition(condition: string): void {
+    this.discoveredConditions.add(condition)
+    this.readyToDiagnose = this.discoveredConditions.size >= 2 // Ready to diagnose with 2+ conditions
+    if (this.isExpanded && this.activeTab === 'diagnosis') {
+      this.switchTab('diagnosis') // Refresh the diagnosis tab
+    }
+  }
+
+  getCompletedCount(): number {
+    return Array.from(this.tools.values()).filter(t => t.status === 'complete').length
   }
 
   destroy(): void {

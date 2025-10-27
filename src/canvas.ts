@@ -22,9 +22,8 @@ import { VoiceConsultationManager } from "./domains/voice/VoiceConsultationManag
 import { NurseAmyNudgeSystem } from "./domains/diagnostic/NurseAmyNudgeSystem"
 import { colors, spacing, typography, borders, effects, zIndex } from './styles/design-tokens'
 import { payForAICase } from "./domains/web3/services/mon-payment"
-import { EconomicEventBridge, createCaseSelectionButton, createTreatmentMenuButton } from "./domains/economic/EconomicEventBridge"
 
-export default class Canvas {
+export class XRayCanvas {
   element: HTMLCanvasElement
   scene!: THREE.Scene
   camera!: THREE.PerspectiveCamera
@@ -65,9 +64,6 @@ export default class Canvas {
   nurseAmyNudges: NurseAmyNudgeSystem | null = null
   aiPanel: any = null // AI Panel reference for milestone responses
 
-  // ENHANCEMENT: Economic Event Bridge
-  economicBridge: EconomicEventBridge | null = null
-
   // Control RAF and listeners
   private _rafId: number | null = null
   private _disposed = false
@@ -102,9 +98,6 @@ export default class Canvas {
     
     // Listen for wallet connection events to update MedicalServiceFacade
     this.setupWalletEventListeners();
-    
-    // ENHANCEMENT: Initialize economic event bridge
-    this.initializeEconomicSystem();
     
     // Remove loading screen and start render after a brief delay to ensure everything is initialized
     setTimeout(() => {
@@ -722,22 +715,7 @@ export default class Canvas {
     console.log('✨ Tutorial and Voice systems initialized')
   }
 
-  // ENHANCEMENT: Initialize economic event bridge and UI buttons
-  private initializeEconomicSystem() {
-    if (!this.gameManager) {
-      console.warn('⚠️ GameManager not initialized, skipping economic system');
-      return;
-    }
-
-    // Create economic event bridge
-    this.economicBridge = new EconomicEventBridge(this.gameManager);
-    this.economicBridge.initialize();
-
-    // Buttons have been moved to the instructions panel (key bindings 12 and 13)
-    // No need to create left panel buttons anymore
-
-    console.log('💰 Economic system initialized');
-  }
+  // ENHANCEMENT: Economic system functionality moved to GameManager
 
   // ENHANCEMENT FIRST: Start the game when tutorial completes
   private startGame() {
@@ -1631,7 +1609,7 @@ export default class Canvas {
     try { this.diagnosticUI?.destroy() } catch { }
     try { this.tutorial?.destroy() } catch { }
     try { this.xRayEffect?.destroy() } catch { }
-    try { this.economicBridge?.dispose() } catch { }
+    // ENHANCEMENT: EconomicBridge functionality moved to GameManager
     try { this.renderer?.dispose() } catch { }
     // Clean up scene resources
     if (this.scene) {

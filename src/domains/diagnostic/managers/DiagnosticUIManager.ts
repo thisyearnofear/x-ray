@@ -19,6 +19,7 @@ import { GaslessConsultationFlow } from '../../web3/GaslessConsultationFlow'
 import { DelegationPermissionsUI } from '../../web3/DelegationPermissionsUI'
 import { CaseRevelationService } from '../../medical/services/CaseRevelationService'
 import { NurseAmyPersonality } from '../../character/NurseAmyPersonality'
+import { DiagnosticConfidence } from '../../medical/services/DiagnosticConfidence'
 
 export interface DiagnosticUIConfig {
   onSolveClick?: () => void
@@ -27,6 +28,7 @@ export interface DiagnosticUIConfig {
   onDiagnosisSubmit?: (selectedConditions: string[]) => void
   onError?: (message: string) => void
   xRayEffect?: any // Reference to x-ray effect for mystery system callbacks
+  gameManager?: any // Reference to game manager for accessing game state
 }
 
 export class DiagnosticUIManager {
@@ -96,6 +98,20 @@ export class DiagnosticUIManager {
     this.config = config
     this.accessManager = CaseAccessManager.getInstance()
     this.revelationService = new CaseRevelationService() // ENHANCEMENT: Initialize revelation service
+  }
+
+  // Method to get game state from game manager
+  public getGameState() {
+    if (this.config.gameManager && typeof this.config.gameManager.getGameState === 'function') {
+      return this.config.gameManager.getGameState();
+    }
+    return null;
+  }
+
+  // Method to get patient state from game state
+  public getPatientState() {
+    const gameState = this.getGameState();
+    return gameState?.patientState || null;
   }
 
   initialize(): void {
@@ -406,6 +422,18 @@ export class DiagnosticUIManager {
         if (this.config.xRayEffect?.showTreatmentOptions) {
           this.config.xRayEffect.showTreatmentOptions();
         }
+      },
+      onShowTreatmentMenu: () => {
+        // Create a basic DiagnosticConfidence instance
+        const diagnosticConfidence = new DiagnosticConfidence();
+        
+        // Trigger the TreatmentMenu by dispatching a custom event
+        document.dispatchEvent(new CustomEvent('showTreatmentMenuWithState', {
+          detail: {
+            patientState: this.getPatientState(),
+            diagnosticConfidence: diagnosticConfidence
+          }
+        }));
       }
     }
 

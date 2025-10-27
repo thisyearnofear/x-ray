@@ -235,7 +235,7 @@ export class HospitalAdministrator {
   requestAdditionalFunds(
     requestedAmount: number,
     justification: string,
-    patientCriticality: 'stable' | 'deteriorating' | 'critical'
+    patientCriticality: 'stable' | 'deteriorating' | 'critical' | 'terminal'
   ): BudgetNegotiation {
     if (!this.hasWalletConnected) {
       return {
@@ -250,17 +250,27 @@ export class HospitalAdministrator {
       };
     }
 
-    // Calculate approval chance based on personality and situation
+    // ENHANCEMENT: Calculate approval chance based on personality and patient state
     let baseChance = this.personality.negotiationDifficulty === 'easy' ? 70 :
                      this.personality.negotiationDifficulty === 'medium' ? 50 : 30;
 
-    // Adjust for patient criticality
-    if (patientCriticality === 'critical') baseChance += 30;
-    else if (patientCriticality === 'deteriorating') baseChance += 15;
+    // ENHANCEMENT: Adjust for patient criticality (dramatic escalation for critical patients)
+    const criticalityBonus = {
+      'stable': 0,
+      'deteriorating': 15,
+      'critical': 35,
+      'terminal': 50 // Urgent life-saving situation - highest approval
+    };
+    baseChance += criticalityBonus[patientCriticality] || 0;
 
     // Adjust for requested amount
     if (requestedAmount < 0.5) baseChance += 10;
     else if (requestedAmount > 2.0) baseChance -= 20;
+    
+    // Small requests in critical situations almost always approved
+    if (patientCriticality === 'terminal' && requestedAmount < 1.0) {
+      baseChance = Math.max(baseChance, 85);
+    }
 
     const approvalChance = Math.min(95, Math.max(5, baseChance));
 

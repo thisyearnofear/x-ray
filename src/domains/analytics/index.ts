@@ -10,7 +10,7 @@ export { SkillTreeData } from './SkillTreeData'
 export { SkillTreeVisualization } from './SkillTreeVisualization'
 export { SkillTreeManager } from './SkillTreeManager'
 export { AchievementDefinitions } from './AchievementDefinitions'
-export { AchievementSystem } from './AchievementSystem'
+// ENHANCEMENT: AchievementSystem consolidated into diagnostic domain
 export { AchievementUI } from './AchievementUI'
 export { PerformanceComparison } from './PerformanceComparison'
 
@@ -65,12 +65,7 @@ export type {
   AchievementRarity
 } from './AchievementDefinitions'
 
-export type {
-  PlayerAchievement,
-  AchievementProgress,
-  AchievementNotification,
-  AchievementStats
-} from './AchievementSystem'
+// ENHANCEMENT: Achievement types consolidated into diagnostic domain
 
 export type {
   AchievementUIConfig

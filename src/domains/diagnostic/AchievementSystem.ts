@@ -1,4 +1,4 @@
-// MODULAR: Achievement and progression management system
+// ENHANCEMENT: Consolidated Achievement and progression management system
 export interface Achievement {
     id: string
     name: string
@@ -9,6 +9,27 @@ export interface Achievement {
     requirements: AchievementRequirement
     reward?: AchievementReward
     rarity: 'common' | 'rare' | 'epic' | 'legendary'
+}
+
+export interface PlayerAchievement {
+    achievementId: string
+    unlockedAt: number
+    progress: number
+    isCompleted: boolean
+    timesCompleted: number
+    lastProgressUpdate: number
+    metadata?: any
+}
+
+export interface AchievementStats {
+    totalAchievements: number
+    unlockedAchievements: number
+    completedAchievements: number
+    totalPoints: number
+    earnedPoints: number
+    completionPercentage: number
+    rareAchievements: number
+    recentUnlocks: PlayerAchievement[]
 }
 
 export interface AchievementRequirement {
@@ -26,10 +47,12 @@ export interface AchievementReward {
 export class AchievementSystem {
     private achievements: Map<string, Achievement> = new Map()
     private unlockedAchievements: Set<string> = new Set()
+    private playerAchievements: Map<string, PlayerAchievement> = new Map()
     private callbacks: Map<string, Function[]> = new Map()
 
     constructor() {
         this.initializeAchievements()
+        this.initializePlayerAchievements()
     }
 
     private initializeAchievements() {
@@ -166,6 +189,25 @@ export class AchievementSystem {
         })
     }
 
+    /**
+     * ENHANCEMENT: Initialize player achievements with zero progress
+     */
+    private initializePlayerAchievements(): void {
+        this.achievements.forEach(achievement => {
+            if (!this.playerAchievements.has(achievement.id)) {
+                this.playerAchievements.set(achievement.id, {
+                    achievementId: achievement.id,
+                    unlockedAt: 0,
+                    progress: 0,
+                    isCompleted: false,
+                    timesCompleted: 0,
+                    lastProgressUpdate: Date.now(),
+                    metadata: {}
+                })
+            }
+        })
+    }
+
     // MODULAR: Event-driven achievement checking
     public on(event: string, callback: Function) {
         if (!this.callbacks.has(event)) {
@@ -239,6 +281,16 @@ export class AchievementSystem {
     private unlockAchievement(achievement: Achievement) {
         this.unlockedAchievements.add(achievement.id)
 
+        // ENHANCEMENT: Update player achievement record
+        const playerAchievement = this.playerAchievements.get(achievement.id)
+        if (playerAchievement) {
+            playerAchievement.unlockedAt = Date.now()
+            playerAchievement.isCompleted = true
+            playerAchievement.timesCompleted++
+            playerAchievement.progress = 100
+            playerAchievement.lastProgressUpdate = Date.now()
+        }
+
         // Apply rewards
         if (achievement.reward) {
             this.applyReward(achievement.reward)
@@ -263,8 +315,8 @@ export class AchievementSystem {
         }
     }
 
-    // MODULAR: Achievement statistics and analytics
-    public getAchievementStats() {
+    // MODULAR: Basic achievement statistics
+    public getBasicStats() {
         const total = this.achievements.size
         const unlocked = this.unlockedAchievements.size
         const completionRate = (unlocked / total) * 100
@@ -354,5 +406,81 @@ export class AchievementSystem {
 
     public getCompletionRate(): number {
         return (this.unlockedAchievements.size / this.achievements.size) * 100
+    }
+
+    /**
+     * ENHANCEMENT: Get player achievement data
+     */
+    public getPlayerAchievement(achievementId: string): PlayerAchievement | null {
+        return this.playerAchievements.get(achievementId) || null
+    }
+
+    /**
+     * ENHANCEMENT: Export achievement data for analytics
+     */
+    public exportAchievementData(): any {
+        return {
+            achievements: Array.from(this.achievements.entries()),
+            playerAchievements: Array.from(this.playerAchievements.entries()),
+            unlockedAchievements: Array.from(this.unlockedAchievements),
+            stats: this.getAchievementStats(),
+            exportTime: Date.now()
+        }
+    }
+
+    /**
+     * ENHANCEMENT: Get achievement progress for UI display
+     */
+    public getAchievementProgress(achievementId: string): { currentProgress: number, maxProgress: number, progressPercentage: number } {
+        const playerAchievement = this.playerAchievements.get(achievementId)
+        if (!playerAchievement) {
+            return { currentProgress: 0, maxProgress: 100, progressPercentage: 0 }
+        }
+
+        return {
+            currentProgress: playerAchievement.progress,
+            maxProgress: 100,
+            progressPercentage: playerAchievement.progress
+        }
+    }
+
+    /**
+     * ENHANCEMENT: Get comprehensive achievement statistics
+     */
+    public getAchievementStats(): AchievementStats {
+        const totalAchievements = this.achievements.size
+        const unlockedAchievements = this.unlockedAchievements.size
+        const completedAchievements = this.unlockedAchievements.size // All unlocked are completed for now
+
+        const totalPoints = Array.from(this.achievements.values())
+            .reduce((sum, achievement) => sum + achievement.points, 0)
+
+        const earnedPoints = Array.from(this.unlockedAchievements)
+            .map(id => this.achievements.get(id)?.points || 0)
+            .reduce((sum, points) => sum + points, 0)
+
+        const completionPercentage = (completedAchievements / totalAchievements) * 100
+
+        const rareAchievements = Array.from(this.unlockedAchievements)
+            .filter(id => {
+                const achievement = this.achievements.get(id)
+                return achievement && ['rare', 'epic', 'legendary'].includes(achievement.rarity)
+            }).length
+
+        const recentUnlocks = Array.from(this.playerAchievements.values())
+            .filter(pa => pa.isCompleted)
+            .sort((a, b) => b.unlockedAt - a.unlockedAt)
+            .slice(0, 5)
+
+        return {
+            totalAchievements,
+            unlockedAchievements,
+            completedAchievements,
+            totalPoints,
+            earnedPoints,
+            completionPercentage,
+            rareAchievements,
+            recentUnlocks
+        }
     }
 }

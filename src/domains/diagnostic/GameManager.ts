@@ -1,15 +1,33 @@
 import { MedicalServiceFacade } from '../medical/MedicalServiceFacade';
-import { PatientCase } from '../medical/types';
+import { PatientCase, PatientState } from '../medical/types';
 import { AchievementSystem } from './AchievementSystem';
 import { BudgetManager, DIFFICULTY_CONFIGS } from '../medical/BudgetManager';
 import { HospitalAdministrator } from '../medical/HospitalAdministrator';
+import { DynamicPricingManager } from '../medical/DynamicPricingManager';
+import { EfficiencyBonusSystem } from '../medical/EfficiencyBonusSystem';
+import { WalletIntegrationManager } from '../web3/WalletIntegrationManager';
+import { CrisisEventSystem } from '../medical/CrisisEventSystem';
+import { TimerNarrativeManager } from './TimerNarrativeManager';
+
+// MODULAR: Game phase enumeration for clear progression tracking
+export enum GamePhase {
+    PATIENT_ARRIVAL = 'patient_arrival',
+    INVESTIGATION = 'investigation',
+    EVIDENCE_GATHERING = 'evidence_gathering',
+    DIAGNOSIS = 'diagnosis',
+    COMPLETED = 'completed',
+    // Legacy phases for backward compatibility
+    SCANNING = 'scanning',
+    ANALYZING = 'analyzing',
+    SOLVED = 'solved'
+}
 
 // MODULAR: Game state management and progression system
 export interface GameState {
     score: number
     streak: number
     timeRemaining: number
-    phase: 'scanning' | 'analyzing' | 'solved'
+    phase: GamePhase
     discoveredConditions: Set<string>
     sessionStartTime: number
     hintsUsed: number
@@ -21,7 +39,7 @@ export interface GameState {
     patientCase: PatientCase | null
     specialization: MedicalSpecialization
     unlockedTechniques: Set<string>
-    
+
     // ENHANCEMENT: MON Token Economy
     budget?: {
         remaining: number
@@ -29,7 +47,10 @@ export interface GameState {
         startingAmount: number
         difficultyTier: 'beginner' | 'intermediate' | 'advanced' | 'expert'
     }
-    patientCriticality?: 'stable' | 'deteriorating' | 'critical'
+
+    // ENHANCEMENT: Patient State - extracted criticality and deterioration logic
+    patientState?: PatientState
+    patientCriticality?: 'stable' | 'deteriorating' | 'critical' // DEPRECATED: Use patientState.criticality
 }
 
 export interface MedicalSpecialization {
@@ -58,6 +79,12 @@ export class GameManager {
     // ENHANCEMENT: MON Token Economy
     private budgetManager: BudgetManager | null = null;
     private hospitalAdmin: HospitalAdministrator | null = null;
+    private dynamicPricingManager: DynamicPricingManager;
+    private efficiencyBonusSystem: EfficiencyBonusSystem;
+    private walletIntegrationManager: WalletIntegrationManager;
+    
+    // ENHANCEMENT: Timer Narrative System
+    private timerNarrativeManager: TimerNarrativeManager | null = null;
 
     constructor(config?: GameManagerConfig) {
         this.medicalService = new MedicalServiceFacade();
@@ -71,15 +98,11 @@ export class GameManager {
             }
         });
         this.gameState = this.initializeGameState()
-        this.startDynamicElementsSystem()
-
-        // Initialize spaced repetition system with previous data
-        this.loadPreviousSessionData();
-
-        // Store UI manager reference if provided
-        if (config?.diagnosticUIManager) {
-            this.diagnosticUIManager = config.diagnosticUIManager;
-        }
+        
+        // Initialize new economic systems
+        this.dynamicPricingManager = new DynamicPricingManager();
+        this.efficiencyBonusSystem = new EfficiencyBonusSystem();
+        this.walletIntegrationManager = new WalletIntegrationManager();
     }
 
     private initializeGameState(): GameState {
@@ -87,7 +110,7 @@ export class GameManager {
             score: 0,
             streak: 0,
             timeRemaining: 300,
-            phase: 'scanning',
+            phase: GamePhase.SCANNING,
             discoveredConditions: new Set(),
             sessionStartTime: Date.now(),
             hintsUsed: 0,
@@ -133,6 +156,10 @@ export class GameManager {
 
             const stateToUpdate = gameState || this.gameState;
             stateToUpdate.patientCase = patientCase;
+
+            // ENHANCEMENT: Initialize PatientState from PatientCase
+            stateToUpdate.patientState = new PatientState(patientCase);
+
             this.emit('gameStateUpdated', stateToUpdate);
         }
     }
@@ -161,10 +188,25 @@ export class GameManager {
         callbacks.forEach(callback => callback(data))
     }
 
-    // ENHANCED: Timer system with urgency feedback
+    // ENHANCED: Timer system with urgency feedback and patient state progression
     public startTimer(): void {
         const timerInterval = setInterval(() => {
             this.gameState.timeRemaining -= 1
+
+            // ENHANCEMENT: Update patient state (1 second = 1/60 minute)
+            if (this.gameState.patientState) {
+                this.gameState.patientState.update(1/60);
+            }
+
+            // Update gameState criticality from patientState
+            if (this.gameState.patientState) {
+                const patientStateData = this.gameState.patientState.getState();
+                // Keep the old property for backward compatibility
+                this.gameState.patientCriticality = patientStateData.criticality as any;
+                
+                // ENHANCEMENT: Check for narrative events
+                this.checkForNarrativeEvents();
+            }
 
             // Emit timer events for UI updates
             const timerEvent = {
@@ -208,6 +250,28 @@ export class GameManager {
                 })
             }
         }, 1000)
+    }
+
+    // ENHANCEMENT: Check for narrative events
+    private checkForNarrativeEvents(): void {
+        if (!this.timerNarrativeManager || !this.gameState.patientState || !this.gameState.patientCase) {
+            return;
+        }
+
+        const narrativeEvent = this.timerNarrativeManager.checkForNarrativeEvents(
+            this.gameState.timeRemaining,
+            this.gameState,
+            this.gameState.phase
+        );
+
+        if (narrativeEvent) {
+            // Emit the narrative event
+            this.emit('narrative_event', {
+                event: narrativeEvent.milestone,
+                type: narrativeEvent.type,
+                timestamp: narrativeEvent.triggeredAt
+            });
+        }
     }
 
     private getTimerUrgency(): 'normal' | 'warning' | 'critical' {
@@ -490,6 +554,26 @@ export class GameManager {
             })
             this.gameState.accuracy = totalProgress / conditionsFound
         }
+
+        // ENHANCEMENT: Update efficiency bonus system
+        if (this.gameState.patientState && this.efficiencyBonusSystem) {
+            // Update time elapsed
+            const config = DIFFICULTY_CONFIGS[this.gameState.budget?.difficultyTier || 'beginner'];
+            const timeElapsed = config.timeLimit - this.gameState.timeRemaining;
+            this.efficiencyBonusSystem.updateTimeElapsed(timeElapsed);
+
+            // Update efficiency bonus system with current metrics
+            const efficiencyData = this.efficiencyBonusSystem.getEfficiencySummary();
+            
+            // Emit efficiency update event
+            this.emit('efficiencyUpdated', efficiencyData);
+            
+            if (typeof document !== 'undefined') {
+                document.dispatchEvent(new CustomEvent('efficiencyUpdated', {
+                    detail: efficiencyData
+                }));
+            }
+        }
     }
 
     // MODULAR: Technique unlocking system
@@ -589,7 +673,37 @@ export class GameManager {
             difficultyTier
         };
         this.gameState.timeRemaining = config.timeLimit;
-        this.gameState.patientCriticality = 'stable';
+
+        // ENHANCEMENT: Set initial criticality from PatientState
+        if (this.gameState.patientState) {
+            const patientStateData = this.gameState.patientState.getState();
+            this.gameState.patientCriticality = patientStateData.criticality as any;
+            
+            // ENHANCEMENT: Initialize timer narrative manager
+            if (this.gameState.patientCase) {
+                this.timerNarrativeManager = new TimerNarrativeManager(
+                    this.gameState.patientState,
+                    this.gameState.patientCase
+                );
+                
+                // Set up narrative event listeners
+                this.setupNarrativeEventListeners();
+            }
+        } else {
+            this.gameState.patientCriticality = 'stable'; // fallback
+        }
+
+        // Initialize efficiency bonus system
+        if (this.gameState.patientState) {
+            this.efficiencyBonusSystem.initialize(
+                this.budgetManager,
+                this.gameState.patientState,
+                config.timeLimit
+            );
+        }
+
+        // Set wallet status in pricing manager
+        this.dynamicPricingManager.setDelegationStatus(hasWallet);
 
         // Wire budget events
         this.budgetManager.on('budgetUpdated', (budgetState: any) => {
@@ -601,28 +715,129 @@ export class GameManager {
             };
             this.emit('gameStateUpdated', this.gameState);
             this.emit('budgetUpdated', this.gameState.budget);
+
+            // ENHANCEMENT: Forward to DOM for React components (consolidating EconomicEventBridge)
+            if (typeof document !== 'undefined') {
+                document.dispatchEvent(new CustomEvent('budgetUpdated', {
+                    detail: this.gameState.budget
+                }));
+            }
         });
 
         this.budgetManager.on('insufficientFunds', (data: any) => {
             this.emit('insufficientFunds', data);
-            
+
+            // ENHANCEMENT: Forward to DOM for React components (consolidating EconomicEventBridge)
+            if (typeof document !== 'undefined') {
+                document.dispatchEvent(new CustomEvent('insufficientFunds', {
+                    detail: data
+                }));
+            }
+
             // Trigger hospital admin warning
             if (this.hospitalAdmin) {
                 const status = this.hospitalAdmin.checkBudgetStatus();
                 this.emit('administratorMessage', status);
+
+                // ENHANCEMENT: Forward to DOM for React components (consolidating EconomicEventBridge)
+                if (typeof document !== 'undefined') {
+                    document.dispatchEvent(new CustomEvent('administratorMessage', {
+                        detail: status
+                    }));
+                }
             }
         });
 
-        // Get initial briefing from administrator
-        if (this.hospitalAdmin) {
-            const briefing = this.hospitalAdmin.getInitialBriefing('Doctor');
-            this.emit('administratorMessage', {
-                message: briefing,
-                urgency: 'normal'
-            });
-        }
-
         console.log(`💰 Budget initialized: ${config.startingBudget} MON for ${difficultyTier} case`);
+    }
+
+    /**
+     * ENHANCEMENT: Setup UI event listeners (consolidating EconomicEventBridge)
+     * CLEAN: Single place for UI-to-game event handling
+     */
+    private setupUIEventListeners(): void {
+        if (typeof document === 'undefined') return; // SSR guard
+
+        // Case selected from CaseSelectionHub
+        document.addEventListener('caseSelected', ((event: CustomEvent) => {
+            const { difficultyTier } = event.detail;
+
+            // Initialize budget in GameManager
+            const budgetManager = this.getBudgetManager();
+            const hospitalAdmin = this.getHospitalAdministrator();
+
+            if (!budgetManager || !hospitalAdmin) {
+                // Initialize if not already done
+                this.initializeBudget(
+                    difficultyTier,
+                    'flexible', // Default personality
+                    this.isWalletConnected()
+                );
+            }
+        }) as EventListener);
+
+        // Execute medical action
+        document.addEventListener('executeAction', ((event: CustomEvent) => {
+            const { action } = event.detail as { action: any };
+
+            const budgetManager = this.getBudgetManager();
+            if (!budgetManager) {
+                console.error('BudgetManager not initialized');
+                return;
+            }
+
+            // Execute action through budget manager
+            const result = budgetManager.executeAction(
+                action,
+                [`Performed ${action.name}`],
+                true
+            );
+
+            if (result) {
+                console.log(`✅ Executed: ${action.name} for ${action.cost} MON`);
+                // BudgetManager internally handles emitting events through GameManager
+            }
+        }) as EventListener);
+
+        // Request additional funds
+        document.addEventListener('requestAdditionalFunds', (() => {
+            const hospitalAdmin = this.getHospitalAdministrator();
+            if (!hospitalAdmin) return;
+
+            const gameState = this.getGameState();
+            const criticality = gameState.patientCriticality || 'stable';
+
+            // Request 0.5 MON (can be made dynamic later)
+            const negotiation = hospitalAdmin.requestAdditionalFunds(
+                0.5,
+                'Additional tests needed for accurate diagnosis',
+                criticality
+            );
+
+            // Show negotiation dialog
+            document.dispatchEvent(new CustomEvent('showNegotiationDialog', {
+                detail: { negotiation }
+            }));
+        }) as EventListener);
+
+        // Contribute personal funds
+        document.addEventListener('contributePersonalFunds', (() => {
+            const hospitalAdmin = this.getHospitalAdministrator();
+            if (!hospitalAdmin) return;
+
+            // Show contribution dialog
+            document.dispatchEvent(new CustomEvent('showContributionDialog', {
+                detail: { maxAmount: 5.0 } // Max 5 MON personal contribution
+            }));
+        }) as EventListener);
+    }
+
+    /**
+     * Check if wallet is connected
+     */
+    private isWalletConnected(): boolean {
+        return typeof window !== 'undefined' &&
+               (window as any).ethereum?.selectedAddress != null;
     }
 
     /**
@@ -686,12 +901,13 @@ export class GameManager {
         this.emit('gameStateUpdated', this.gameState);
     }
 
-    public updatePhase(newPhase: 'scanning' | 'analyzing' | 'solved') {
+    public updatePhase(newPhase: GamePhase) {
         const oldPhase = this.gameState.phase;
         this.gameState.phase = newPhase;
 
-        // If phase changed to 'solved' (game completed), record session completion and high score
-        if (oldPhase !== 'solved' && newPhase === 'solved') {
+        // If phase changed to 'solved' or 'completed' (game completed), record session completion and high score
+        const completedPhases = [GamePhase.SOLVED, GamePhase.COMPLETED];
+        if (!completedPhases.includes(oldPhase) && completedPhases.includes(newPhase)) {
             this.recordSessionCompletion();
             this.recordHighScore();
         }
@@ -704,8 +920,9 @@ export class GameManager {
         const oldPhase = this.gameState.phase;
         this.gameState = { ...this.gameState, ...updates };
 
-        // If phase changed to 'solved' (game completed), record session completion
-        if (oldPhase !== 'solved' && this.gameState.phase === 'solved') {
+        // If phase changed to 'solved' or 'completed' (game completed), record session completion
+        const completedPhases = [GamePhase.SOLVED, GamePhase.COMPLETED];
+        if (!completedPhases.includes(oldPhase) && completedPhases.includes(this.gameState.phase)) {
             this.recordSessionCompletion();
             this.recordHighScore(); // Also record high score
         }
@@ -957,7 +1174,6 @@ export class GameManager {
 
         this.emit('sessionCompleted', sessionData);
 
-        // Save session data for future spaced repetition scheduling
         this.saveSessionData(sessionData);
     }
 
@@ -1107,6 +1323,97 @@ export class GameManager {
         return [];
     }
 
+    // ENHANCEMENT: Handle player response to crisis events
+    public handleCrisisResponse(eventId: string, action: string, success: boolean): void {
+        if (this.timerNarrativeManager) {
+            this.timerNarrativeManager.handleCrisisResponse(eventId, action, success);
+        }
+    }
+
+    // ENHANCEMENT: Resolve crisis without player response
+    public resolveCrisisWithoutResponse(eventId: string): void {
+        if (this.timerNarrativeManager) {
+            this.timerNarrativeManager.resolveCrisisWithoutResponse(eventId);
+        }
+    }
+
+    // ENHANCEMENT: Set up narrative event listeners
+    private setupNarrativeEventListeners(): void {
+        if (!this.timerNarrativeManager) return;
+
+        // Listen for narrative events
+        this.timerNarrativeManager.on('narrative_event_triggered', (event: any) => {
+            this.emit('narrative_event_triggered', event);
+            
+            // Forward to DOM for React components
+            if (typeof document !== 'undefined') {
+                document.dispatchEvent(new CustomEvent('narrativeEventTriggered', {
+                    detail: event
+                }));
+            }
+        });
+
+        // Listen for crisis events
+        this.timerNarrativeManager.on('crisis_event_triggered', (event: any) => {
+            this.emit('crisis_event_triggered', event);
+            
+            // Forward to DOM for React components
+            if (typeof document !== 'undefined') {
+                document.dispatchEvent(new CustomEvent('crisisEventTriggered', {
+                    detail: event
+                }));
+            }
+        });
+
+        // Listen for health change requests
+        this.timerNarrativeManager.on('health_change_requested', (data: any) => {
+            // Apply health change to patient state
+            if (this.gameState.patientState) {
+                // This would require a method in PatientState to adjust health directly
+                // For now, we'll emit an event for the canvas to handle
+                this.emit('patient_health_change', data);
+                
+                if (typeof document !== 'undefined') {
+                    document.dispatchEvent(new CustomEvent('patientHealthChange', {
+                        detail: data
+                    }));
+                }
+            }
+        });
+
+        // Listen for other crisis consequences
+        this.timerNarrativeManager.on('deterioration_rate_change_requested', (data: any) => {
+            this.emit('patient_deterioration_rate_change', data);
+        });
+
+        this.timerNarrativeManager.on('time_adjustment_requested', (data: any) => {
+            this.emit('timer_adjustment_requested', data);
+        });
+
+        this.timerNarrativeManager.on('budget_adjustment_requested', (data: any) => {
+            if (this.budgetManager) {
+                // This would require a method to adjust budget
+                this.emit('budget_adjustment_requested', data);
+            }
+        });
+
+        this.timerNarrativeManager.on('symptom_added', (data: any) => {
+            this.emit('patient_symptom_added', data);
+        });
+
+        this.timerNarrativeManager.on('complication_added', (data: any) => {
+            this.emit('patient_complication_added', data);
+        });
+
+        this.timerNarrativeManager.on('crisis_resolved', (data: any) => {
+            this.emit('crisis_resolved', data);
+        });
+
+        this.timerNarrativeManager.on('crisis_ignored', (data: any) => {
+            this.emit('crisis_ignored', data);
+        });
+    }
+
     // Public method to check achievements
     public checkAchievements(gameState: GameState, event: any) {
         this.achievementSystem?.checkAchievements(gameState, event);
@@ -1115,7 +1422,8 @@ export class GameManager {
     // Reset the game state to initial values
     public resetGameState(difficulty: 'easy' | 'medium' | 'hard' = 'medium') {
         // Record current session before resetting and potentially store high score
-        if (this.gameState.phase === 'solved') {
+        const completedPhases = [GamePhase.SOLVED, GamePhase.COMPLETED];
+        if (completedPhases.includes(this.gameState.phase)) {
             this.recordSessionCompletion();
             this.recordHighScore(); // Record high score when game is completed
         }
@@ -1249,6 +1557,86 @@ export class GameManager {
             clearInterval(this.dynamicElementsInterval);
             this.dynamicElementsInterval = null;
         }
+    }
+
+    /**
+     * Get dynamic price for a medical action
+     * ENHANCEMENT: Time and patient state-based pricing
+     */
+    public getDynamicPrice(action: any): number {
+        if (!this.budgetManager || !this.gameState.patientState) {
+            return action.cost; // Fallback to base cost
+        }
+
+        const config = DIFFICULTY_CONFIGS[this.gameState.budget?.difficultyTier || 'beginner'];
+        const budgetEfficiency = this.budgetManager.getBudgetEfficiency();
+
+        return this.dynamicPricingManager.calculateDynamicPrice(
+            action,
+            this.gameState.timeRemaining,
+            config.timeLimit,
+            this.gameState.patientState,
+            budgetEfficiency
+        );
+    }
+
+    /**
+     * Get pricing explanation for an action
+     * ENHANCEMENT: Transparent pricing feedback
+     */
+    public getPricingExplanation(action: any): string {
+        if (!this.budgetManager || !this.gameState.patientState) {
+            return "Standard pricing";
+        }
+
+        const config = DIFFICULTY_CONFIGS[this.gameState.budget?.difficultyTier || 'beginner'];
+        const budgetEfficiency = this.budgetManager.getBudgetEfficiency();
+
+        return this.dynamicPricingManager.getPricingExplanation(
+            action,
+            this.gameState.timeRemaining,
+            config.timeLimit,
+            this.gameState.patientState,
+            budgetEfficiency
+        );
+    }
+
+    /**
+     * Calculate efficiency bonuses for case completion
+     * ENHANCEMENT: Reward system for budget-conscious play
+     */
+    public calculateEfficiencyBonuses(): number {
+        return this.efficiencyBonusSystem.calculateTotalBonus();
+    }
+
+    /**
+     * Get wallet integration benefits
+     * ENHANCEMENT: Premium features for wallet users
+     */
+    public getWalletBenefits(): any {
+        return this.walletIntegrationManager.getWalletBenefits();
+    }
+
+    /**
+     * Connect wallet
+     * ENHANCEMENT: Wallet integration
+     */
+    public async connectWallet(): Promise<boolean> {
+        const success = await this.walletIntegrationManager.connectWallet();
+        if (success) {
+            this.smartAccount = this.walletIntegrationManager.getWalletAddress();
+            // Update pricing manager with delegation status
+            this.dynamicPricingManager.setDelegationStatus(true);
+        }
+        return success;
+    }
+
+    /**
+     * Check wallet achievements
+     * ENHANCEMENT: Progression system
+     */
+    public checkWalletAchievements(): any[] {
+        return this.walletIntegrationManager.checkAchievements();
     }
 
 }

@@ -6,7 +6,8 @@
  */
 
 import { AnalyticsDataProcessor } from './AnalyticsDataProcessor'
-import { AchievementSystem } from './AchievementSystem'
+// ENHANCEMENT: Consolidated AchievementSystem from diagnostic domain
+import { AchievementSystem } from '../diagnostic/AchievementSystem'
 import { SkillProgression, AnalyticsSummary } from './types'
 import { colors, spacing, typography, borders, effects, zIndex } from '../../styles/design-tokens'
 

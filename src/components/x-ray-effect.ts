@@ -13,7 +13,7 @@ import gsap from "gsap"
 import { MedicalMarker } from "./MedicalMarker"
 import { AudioManager as AudioManagerType, SoundType as SoundTypeType } from "./AudioManager"
 import { VisualFeedbackSystem } from "./VisualFeedbackSystem"
-import { AudioManagementSystem } from "../domains/audio/audio-management-system"
+// ENHANCEMENT: AudioManagementSystem consolidated into AudioManager
 import { AdvancedConditionDetection } from "./AdvancedConditionDetection"
 import { MetaMaskSmartAccount } from './MetaMaskSmartAccount'
 import { EnvioIndexer } from './EnvioIndexer'
@@ -189,8 +189,6 @@ export default class XRayEffect {
 
   // Audio system
   audioManager: AudioManagerType;
-  // Audio management system
-  audioManagementSystem!: AudioManagementSystem;
 
   // Visual feedback system for accessibility
   visualFeedbackSystem!: VisualFeedbackSystem;
@@ -274,7 +272,7 @@ export default class XRayEffect {
     // HACKATHON: Initialize MetaMask Smart Accounts
     this.smartAccount = new MetaMaskSmartAccount();
     this.envioIndexer = new EnvioIndexer(this.smartAccount);
-    this.audioManagementSystem = new AudioManagementSystem(audioManager);
+    // ENHANCEMENT: AudioManagementSystem consolidated into AudioManager
     this.scanFeedbackSystem = scanFeedbackSystem;
     this.mobileCamera = mobileCamera;
     this.visualFeedbackSystem = new VisualFeedbackSystem(this.scene);
@@ -797,7 +795,7 @@ export default class XRayEffect {
           this.showScanProgressIndicator(medicalMarker.getMarkerGroup().position, conditionId);
 
           // Play proximity sound when hovering near a condition
-          this.audioManagementSystem.playSound(SoundTypeType.HOVER);
+          this.audioManager.playSound(SoundTypeType.HOVER);
 
           // Provide clear audio hint about the condition if it hasn't been discovered yet
           if (!this.discoveredConditions.has(conditionId)) {
@@ -831,7 +829,7 @@ export default class XRayEffect {
         markerGroup === intersect.object
       )) {
         // Play click sound for consistency
-        this.audioManagementSystem.playSound(SoundTypeType.CLICK);
+        this.audioManager.playSound(SoundTypeType.CLICK);
 
         // ENHANCEMENT FIRST: Trigger streaming analysis for immediate feedback
         const condition = MEDICAL_CONDITIONS.find(c => c.id === conditionId)
@@ -1072,7 +1070,7 @@ export default class XRayEffect {
       const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId);
       if (condition) {
         // Play discovery sound based on severity through audio management system
-        this.audioManagementSystem.playDiscoverySound(condition.severity);
+        this.audioManager.playDiscoverySound(condition.severity);
 
         // Create visual feedback as audio alternative
         this.visualFeedbackSystem.createConditionDiscoveryFeedback(
@@ -1731,201 +1729,24 @@ export default class XRayEffect {
 
   // MYSTERY SYSTEM: Treatment decision system
   showTreatmentOptions(): void {
-    const availableTreatments = [
-      {
-        id: 'ibuprofen',
-        name: 'Ibuprofen 600mg',
-        type: 'medication' as const,
-        description: 'NSAID for pain and inflammation reduction',
-        timeCost: 5, // 5 seconds
-        riskLevel: 'low' as const,
-        outcomes: [
-          {
-            condition: 'has_inflammation',
-            probability: 0.8,
-            result: 'partial_success',
-            effects: [
-              { type: 'symptom_relief', target: 'jaw_pain', magnitude: -1, duration: 180 }
-            ],
-            timeBonus: 10
-          },
-          {
-            condition: 'true',
-            probability: 0.2,
-            result: 'complication',
-            effects: [
-              { type: 'new_symptom', target: 'stomach_pain', magnitude: 2, duration: 120 }
-            ]
-          }
-        ]
-      },
-      {
-        id: 'muscle_relaxant',
-        name: 'Muscle Relaxant',
-        type: 'medication' as const,
-        description: 'Reduces jaw muscle tension',
-        timeCost: 8,
-        riskLevel: 'medium' as const,
-        outcomes: [
-          {
-            condition: 'has_muscle_tension',
-            probability: 0.7,
-            result: 'success',
-            effects: [
-              { type: 'symptom_relief', target: 'clicking', magnitude: -2, duration: 300 }
-            ],
-            timeBonus: 15
-          }
-        ]
-      },
-      {
-        id: 'physical_therapy',
-        name: 'Jaw Exercises',
-        type: 'procedure' as const,
-        description: 'Teach patient jaw relaxation exercises',
-        timeCost: 15,
-        riskLevel: 'low' as const,
-        outcomes: [
-          {
-            condition: 'true',
-            probability: 0.9,
-            result: 'partial_success',
-            effects: [
-              { type: 'trust_change', target: 'trust', magnitude: 10 }
-            ],
-            timeBonus: 20
-          }
-        ]
-      }
-    ];
-
-    this.displayTreatmentDialog(availableTreatments);
+    // Instead of showing the custom treatment dialog, dispatch an event to show the TreatmentMenu
+    document.dispatchEvent(new CustomEvent('showTreatmentMenu'));
   }
-
+  // Keep the existing methods for backward compatibility, but they won't be used anymore
   displayTreatmentDialog(treatments: any[]): void {
-    const dialog = document.createElement('div');
-    dialog.style.cssText = `
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: linear-gradient(135deg, #ff9a9e, #fecfef);
-      color: white;
-      padding: 25px;
-      border-radius: 15px;
-      max-width: 500px;
-      max-height: 80vh;
-      overflow-y: auto;
-      z-index: 3000;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    `;
-
-    dialog.innerHTML = `
-      <h3 style="margin: 0 0 15px 0; color: #fff;">💊 Treatment Options</h3>
-      <p style="margin: 0 0 20px 0; font-size: 14px;">Choose a treatment for ${this.patientState.name}. Each treatment costs time but may provide benefits.</p>
-      ${treatments.map((treatment, index) => `
-        <div style="margin: 10px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
-          <div style="font-weight: bold; margin-bottom: 5px;">${treatment.name}</div>
-          <div style="font-size: 12px; margin-bottom: 8px; opacity: 0.9;">${treatment.description}</div>
-          <div style="font-size: 11px; margin-bottom: 10px;">
-          ⏰ Time cost: ${treatment.timeCost}s |
-          💰 Cost: ${(treatment.timeCost * 0.01 * (treatment.riskLevel === 'low' ? 1.0 : treatment.riskLevel === 'medium' ? 1.5 : 2.0)).toFixed(3)} MON |
-          ⚠️ Risk: ${treatment.riskLevel.toUpperCase()}
-          </div>
-          <button class="treatment-btn" data-index="${index}"
-            style="padding: 8px 16px; background: #4CAF50; border: none; border-radius: 6px;
-                   color: white; cursor: pointer; font-size: 12px;">
-            Administer Treatment
-          </button>
-        </div>
-      `).join('')}
-      <button id="close-treatments" style="margin-top: 15px; padding: 10px 20px;
-              background: rgba(255,255,255,0.2); border: none; border-radius: 8px;
-              color: white; cursor: pointer;">Close</button>
-    `;
-
-    document.body.appendChild(dialog);
-
-    // Add event listeners
-    treatments.forEach((treatment, index) => {
-      const button = dialog.querySelector(`[data-index="${index}"]`) as HTMLButtonElement;
-      button.addEventListener('click', () => {
-        this.administerTreatment(treatment);
-        dialog.remove();
-      });
-    });
-
-    const closeBtn = dialog.querySelector('#close-treatments') as HTMLButtonElement;
-    closeBtn.addEventListener('click', () => dialog.remove());
+    // This method is no longer used
+    console.log('displayTreatmentDialog is deprecated, using TreatmentMenu instead');
   }
 
   administerTreatment(treatment: any): void {
-    let treatmentCost = 0;
-    
-    // Manual treatment execution
-    const riskMultipliers = { low: 1.0, medium: 1.5, high: 2.0 };
-    const baseCost = treatment.timeCost * 0.01; // 0.01 MON per second of time cost
-    treatmentCost = Math.round((baseCost * riskMultipliers[treatment.riskLevel as keyof typeof riskMultipliers]) * 1000) / 1000;
-
-    // Check budget first
-    if (!this.spendBudget(treatmentCost, treatment.name)) {
-      return; // Budget check failed
-    }
-
-    // Check if player has enough time
-    if (!this.gameManager) return;
-
-    const gameState = this.gameManager.getGameState();
-    if (!gameState || gameState.timeRemaining < treatment.timeCost) {
-      // Refund budget if time check fails
-      this.hospitalBudget += treatmentCost;
-      this.updateEconomicDisplays();
-      this.audioManager?.showFeedback('❌ Not enough time remaining for this treatment!', 'warning');
-      return;
-    }
-
-    // Consume time
-    this.gameManager.adjustTime(-treatment.timeCost);
-
-    // Start treatment
-    const newTreatment: Treatment = {
-      id: treatment.id,
-      name: treatment.name,
-      type: treatment.type,
-      startTime: Date.now(),
-      duration: treatment.timeCost * 1000, // Convert to milliseconds
-      timeCost: treatment.timeCost,
-      riskLevel: treatment.riskLevel,
-      potentialOutcomes: treatment.outcomes,
-      active: true,
-      completed: false
-    };
-
-    this.activeTreatments.push(newTreatment);
-
-    this.audioManager?.showFeedback(`💊 Starting ${treatment.name}... (${treatment.timeCost}s)`, 'info');
-
-    // Schedule treatment completion
-    setTimeout(() => {
-      this.completeTreatment(newTreatment);
-    }, newTreatment.duration);
+    // This method is no longer used
+    console.log('administerTreatment is deprecated, using TreatmentMenu instead');
   }
 
   completeTreatment(treatment: Treatment): void {
-    treatment.active = false;
-    treatment.completed = true;
-    this.patientState.treatmentHistory.push(treatment);
-
-    // Determine outcome based on probabilities
-    const outcome = this.determineTreatmentOutcome(treatment);
-    this.applyTreatmentOutcome(outcome, treatment);
-
-    // Show result
-    const resultMessage = this.getOutcomeMessage(outcome, treatment);
-    this.audioManager?.showFeedback(resultMessage, outcome.result === 'success' ? 'success' : outcome.result === 'complication' ? 'error' : 'warning');
-  }
-
-  determineTreatmentOutcome(treatment: Treatment): TreatmentOutcome {
+    // This method is no longer used
+    console.log('completeTreatment is deprecated, using TreatmentMenu instead');
+  }  determineTreatmentOutcome(treatment: Treatment): TreatmentOutcome {
     // Simple probability-based outcome selection
     const rand = Math.random();
     let cumulativeProb = 0;

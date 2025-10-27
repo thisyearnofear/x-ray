@@ -39,6 +39,24 @@ export enum SoundType {
   SCAN_PROGRESS = 'scan_progress'
 }
 
+export interface AudioCue {
+  id: string
+  type: 'background' | 'effect' | 'notification' | 'ambient'
+  file?: string
+  volume: number
+  loop: boolean
+  fadeIn?: number
+  fadeOut?: number
+  priority: 'low' | 'medium' | 'high' | 'critical'
+}
+
+export interface PhaseAudioConfig {
+  backgroundMusic?: AudioCue
+  ambientSounds?: AudioCue[]
+  transitionEffects?: AudioCue[]
+  notificationSounds?: AudioCue[]
+}
+
 export class AudioManager {
   private audioListener: THREE.AudioListener;
   private soundMap: Map<SoundType, THREE.Audio | THREE.PositionalAudio> = new Map();
@@ -49,6 +67,19 @@ export class AudioManager {
   private ambienceLoop: THREE.Audio | THREE.PositionalAudio | null = null;
   private isAmbiencePlaying: boolean = false;
 
+  // ENHANCEMENT: Enhanced audio system features
+  private currentPhase: string = 'idle';
+  private audioBuffers: Map<string, AudioBuffer> = new Map();
+  private activeSources: Map<string, AudioBufferSourceNode> = new Map();
+  private gainNodes: Map<string, GainNode> = new Map();
+  private isEnabled: boolean = true;
+
+  // Phase-specific audio configurations
+  private phaseConfigs: Map<string, PhaseAudioConfig> = new Map();
+
+  // Audio cue definitions
+  private audioCues: Map<string, AudioCue> = new Map();
+
   constructor(camera: THREE.Camera) {
     this.audioListener = new THREE.AudioListener();
     camera.add(this.audioListener);
@@ -58,6 +89,11 @@ export class AudioManager {
 
     this.createProceduralSounds();
     this.loadSounds();
+
+    // ENHANCEMENT: Initialize enhanced audio features
+    this.initializeAudioContext();
+    this.setupPhaseConfigurations();
+    this.setupAudioCues();
   }
 
   private async loadSounds(): Promise<void> {
@@ -509,5 +545,261 @@ export class AudioManager {
       console.warn('ElevenLabs audio generation failed:', error);
       return null;
     }
+  }
+
+  // ENHANCEMENT: Enhanced audio system methods (consolidating EnhancedAudioManager and AudioManagementSystem)
+
+  private initializeAudioContext(): void {
+    try {
+      this.context = new (window.AudioContext || (window as any).webkitAudioContext)();
+    } catch (error) {
+      console.warn('Web Audio API not supported:', error);
+    }
+  }
+
+  private setupPhaseConfigurations(): void {
+    // Define audio configurations for different game phases
+    this.phaseConfigs.set('scanning', {
+      backgroundMusic: { id: 'scan_bg', type: 'background', volume: 0.3, loop: true, priority: 'medium' },
+      ambientSounds: [
+        { id: 'xray_hum', type: 'ambient', volume: 0.4, loop: true, priority: 'low' }
+      ]
+    });
+
+    this.phaseConfigs.set('analysis', {
+      backgroundMusic: { id: 'analysis_bg', type: 'background', volume: 0.2, loop: true, priority: 'medium' },
+      ambientSounds: [
+        { id: 'thinking_hum', type: 'ambient', volume: 0.3, loop: true, priority: 'low' }
+      ]
+    });
+
+    this.phaseConfigs.set('critical', {
+      backgroundMusic: { id: 'urgent_bg', type: 'background', volume: 0.5, loop: true, priority: 'high' },
+      ambientSounds: [
+        { id: 'heartbeat_fast', type: 'ambient', volume: 0.6, loop: true, priority: 'medium' }
+      ]
+    });
+  }
+
+  private setupAudioCues(): void {
+    // Define reusable audio cues
+    this.audioCues.set('discovery_major', {
+      id: 'discovery_major',
+      type: 'notification',
+      volume: 0.7,
+      loop: false,
+      priority: 'high'
+    });
+
+    this.audioCues.set('phase_transition', {
+      id: 'phase_transition',
+      type: 'effect',
+      volume: 0.5,
+      loop: false,
+      priority: 'medium'
+    });
+  }
+
+  // ENHANCEMENT: Phase management methods
+  public setCurrentPhase(phase: string): void {
+    if (this.currentPhase === phase) return;
+
+    const previousPhase = this.currentPhase;
+    this.currentPhase = phase;
+
+    // Handle phase transition audio
+    this.handlePhaseTransition(previousPhase, phase);
+  }
+
+  private handlePhaseTransition(fromPhase: string, toPhase: string): void {
+    // Stop previous phase audio
+    this.stopPhaseAudio(fromPhase);
+
+    // Start new phase audio
+    this.startPhaseAudio(toPhase);
+
+    // Play transition sound
+    this.playAudioCue('phase_transition');
+  }
+
+  private stopPhaseAudio(phase: string): void {
+    const config = this.phaseConfigs.get(phase);
+    if (!config) return;
+
+    // Stop background music
+    if (config.backgroundMusic) {
+      this.stopAudioCue(config.backgroundMusic.id);
+    }
+
+    // Stop ambient sounds
+    config.ambientSounds?.forEach(cue => {
+      this.stopAudioCue(cue.id);
+    });
+  }
+
+  private startPhaseAudio(phase: string): void {
+    const config = this.phaseConfigs.get(phase);
+    if (!config) return;
+
+    // Start background music
+    if (config.backgroundMusic) {
+      this.playAudioCue(config.backgroundMusic.id);
+    }
+
+    // Start ambient sounds
+    config.ambientSounds?.forEach(cue => {
+      this.playAudioCue(cue.id);
+    });
+  }
+
+  public playAudioCue(cueId: string): void {
+    const cue = this.audioCues.get(cueId);
+    if (!cue || !this.isEnabled) return;
+
+    // Use existing sound system for known cues, Web Audio API for custom cues
+    if (cue.file) {
+      // Load and play file-based cue
+      this.loadAndPlayCue(cue);
+    } else {
+      // Map to existing SoundType for procedural sounds
+      const soundType = this.mapCueToSoundType(cueId);
+      if (soundType) {
+        this.playSound(soundType);
+      }
+    }
+  }
+
+  public stopAudioCue(cueId: string): void {
+    const cue = this.audioCues.get(cueId);
+    if (!cue) return;
+
+    const soundType = this.mapCueToSoundType(cueId);
+    if (soundType) {
+      this.stopSound(soundType);
+    }
+  }
+
+  private mapCueToSoundType(cueId: string): SoundType | null {
+    const mapping: Record<string, SoundType> = {
+      'discovery_major': SoundType.CONDITION_FOUND,
+      'phase_transition': SoundType.MEDICAL_BEEP,
+      'scan_bg': SoundType.XRAY_SCANNING,
+      'analysis_bg': SoundType.HOSPITAL_AMBIENCE,
+      'urgent_bg': SoundType.HEARTBEAT,
+      'xray_hum': SoundType.XRAY_SCANNING,
+      'thinking_hum': SoundType.AI_PROCESSING,
+      'heartbeat_fast': SoundType.HEARTBEAT
+    };
+
+    return mapping[cueId] || null;
+  }
+
+  private async loadAndPlayCue(cue: AudioCue): Promise<void> {
+    if (!cue.file) return;
+
+    try {
+      const response = await fetch(cue.file);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+
+      const source = this.context.createBufferSource();
+      const gainNode = this.context.createGain();
+
+      source.buffer = audioBuffer;
+      source.loop = cue.loop;
+      gainNode.gain.value = cue.volume;
+
+      source.connect(gainNode);
+      gainNode.connect(this.context.destination);
+
+      // Store for cleanup
+      const cueId = cue.id;
+      this.activeSources.set(cueId, source);
+      this.gainNodes.set(cueId, gainNode);
+
+      source.start();
+
+      // Handle fade in
+      if (cue.fadeIn) {
+        gainNode.gain.setValueAtTime(0, this.context.currentTime);
+        gainNode.gain.linearRampToValueAtTime(cue.volume, this.context.currentTime + cue.fadeIn);
+      }
+
+      // Handle fade out for looped sounds
+      if (cue.loop && cue.fadeOut) {
+        // This would need more complex implementation for fade out
+      }
+
+    } catch (error) {
+      console.warn(`Failed to load audio cue ${cue.id}:`, error);
+    }
+  }
+
+  // ENHANCEMENT: AudioManagementSystem features
+  public enableAudioSystems(): void {
+    console.log('🎵 Audio systems enabled via user interaction');
+    this.isEnabled = true;
+
+    setTimeout(() => {
+      try {
+        // Resume AudioContext if suspended
+        if (this.context && this.context.state === 'suspended') {
+          this.context.resume();
+        }
+
+        // Start ambient medical sounds
+        this.startHospitalAmbience();
+      } catch (error) {
+        console.warn('Audio initialization warning:', error);
+      }
+    }, 100);
+  }
+
+
+
+
+
+  public playDiscoverySound(severity: 'low' | 'medium' | 'high'): void {
+    try {
+      switch (severity) {
+        case 'low':
+          this.playSound(SoundType.LOW_SEVERITY);
+          break;
+        case 'medium':
+          this.playSound(SoundType.MEDIUM_SEVERITY);
+          break;
+        case 'high':
+          this.playSound(SoundType.HIGH_SEVERITY);
+          break;
+      }
+    } catch (error) {
+      console.warn('⚠️ Discovery sound failed:', error);
+    }
+  }
+
+
+
+
+
+  public getIsAmbiencePlaying(): boolean {
+    return this.isAmbiencePlaying;
+  }
+
+
+
+  // Cleanup
+  public destroy(): void {
+    this.stopHospitalAmbience();
+
+    // Stop all active Web Audio API sources
+    this.activeSources.forEach(source => {
+      try {
+        source.stop();
+      } catch (e) {
+        // Source might already be stopped
+      }
+    });
+    this.activeSources.clear();
+    this.gainNodes.clear();
   }
 }

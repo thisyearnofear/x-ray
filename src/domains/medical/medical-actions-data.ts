@@ -126,7 +126,20 @@ export const TREATMENTS: MedicalAction[] = [
     expectedOutcome: 'Treat bacterial infections before culture results',
     risks: ['Allergic reaction', 'C. diff infection', 'Antibiotic resistance'],
     contraindications: ['Known antibiotic allergy'],
-    timeRequired: 0
+    timeRequired: 0,
+    effectiveness: {
+      baseSuccessRate: 0.65,
+      effectivenessVsCriticality: {
+        stable: 0.80,
+        deteriorating: 0.65,
+        critical: 0.45,
+        terminal: 0.20
+      },
+      healthImpact: 15,
+      deteriorationReduction: 0.3,
+      requiresConditions: ['infection'],
+      contraindictedConditions: ['viral_infection']
+    }
   },
   {
     id: 'antibiotics_targeted',
@@ -138,7 +151,20 @@ export const TREATMENTS: MedicalAction[] = [
     description: 'Culture-directed antibiotic therapy',
     expectedOutcome: 'Effective treatment with lower resistance risk',
     risks: ['Minor side effects'],
-    timeRequired: 0
+    timeRequired: 0,
+    effectiveness: {
+      baseSuccessRate: 0.90,
+      effectivenessVsCriticality: {
+        stable: 0.95,
+        deteriorating: 0.90,
+        critical: 0.75,
+        terminal: 0.50
+      },
+      healthImpact: 25,
+      deteriorationReduction: 0.5,
+      requiresConditions: ['infection', 'culture_result'],
+      contraindictedConditions: []
+    }
   },
   {
     id: 'iv_fluids',
@@ -150,7 +176,20 @@ export const TREATMENTS: MedicalAction[] = [
     description: 'Intravenous crystalloid fluid administration',
     expectedOutcome: 'Restore hydration and blood pressure',
     risks: ['Fluid overload', 'Electrolyte imbalance'],
-    timeRequired: 1
+    timeRequired: 1,
+    effectiveness: {
+      baseSuccessRate: 0.85,
+      effectivenessVsCriticality: {
+        stable: 0.90,
+        deteriorating: 0.85,
+        critical: 0.75,
+        terminal: 0.50
+      },
+      healthImpact: 10,
+      deteriorationReduction: 0.2,
+      requiresConditions: ['dehydration', 'hypotension'],
+      contraindictedConditions: ['heart_failure', 'fluid_overload']
+    }
   },
   {
     id: 'oxygen_therapy',
@@ -162,7 +201,20 @@ export const TREATMENTS: MedicalAction[] = [
     description: 'Oxygen administration via nasal cannula or mask',
     expectedOutcome: 'Improve oxygen saturation',
     risks: ['Minimal'],
-    timeRequired: 0
+    timeRequired: 0,
+    effectiveness: {
+      baseSuccessRate: 0.95,
+      effectivenessVsCriticality: {
+        stable: 0.98,
+        deteriorating: 0.95,
+        critical: 0.85,
+        terminal: 0.60
+      },
+      healthImpact: 8,
+      deteriorationReduction: 0.15,
+      requiresConditions: ['hypoxia', 'respiratory_distress'],
+      contraindictedConditions: []
+    }
   },
   {
     id: 'pain_management',
@@ -187,7 +239,20 @@ export const TREATMENTS: MedicalAction[] = [
     expectedOutcome: 'Correct life-threatening anatomical problem',
     risks: ['Anesthesia complications', 'Bleeding', 'Infection', 'Very high cost'],
     contraindications: ['Unstable patient without resuscitation'],
-    timeRequired: 60
+    timeRequired: 60,
+    effectiveness: {
+      baseSuccessRate: 0.70,
+      effectivenessVsCriticality: {
+        stable: 0.85,
+        deteriorating: 0.70,
+        critical: 0.55,
+        terminal: 0.25
+      },
+      healthImpact: 40,
+      deteriorationReduction: 0.8,
+      requiresConditions: ['surgical_emergency'],
+      contraindictedConditions: ['coagulopathy', 'severe_sepsis']
+    }
   }
 ];
 

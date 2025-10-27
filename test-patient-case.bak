@@ -1,0 +1,58 @@
+const testPatientGeneration = async () => {
+  console.log('🧪 Testing AI-powered patient case generation...\n');
+
+  // Test different models and difficulties
+  const testCases = [
+    { model: 'head', difficulty: 'medium' },
+    { model: 'torso', difficulty: 'hard' },
+    { model: 'fullbody', difficulty: 'easy' }
+  ];
+
+  for (const testCase of testCases) {
+    console.log(`📋 Generating case for ${testCase.model} (${testCase.difficulty})...`);
+    
+    try {
+      const response = await fetch('http://localhost:3000/api/generate-patient-case', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testCase)
+      });
+
+      if (!response.ok) {
+        console.log(`❌ API call failed: ${response.status}`);
+        continue;
+      }
+
+      const generatedCase = await response.json();
+      
+      // Validate case structure
+      const requiredFields = ['patientName', 'age', 'gender', 'chiefComplaint', 'hiddenElements'];
+      const hasRequired = requiredFields.every(field => generatedCase[field]);
+      
+      if (hasRequired) {
+        console.log(`✅ Generated: ${generatedCase.patientName}, ${generatedCase.age}yo ${generatedCase.gender}`);
+        console.log(`   Complaint: ${generatedCase.chiefComplaint}`);
+        console.log(`   Complexity: ${generatedCase.caseComplexity}`);
+        console.log(`   Conditions: ${generatedCase.underlyingConditions?.length || 0} underlying conditions`);
+        
+        // Check for progressive revelation structure
+        if (generatedCase.hiddenElements && generatedCase.hiddenElements.differentialDiagnosis) {
+          console.log('   ✅ Progressive revelation structure present');
+        }
+      } else {
+        console.log('❌ Missing required fields:', requiredFields.filter(f => !generatedCase[f]));
+      }
+      
+    } catch (error) {
+      console.log(`❌ Error: ${error.message}`);
+    }
+    
+    console.log('');
+  }
+  
+  console.log('🎯 Test complete!');
+};
+
+testPatientGeneration();

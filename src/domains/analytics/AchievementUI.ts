@@ -5,7 +5,8 @@
  * MOTIVATIONAL: Engaging visual design to encourage achievement hunting
  */
 
-import { AchievementSystem, PlayerAchievement, AchievementStats } from './AchievementSystem'
+// ENHANCEMENT: Consolidated AchievementSystem from diagnostic domain
+import { AchievementSystem, PlayerAchievement, AchievementStats } from '../diagnostic/AchievementSystem'
 import { Achievement, AchievementDefinitions, AchievementCategory, AchievementRarity } from './AchievementDefinitions'
 import { colors, spacing, typography, borders, effects, zIndex } from '../../styles/design-tokens'
 

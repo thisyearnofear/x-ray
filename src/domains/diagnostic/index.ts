@@ -15,6 +15,7 @@ export * from './ui'
 // MODULAR: Managers and Systems
 export { GameManager } from './GameManager'
 export { AchievementSystem } from './AchievementSystem'
+export type { PlayerAchievement, AchievementStats } from './AchievementSystem'
 export { LearningTracker } from './LearningTracker'
 export { MedicalWorkflowManager } from './MedicalWorkflowManager'
 export { Web3SkillTracker } from './Web3SkillTracker'

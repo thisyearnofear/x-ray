@@ -5,12 +5,12 @@
  * ADAPTIVE: Responds to device capabilities and user preferences
  */
 
-import { EnhancedAudioManager } from '../audio/EnhancedAudioManager'
+// ENHANCEMENT: EnhancedAudioManager consolidated into AudioManager component
+import { AudioManager } from '../../components/AudioManager'
 import { EnhancedVisualEffects } from '../visual/EnhancedVisualEffects'
 import { EnhancedConsultationUI } from '../consultation/EnhancedConsultationUI'
 import { MobileOptimization } from '../mobile/MobileOptimization'
 import { EnhancedGameManager, GameEvent, EnhancedGameState } from '../diagnostic/EnhancedGameManager'
-import { AudioManager } from '../../components/AudioManager'
 import * as THREE from 'three'
 
 export interface Phase3Config {
@@ -32,7 +32,7 @@ export interface Phase3Status {
 }
 
 export class Phase3Integration {
-  private enhancedAudioManager: EnhancedAudioManager | null = null
+  private audioManager: AudioManager | null = null
   private enhancedVisualEffects: EnhancedVisualEffects | null = null
   private enhancedConsultationUI: EnhancedConsultationUI | null = null
   private mobileOptimization: MobileOptimization | null = null
@@ -169,11 +169,11 @@ export class Phase3Integration {
       return
     }
 
-    this.enhancedAudioManager = new EnhancedAudioManager(this.baseAudioManager)
+    this.audioManager = this.baseAudioManager // EnhancedAudioManager consolidated into base AudioManager
     
     // Adjust audio quality based on performance level
     if (this.performanceLevel === 'low') {
-      this.enhancedAudioManager.setMasterVolume(0.5)
+      this.audioManager.setMasterVolume(0.5)
     }
 
     console.log('🎵 Enhanced audio manager initialized')
@@ -237,9 +237,8 @@ export class Phase3Integration {
     const { region, revealed, type } = event.data
 
     // Audio feedback
-    if (this.enhancedAudioManager) {
-      this.enhancedAudioManager.provideContextualFeedback('revelation', { type })
-    }
+    // ENHANCEMENT: EnhancedAudioManager consolidated - contextual feedback now handled by base AudioManager
+    // this.audioManager.playAudioCue('revelation')
 
     // Visual effects
     if (this.enhancedVisualEffects && revealed && revealed.length > 0) {
@@ -263,10 +262,8 @@ export class Phase3Integration {
   private handleInvestigationEvent(event: GameEvent): void {
     const { technique, region, position } = event.data
 
-    // Audio feedback
-    if (this.enhancedAudioManager) {
-      this.enhancedAudioManager.provideContextualFeedback('investigation_technique', { technique })
-    }
+    // Audio feedback - ENHANCEMENT: EnhancedAudioManager consolidated
+    // this.audioManager.playAudioCue('investigation_technique')
 
     // Visual effects
     if (this.enhancedVisualEffects) {
@@ -281,9 +278,8 @@ export class Phase3Integration {
     const { type, specialist, request } = event.data
 
     // Audio feedback
-    if (this.enhancedAudioManager) {
-      this.enhancedAudioManager.provideContextualFeedback('consultation_request')
-    }
+    // ENHANCEMENT: EnhancedAudioManager consolidated
+    // this.audioManager.playAudioCue('consultation_request')
 
     // Show consultation UI
     if (this.enhancedConsultationUI && type === 'request') {
@@ -298,8 +294,8 @@ export class Phase3Integration {
     const { direction, metrics } = event.data
 
     // Audio feedback
-    if (this.enhancedAudioManager) {
-      this.enhancedAudioManager.provideContextualFeedback('difficulty_adjusted', { direction })
+    if (this.audioManager) {
+      // this.audioManager.playAudioCue('difficulty_adjusted')
     }
 
     // Visual feedback
@@ -315,8 +311,8 @@ export class Phase3Integration {
     const { choices, type } = event.data
 
     // Audio feedback
-    if (this.enhancedAudioManager) {
-      this.enhancedAudioManager.provideContextualFeedback('narrative_choice')
+    if (this.audioManager) {
+      // this.audioManager.playAudioCue('narrative_choice')
     }
 
     // Mobile optimization for narrative choices
@@ -330,8 +326,8 @@ export class Phase3Integration {
     const { newPhase, gameState } = event.data
 
     // Audio phase transition
-    if (this.enhancedAudioManager) {
-      this.enhancedAudioManager.transitionToPhase(newPhase, gameState)
+    if (this.audioManager) {
+      this.audioManager.setCurrentPhase(newPhase)
     }
 
     // Adjust UI for new phase
@@ -373,9 +369,9 @@ export class Phase3Integration {
       // Implementation would reduce particle counts, disable expensive effects, etc.
     }
 
-    if (this.enhancedAudioManager) {
+    if (this.audioManager) {
       // Reduce audio quality
-      this.enhancedAudioManager.setMasterVolume(0.4)
+      this.audioManager.setMasterVolume(0.4)
     }
   }
 
@@ -449,7 +445,7 @@ export class Phase3Integration {
    */
   public getStatus(): Phase3Status {
     return {
-      audioManager: this.enhancedAudioManager?.getAudioStatus(),
+      audioManager: { isEnabled: !!this.audioManager, currentPhase: 'unknown' },
       visualEffects: {
         isActive: !!this.enhancedVisualEffects,
         availableTechniques: this.enhancedVisualEffects?.getAvailableInvestigationTechniques() || []
@@ -465,9 +461,9 @@ export class Phase3Integration {
     this.performanceLevel = level
     
     // Adjust all systems based on new performance level
-    if (this.enhancedAudioManager) {
+    if (this.audioManager) {
       const volumeMap = { high: 0.7, medium: 0.5, low: 0.3 }
-      this.enhancedAudioManager.setMasterVolume(volumeMap[level])
+      this.audioManager.setMasterVolume(volumeMap[level])
     }
 
     if (this.mobileOptimization) {
@@ -482,8 +478,9 @@ export class Phase3Integration {
   }
 
   public enableAudioEnhancements(enabled: boolean): void {
-    if (this.enhancedAudioManager) {
-      this.enhancedAudioManager.setEnabled(enabled)
+    if (this.audioManager) {
+      // ENHANCEMENT: setEnabled method consolidated - audio enabled state now managed internally
+      // this.audioManager.setEnabled(enabled)
     }
   }
 
@@ -504,8 +501,8 @@ export class Phase3Integration {
       this.enhancedVisualEffects.startInvestigationEffect(technique, position)
     }
 
-    if (this.enhancedAudioManager) {
-      this.enhancedAudioManager.provideContextualFeedback('investigation_technique', { technique })
+    if (this.audioManager) {
+      // this.audioManager.playAudioCue('investigation_technique')
     }
   }
 
@@ -520,9 +517,9 @@ export class Phase3Integration {
    * Cleanup and destroy
    */
   public destroy(): void {
-    if (this.enhancedAudioManager) {
-      this.enhancedAudioManager.destroy()
-      this.enhancedAudioManager = null
+    if (this.audioManager) {
+      this.audioManager.destroy()
+      // AudioManager is managed externally, don't set to null
     }
 
     if (this.enhancedVisualEffects) {

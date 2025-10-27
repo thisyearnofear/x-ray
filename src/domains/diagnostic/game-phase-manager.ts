@@ -1,5 +1,5 @@
 // CLEAN: Phase management integrated with GameManager (no duplicate state)
-import { GameManager } from './GameManager';
+import { GameManager, GamePhase as GMGamePhase } from './GameManager';
 import { DiagnosticUIManager } from './managers/DiagnosticUIManager';
 import { AudioManager, SoundType } from '../../components/AudioManager';
 import Canvas from '../../canvas';
@@ -107,16 +107,17 @@ export class GamePhaseManager {
 
     // Update phase in GameManager if available
     if (this.gameManager) {
-      const phaseMap: Record<GamePhase, 'scanning' | 'analyzing' | 'solved'> = {
-        [GamePhase.ACTIVE]: 'scanning',
-        [GamePhase.PAUSED]: 'scanning',
-        [GamePhase.COMPLETE]: 'solved',
-        [GamePhase.WELCOME]: 'scanning',
-        [GamePhase.TUTORIAL]: 'scanning',
-        [GamePhase.EXPLORATION]: 'scanning',
-        [GamePhase.READY]: 'scanning'
+      // Map GamePhaseManager phases to GameManager phases
+      const phaseMap: Record<GamePhase, GMGamePhase> = {
+        [GamePhase.ACTIVE]: GMGamePhase.SCANNING,
+        [GamePhase.PAUSED]: GMGamePhase.SCANNING,
+        [GamePhase.COMPLETE]: GMGamePhase.SOLVED,
+        [GamePhase.WELCOME]: GMGamePhase.SCANNING,
+        [GamePhase.TUTORIAL]: GMGamePhase.SCANNING,
+        [GamePhase.EXPLORATION]: GMGamePhase.SCANNING,
+        [GamePhase.READY]: GMGamePhase.SCANNING
       }
-      const mappedPhase = phaseMap[newPhase] || 'scanning'
+      const mappedPhase = phaseMap[newPhase] || GMGamePhase.SCANNING
       this.gameManager.updatePhase(mappedPhase)
     }
 
