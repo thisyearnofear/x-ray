@@ -258,6 +258,11 @@ export const animation = {
         glow: 'glow',
         shimmer: 'shimmer',
         scan: 'scan',
+        // Staged interface animations
+        stageTransition: 'stageTransition',
+        stageFadeIn: 'stageFadeIn',
+        stageSlideInLeft: 'stageSlideInLeft',
+        stageSlideInRight: 'stageSlideInRight'
     },
 } as const
 
@@ -445,6 +450,27 @@ export const keyframeCSS = `
   0% { left: -100%; }
   100% { left: 100%; }
 }
+
+@keyframes stageTransition {
+  0% { opacity: 0; transform: translateX(20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes stageFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes stageSlideInLeft {
+  0% { opacity: 0; transform: translateX(-50px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes stageSlideInRight {
+  0% { opacity: 0; transform: translateX(50px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
 `
 
 // ============================================================================

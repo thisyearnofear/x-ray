@@ -80,9 +80,19 @@ Open [http://localhost:3000](http://localhost:3000) - Connect MetaMask to enable
 
 
 
-## 📚 Docs
+## 📚 Documentation
 
-- [Core Concepts](docs/CORE_CONCEPTS.md) | [Web3 Implementation](docs/WEB3_IMPLEMENTATION.md) | [Usage Guide](docs/USAGE_GUIDE.md)
+### 📋 [Roadmap & Progress](docs/ROADMAP_PROGRESS_FEATURES.md)
+Complete development roadmap, phase tracking, AI integration status, UX plans, and UI component audit.
+
+### 🏗️ [Architecture & Core Systems](docs/ARCHITECTURE_CORE_SYSTEMS.md)
+System architecture, Web3 integration, smart contracts, domain-driven design, and core principles.
+
+### 💰 [Economic & Medical Systems](docs/ECONOMIC_MEDICAL_SYSTEMS.md)
+MON token economy, patient-centric mechanics, diagnostic confidence, treatment effectiveness, and UI components.
+
+### 🔧 [Development & Implementation](docs/DEVELOPMENT_IMPLEMENTATION.md)
+Setup instructions, testing scenarios, debugging guides, deployment procedures, and performance monitoring.
 
 ---
 

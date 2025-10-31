@@ -1,8 +1,54 @@
-# X-RAY Medical Diagnostics - Developer Guide & Testing
+# Development & Implementation
 
-## 🧪 Testing Guide
+## Overview
+
+This document covers the development workflow, implementation details, testing procedures, and deployment processes for X-RAY Medical Diagnostics. It includes setup instructions, testing scenarios, debugging guides, and performance monitoring.
+
+## Development Environment Setup
 
 ### Prerequisites
+- **Node.js** v18.18.0 or higher
+- **npm** v9.8.1 or higher
+- **MetaMask** browser extension
+- **Visual Studio Code** (recommended IDE)
+- **Git** for version control
+
+### Recommended VS Code Extensions
+- **ESLint** - JavaScript/TypeScript linting
+- **Prettier** - Code formatting
+- **Solidity** - Smart contract syntax highlighting
+- **GitLens** - Enhanced Git capabilities
+- **Bracket Pair Colorizer** - Visual bracket matching
+
+### Installation
+```bash
+# Clone repository
+git clone <repository-url>
+cd x-ray-medical-diagnostics
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+### Environment Variables
+Create a `.env.local` file:
+```bash
+# RPC Configuration
+NEXT_PUBLIC_RPC_URL=https://testnet-rpc.monad.xyz
+NEXT_PUBLIC_BLOCK_EXPLORER=https://testnet.monadexplorer.com
+NEXT_PUBLIC_BUNDLER_URL=https://api.pimlico.io/v2/monad-testnet/rpc
+
+# Contract Addresses (automatically configured)
+# NEXT_PUBLIC_MEDICAL_NFT=0xA960B1692aa11a10Ff1c1595300301DfF1CDAcB4
+# NEXT_PUBLIC_PAYMASTER=0x2Aa0f72AEc34Ea007aeeD1c998f28278A1501423
+```
+
+## Testing Guide
+
+### Prerequisites Setup
 
 #### 1. MetaMask Setup
 - Install MetaMask browser extension
@@ -18,19 +64,6 @@
 - Get MON test tokens from Monad testnet faucet
 - Fund your wallet with at least 1 MON for testing
 - Verify balance in MetaMask
-
-#### 3. Development Environment
-```bash
-# Clone repository
-git clone <repository-url>
-cd x-ray-medical-diagnostics
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
 
 ### Testing Scenarios
 
@@ -58,7 +91,6 @@ npm run dev
 3. Enter a valid delegate address (e.g., `0x1234...abcd`)
 4. Select "Enable Gasless AI" option
 5. Approve transaction in MetaMask
-6. Verify success message
 
 **Expected Results**:
 - Delegation is created successfully
@@ -75,7 +107,6 @@ npm run dev
 3. Enter a valid delegate address
 4. Select "Share Progress" option
 5. Approve transaction in MetaMask
-6. Verify success message
 
 **Expected Results**:
 - Data sharing delegation is created
@@ -107,14 +138,12 @@ npm run dev
 2. Click "Save Achievement Certificate" button
 3. Approve transaction in MetaMask
 4. Wait for transaction confirmation
-5. Verify certificate details
 
 **Expected Results**:
 - Transaction is submitted through paymaster
 - No gas fees are charged to user
 - Certificate is minted successfully
 - Transaction hash is displayed
-- Certificate appears in UI
 
 #### 6. Certificate Verification
 **Objective**: Verify certificate data and ownership
@@ -177,49 +206,8 @@ npm run test:e2e
 - [ ] Contract authorization
 - [ ] Event emission and indexing
 
-## 🛠️ Development Workflow
+## Development Scripts
 
-### Branch Strategy
-- **main**: Production-ready code
-- **develop**: Development branch for ongoing work
-- **feature/**: Feature branches for new functionality
-- **hotfix/**: Emergency fixes for production issues
-
-### Commit Guidelines
-- Use conventional commit messages
-- Include issue numbers when applicable
-- Keep commits focused and atomic
-- Write clear, descriptive commit messages
-
-### Code Review Process
-1. Create pull request from feature branch to develop
-2. Assign reviewers from the team
-3. Address all review comments
-4. Merge after approval and CI passes
-
-### Continuous Integration
-- Automated testing on every push
-- Code quality checks and linting
-- Security scanning for dependencies
-- Deployment to staging environment
-
-## 🔧 Development Tools
-
-### Required Tools
-- **Node.js** v18.18.0 or higher
-- **npm** v9.8.1 or higher
-- **MetaMask** browser extension
-- **Visual Studio Code** (recommended IDE)
-- **Git** for version control
-
-### Recommended VS Code Extensions
-- **ESLint** - JavaScript/TypeScript linting
-- **Prettier** - Code formatting
-- **Solidity** - Smart contract syntax highlighting
-- **GitLens** - Enhanced Git capabilities
-- **Bracket Pair Colorizer** - Visual bracket matching
-
-### Development Scripts
 ```bash
 # Development server
 npm run dev
@@ -246,7 +234,7 @@ npm run lint:fix
 npm run typecheck
 ```
 
-## 🐛 Debugging Guide
+## Debugging Guide
 
 ### Common Issues and Solutions
 
@@ -309,7 +297,7 @@ DEBUG=viem:* npm run dev
 - Use "Settings > Advanced > State Logs" for troubleshooting
 - Check "Settings > Alerts" for network issues
 
-## 📈 Performance Monitoring
+## Performance Monitoring
 
 ### Key Performance Indicators
 - **Page Load Time**: < 3 seconds
@@ -325,7 +313,158 @@ DEBUG=viem:* npm run dev
 - **Image Optimization**: Compressed assets and lazy loading
 - **Network Optimization**: Efficient API calls and bundler usage
 
-## 🔒 Security Best Practices
+## Deployment Instructions
+
+### Local Development
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm run start
+```
+
+### Monad Testnet Deployment
+The contracts are already deployed on Monad testnet:
+
+- **MedicalAchievementNFT**: `0xA960B1692aa11a10Ff1c1595300301DfF1CDAcB4`
+- **MedicalPaymaster**: `0x2Aa0f72AEc34Ea007aeeD1c998f28278A1501423`
+- **EntryPoint**: `0x0000000071727De22E5E9d8BAf0edAc6f37da032`
+
+### Remix Deployment Guide
+
+#### Deployed Contract Addresses
+- **MedicalAchievementNFT**: 0xA960B1692aa11a10Ff1c1595300301DfF1CDAcB4
+- **MedicalPaymaster**: 0x2Aa0f72AEc34Ea007aeeD1c998f28278A1501423
+- **EntryPoint (Monad Testnet)**: 0x0000000071727De22E5E9d8BAf0edAc6f37da032
+
+#### Steps to Deploy MedicalPaymaster in Remix
+1. **Compile the Contract**
+   - Set compiler version to 0.8.28 or higher
+   - Enable optimization
+   - Compile MedicalPaymaster.sol
+
+2. **Get EntryPoint Address**
+   - For Monad Testnet, use: 0x0000000071727De22E5E9d8BAf0edAc6f37da032
+
+3. **Deploy the Contract**
+   - Select "Injected Web3" or "Metamask" as environment
+   - Enter the EntryPoint address as constructor parameter
+   - Click "Deploy"
+
+4. **Fund the Paymaster**
+   - Call the `deposit()` function with some test ETH
+   - This funds the paymaster's stake in the EntryPoint
+
+5. **Authorize Medical Contracts**
+   - Call `authorizeContract()` with your MedicalAchievementNFT address
+   - Only authorized contracts can use the paymaster
+
+## Demo Script
+
+### Prerequisites
+1. MetaMask browser extension installed
+2. Some test MON tokens on Monad testnet
+3. Access to the deployed application
+
+### Demo Flow
+
+#### 1. Wallet Connection
+- Click "Connect MetaMask" button
+- Observe smart account creation using MetaMask Delegation Toolkit
+- Show account address and connection status
+
+#### 2. Delegation Setup
+- Open Delegation Panel
+- Enter AI assistant address (example: `0x1234...abcd`)
+- Click "Enable Gasless AI"
+- Show delegation creation with ERC-7710 standards
+- Display success message with gasless consultation enabled
+
+#### 3. Medical Diagnosis
+- Upload patient face image or use camera
+- Complete medical diagnosis process
+- Show diagnostic accuracy and identified conditions
+
+#### 4. Gasless Certificate Minting
+- Click "Save Achievement Certificate" button
+- Observe transaction being processed through MedicalPaymaster
+- Show that no gas fees are charged to the user
+- Display transaction hash and certificate details
+
+#### 5. Certificate Verification
+- Show minted certificate in wallet/portfolio
+- Verify certificate details on blockchain explorer
+- Demonstrate certificate ownership and authenticity
+
+## Troubleshooting
+
+### Common Issues
+
+#### Wallet Connection Failed
+- Ensure MetaMask is installed and unlocked
+- Check that Monad Testnet is added to MetaMask
+- Verify network connectivity
+
+#### Delegation Not Working
+- Check that contract is authorized in MedicalPaymaster
+- Verify delegation has not expired
+- Confirm sufficient funds in paymaster stake
+
+#### Transaction Rejected
+- Check that paymaster has sufficient deposit
+- Verify user has enough funds for any required payments
+- Confirm transaction parameters are valid
+
+### Verification Steps
+1. Check contract addresses in `contracts/config/MonadConfig.ts`
+2. Verify paymaster has sufficient deposit via `getPaymasterDeposit()`
+3. Confirm delegation is active via `isContractAuthorized()`
+
+## Success Metrics
+
+- ✅ Wallet connects and creates smart account
+- ✅ Delegation is successfully created
+- ✅ Medical diagnosis completes
+- ✅ Certificate is minted without gas fees
+- ✅ Transaction is confirmed on Monad testnet
+- ✅ Certificate is visible in wallet/portfolio
+
+## Branch Strategy
+
+- **main**: Production-ready code
+- **develop**: Development branch for ongoing work
+- **feature/**: Feature branches for new functionality
+- **hotfix/**: Emergency fixes for production issues
+
+## Commit Guidelines
+
+- Use conventional commit messages
+- Include issue numbers when applicable
+- Keep commits focused and atomic
+- Write clear, descriptive commit messages
+
+## Code Review Process
+
+1. Create pull request from feature branch to develop
+2. Assign reviewers from the team
+3. Address all review comments
+4. Merge after approval and CI passes
+
+## Continuous Integration
+
+- Automated testing on every push
+- Code quality checks and linting
+- Security scanning for dependencies
+- Deployment to staging environment
+
+## Security Best Practices
 
 ### Code Security
 - Regular dependency updates and security scanning
@@ -347,7 +486,7 @@ DEBUG=viem:* npm run dev
 - Time-based delegation expiration
 - User approval for all sensitive operations
 
-## 🚀 Deployment Checklist
+## Deployment Checklist
 
 ### Pre-Deployment
 - [ ] All tests passing

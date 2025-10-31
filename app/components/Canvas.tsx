@@ -13,6 +13,7 @@ import { MasterHUD } from "../../src/components/MasterHUD";
 import { CaseSelectionHub } from "../../src/components/CaseSelectionHub";
 import { TreatmentMenu } from "../../src/components/TreatmentMenu";
 import { SmartAccountHUD } from "../../src/domains/web3/SmartAccountHUD";
+import { StagedDiagnosticView } from "../../src/domains/diagnostic/stages/StagedDiagnosticView";
 
 // ENHANCEMENT: Feature Discovery Components
 import { TutorialSystem } from "../../src/components/TutorialSystem";
@@ -71,6 +72,10 @@ const Canvas: React.FC = () => {
     health: 100,
     evidenceCount: 0,
   });
+  
+  // Staged diagnostic interface state
+  const [showStagedDiagnostic, setShowStagedDiagnostic] = useState(false);
+  const [currentGamePhase, setCurrentGamePhase] = useState<any>(null);
 
   // Web3 integration
   const {
@@ -98,6 +103,42 @@ const Canvas: React.FC = () => {
         .catch(() => setMonBalance("0.00"));
     }
   }, [isConnected, walletAddress, web3Facade, getMonBalance]);
+
+  // Effect to handle game phase changes and show staged interface
+  useEffect(() => {
+    const handleGamePhaseChanged = (event: CustomEvent) => {
+      const { newPhase } = event.detail;
+      setCurrentGamePhase(newPhase);
+      
+      // Show staged diagnostic interface for diagnostic phases
+      const diagnosticPhases = [
+        'patient_arrival',
+        'investigation',
+        'evidence_gathering',
+        'diagnosis',
+        'completed'
+      ];
+      
+      if (diagnosticPhases.includes(newPhase)) {
+        setShowStagedDiagnostic(true);
+      }
+    };
+    
+    const handleCaseSelected = (event: CustomEvent) => {
+      // Show staged diagnostic interface when a case is selected
+      setShowStagedDiagnostic(true);
+    };
+    
+    // Add event listeners
+    document.addEventListener('gamePhaseChanged', handleGamePhaseChanged as EventListener);
+    document.addEventListener('caseSelected', handleCaseSelected as EventListener);
+    
+    // Cleanup event listeners
+    return () => {
+      document.removeEventListener('gamePhaseChanged', handleGamePhaseChanged as EventListener);
+      document.removeEventListener('caseSelected', handleCaseSelected as EventListener);
+    };
+  }, []);
 
   // ENHANCEMENT FIRST: Show onboarding on first wallet connect (once per session)
   useEffect(() => {
@@ -461,6 +502,35 @@ const Canvas: React.FC = () => {
     // Remove from active crises
     setActiveCrises((prev) => prev.filter((crisis) => crisis.id !== eventId));
   };
+  
+  // Staged diagnostic interface handlers
+  const handleGamePhaseChange = (newPhase: any) => {
+    setCurrentGamePhase(newPhase);
+    // Emit event to update game manager
+    document.dispatchEvent(
+      new CustomEvent("gamePhaseChanged", {
+        detail: { newPhase },
+      })
+    );
+  };
+  
+  const handleEvidenceCollected = (evidence: any) => {
+    // Emit event to update game state
+    document.dispatchEvent(
+      new CustomEvent("evidenceCollected", {
+        detail: { evidence },
+      })
+    );
+  };
+  
+  const handleDiagnosisSubmitted = (diagnosis: any) => {
+    // Emit event to submit diagnosis
+    document.dispatchEvent(
+      new CustomEvent("diagnosisSubmitted", {
+        detail: { diagnosis },
+      })
+    );
+  };
 
   return (
     <div>
@@ -665,6 +735,26 @@ const Canvas: React.FC = () => {
             onDismiss={handleCrisisDismiss}
             onTimeout={handleCrisisTimeout}
           />
+          
+          {/* Staged Diagnostic Interface */}
+          {showStagedDiagnostic && currentGamePhase && canvasInstanceRef.current && (
+            <StagedDiagnosticView
+              gameManager={canvasInstanceRef.current.getGameManager()}
+              diagnosticUIManager={canvasInstanceRef.current.getDiagnosticUIManager()}
+              currentGamePhase={currentGamePhase}
+              onGamePhaseChange={handleGamePhaseChange}
+              patientCase={patientState}
+              budget={{
+                remaining: budgetState.remaining,
+                spent: budgetState.spent,
+                startingAmount: budgetState.startingAmount,
+              }}
+              timeRemaining={gameState.timeRemaining}
+              onEvidenceCollected={handleEvidenceCollected}
+              onDiagnosisSubmitted={handleDiagnosisSubmitted}
+              nurseAmyNudges={canvasInstanceRef.current.nurseAmyNudges}
+            />
+          )}
         </>
       )}
     </div>

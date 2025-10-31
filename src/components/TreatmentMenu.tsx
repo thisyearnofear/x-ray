@@ -56,6 +56,8 @@ export const TreatmentMenu: React.FC<TreatmentMenuProps> = ({
   patientState,
   diagnosticConfidence,
   timeRemaining = 300,
+  getDynamicPrice,
+  getPricingExplanation,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>("all");
   const [selectedAction, setSelectedAction] = useState<MedicalAction | null>(

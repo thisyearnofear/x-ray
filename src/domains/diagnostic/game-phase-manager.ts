@@ -2,7 +2,7 @@
 import { GameManager, GamePhase as GMGamePhase } from './GameManager';
 import { DiagnosticUIManager } from './managers/DiagnosticUIManager';
 import { AudioManager, SoundType } from '../../components/AudioManager';
-import Canvas from '../../canvas';
+import { XRayCanvas as Canvas } from '../../canvas';
 import * as THREE from 'three';
 
 export enum GamePhase {
@@ -12,7 +12,12 @@ export enum GamePhase {
   READY = 'ready',
   ACTIVE = 'active',
   PAUSED = 'paused',
-  COMPLETE = 'complete'
+  COMPLETE = 'complete',
+  // Staged diagnostic workflow phases
+  PATIENT_PRESENTATION = 'patient_presentation',
+  INVESTIGATION = 'investigation',
+  ANALYSIS = 'analysis',
+  DIAGNOSIS = 'diagnosis'
 }
 
 // AGGRESSIVE CONSOLIDATION: Removed duplicate GameState interface
@@ -66,7 +71,12 @@ export class GamePhaseManager {
             [GamePhase.READY]: "Get Ready!",
             [GamePhase.ACTIVE]: "Starting Diagnosis",
             [GamePhase.PAUSED]: "Game Paused",
-            [GamePhase.COMPLETE]: "Diagnosis Complete"
+            [GamePhase.COMPLETE]: "Diagnosis Complete",
+            // Staged diagnostic workflow messages
+            [GamePhase.PATIENT_PRESENTATION]: "Patient Presentation",
+            [GamePhase.INVESTIGATION]: "Investigation Phase",
+            [GamePhase.ANALYSIS]: "Analysis Phase",
+            [GamePhase.DIAGNOSIS]: "Diagnosis Phase"
         };
         this.diagnosticUIManager.showTransitionOverlay(messageMap[newPhase]);
     }
@@ -79,7 +89,12 @@ export class GamePhaseManager {
             [GamePhase.READY]: { position: new THREE.Vector3(0, 0, 7), target: new THREE.Vector3(0, 0, 0) },
             [GamePhase.ACTIVE]: { position: new THREE.Vector3(0, 0, 7), target: new THREE.Vector3(0, 0, 0) },
             [GamePhase.PAUSED]: { position: new THREE.Vector3(0, 0, 7), target: new THREE.Vector3(0, 0, 0) },
-            [GamePhase.COMPLETE]: { position: new THREE.Vector3(0, 0, 12), target: new THREE.Vector3(0, 0, 0) }
+            [GamePhase.COMPLETE]: { position: new THREE.Vector3(0, 0, 12), target: new THREE.Vector3(0, 0, 0) },
+            // Staged diagnostic workflow camera positions
+            [GamePhase.PATIENT_PRESENTATION]: { position: new THREE.Vector3(0, 0, 8), target: new THREE.Vector3(0, 0, 0) },
+            [GamePhase.INVESTIGATION]: { position: new THREE.Vector3(3, 3, 6), target: new THREE.Vector3(0, 0, 0) },
+            [GamePhase.ANALYSIS]: { position: new THREE.Vector3(0, 0, 7), target: new THREE.Vector3(0, 0, 0) },
+            [GamePhase.DIAGNOSIS]: { position: new THREE.Vector3(0, 0, 9), target: new THREE.Vector3(0, 0, 0) }
         };
         const { position, target } = cameraPositions[newPhase];
         this.canvas.animateCameraTo(position, target);
@@ -93,7 +108,12 @@ export class GamePhaseManager {
             [GamePhase.READY]: SoundType.TUTORIAL_SUCCESS,
             [GamePhase.ACTIVE]: SoundType.MEDICAL_BEEP,
             [GamePhase.PAUSED]: SoundType.CLICK,
-            [GamePhase.COMPLETE]: SoundType.DISCOVERY
+            [GamePhase.COMPLETE]: SoundType.DISCOVERY,
+            // Staged diagnostic workflow sounds
+            [GamePhase.PATIENT_PRESENTATION]: SoundType.TUTORIAL_START,
+            [GamePhase.INVESTIGATION]: SoundType.MEDICAL_BEEP,
+            [GamePhase.ANALYSIS]: SoundType.TUTORIAL_PROGRESS,
+            [GamePhase.DIAGNOSIS]: SoundType.TUTORIAL_SUCCESS
         };
         this.audioManager.playSound(soundMap[newPhase]);
     }
@@ -115,7 +135,12 @@ export class GamePhaseManager {
         [GamePhase.WELCOME]: GMGamePhase.SCANNING,
         [GamePhase.TUTORIAL]: GMGamePhase.SCANNING,
         [GamePhase.EXPLORATION]: GMGamePhase.SCANNING,
-        [GamePhase.READY]: GMGamePhase.SCANNING
+        [GamePhase.READY]: GMGamePhase.SCANNING,
+        // Map staged diagnostic phases to appropriate GameManager phases
+        [GamePhase.PATIENT_PRESENTATION]: GMGamePhase.PATIENT_ARRIVAL,
+        [GamePhase.INVESTIGATION]: GMGamePhase.INVESTIGATION,
+        [GamePhase.ANALYSIS]: GMGamePhase.DIAGNOSIS,
+        [GamePhase.DIAGNOSIS]: GMGamePhase.COMPLETED
       }
       const mappedPhase = phaseMap[newPhase] || GMGamePhase.SCANNING
       this.gameManager.updatePhase(mappedPhase)
@@ -155,13 +180,18 @@ export class GamePhaseManager {
   // CLEAN: Clear validation rules for phase transitions
   private isValidTransition(from: GamePhase, to: GamePhase): boolean {
     const validTransitions: Record<GamePhase, GamePhase[]> = {
-      [GamePhase.WELCOME]: [GamePhase.TUTORIAL, GamePhase.EXPLORATION],
-      [GamePhase.TUTORIAL]: [GamePhase.WELCOME, GamePhase.EXPLORATION, GamePhase.READY],
-      [GamePhase.EXPLORATION]: [GamePhase.READY, GamePhase.TUTORIAL],
-      [GamePhase.READY]: [GamePhase.ACTIVE, GamePhase.EXPLORATION],
-      [GamePhase.ACTIVE]: [GamePhase.PAUSED, GamePhase.COMPLETE],
-      [GamePhase.PAUSED]: [GamePhase.ACTIVE, GamePhase.COMPLETE],
-      [GamePhase.COMPLETE]: [GamePhase.WELCOME, GamePhase.READY]
+      [GamePhase.WELCOME]: [GamePhase.TUTORIAL, GamePhase.EXPLORATION, GamePhase.PATIENT_PRESENTATION],
+      [GamePhase.TUTORIAL]: [GamePhase.WELCOME, GamePhase.EXPLORATION, GamePhase.READY, GamePhase.PATIENT_PRESENTATION],
+      [GamePhase.EXPLORATION]: [GamePhase.READY, GamePhase.TUTORIAL, GamePhase.PATIENT_PRESENTATION],
+      [GamePhase.READY]: [GamePhase.ACTIVE, GamePhase.EXPLORATION, GamePhase.PATIENT_PRESENTATION],
+      [GamePhase.ACTIVE]: [GamePhase.PAUSED, GamePhase.COMPLETE, GamePhase.PATIENT_PRESENTATION],
+      [GamePhase.PAUSED]: [GamePhase.ACTIVE, GamePhase.COMPLETE, GamePhase.PATIENT_PRESENTATION],
+      [GamePhase.COMPLETE]: [GamePhase.WELCOME, GamePhase.READY, GamePhase.PATIENT_PRESENTATION],
+      // Staged diagnostic workflow transitions
+      [GamePhase.PATIENT_PRESENTATION]: [GamePhase.INVESTIGATION, GamePhase.WELCOME],
+      [GamePhase.INVESTIGATION]: [GamePhase.ANALYSIS, GamePhase.PATIENT_PRESENTATION],
+      [GamePhase.ANALYSIS]: [GamePhase.DIAGNOSIS, GamePhase.INVESTIGATION],
+      [GamePhase.DIAGNOSIS]: [GamePhase.COMPLETE, GamePhase.ANALYSIS]
     }
 
     return validTransitions[from]?.includes(to) || false

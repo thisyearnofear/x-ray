@@ -4,7 +4,7 @@
  * USAGE: Import and use this in your main application file
  */
 
-import Canvas from './canvas'
+import { XRayCanvas as Canvas } from './canvas'
 import { EnhancedCanvasIntegration } from './domains/diagnostic/EnhancedCanvasIntegration'
 import { EnhancedDiagnosticUI } from './domains/diagnostic/EnhancedDiagnosticUI'
 import { EnhancedGameManager } from './domains/diagnostic/EnhancedGameManager'

@@ -13,6 +13,7 @@ import { AudioManager } from "./components/AudioManager"
 import { SoundType } from "./components/AudioManager"
 import { ScanFeedbackSystem } from "./components/ScanFeedbackSystem"
 import { DiagnosticUIFacade } from "./domains/diagnostic/DiagnosticUIFacade"
+import { StagedDiagnosticView } from "./domains/diagnostic/stages/StagedDiagnosticView"
 import { AchievementDisplay } from "./domains/diagnostic/ui/AchievementDisplay"
 import { GameManager, GameState } from "./domains/diagnostic/GameManager"
 import { MedicalServiceFacade } from "./domains/medical/MedicalServiceFacade"
@@ -52,6 +53,7 @@ export class XRayCanvas {
 
   // ENHANCEMENT FIRST: Diagnostic UI system
   diagnosticUI: DiagnosticUIFacade | null = null
+  stagedDiagnosticView: any = null // Staged diagnostic view reference
   achievementDisplay: AchievementDisplay | null = null
 
   // ENHANCEMENT FIRST: Game systems
@@ -553,6 +555,9 @@ export class XRayCanvas {
     this.achievementDisplay = new AchievementDisplay()
     const achievementElement = this.achievementDisplay.create()
     document.body.appendChild(achievementElement)
+
+    // Initialize staged diagnostic view
+    // this.initializeStagedDiagnosticView();
 
     // Set callbacks for buttons
     this.achievementDisplay.setCallbacks({
@@ -1597,6 +1602,21 @@ export class XRayCanvas {
         console.log('Camera permission granted')
       }
     })
+  }
+  
+  // Method to get the diagnostic UI manager for React integration
+  public getDiagnosticUIManager() {
+    return this.diagnosticUI?.getUIManager() || null;
+  }
+  
+  // Method to get the game manager for React integration
+  public getGameManager() {
+    return this.gameManager || null;
+  }
+  
+  // Method to get the current game phase
+  public getCurrentGamePhase() {
+    return this.gameManager?.getGameState()?.phase || null;
   }
 
   dispose() {

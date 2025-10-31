@@ -5,7 +5,7 @@
  * ADAPTIVE: Responds to device capabilities and user preferences
  */
 
-import Canvas from './canvas'
+import { XRayCanvas as Canvas } from './canvas'
 import { EnhancedGameManager } from './domains/diagnostic/EnhancedGameManager'
 import { EnhancedDiagnosticUI } from './domains/diagnostic/EnhancedDiagnosticUI'
 import { Phase3Integration } from './domains/enhancement/Phase3Integration'

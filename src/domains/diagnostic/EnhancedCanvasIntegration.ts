@@ -5,7 +5,7 @@
  * PERFORMANT: Optimized for real-time interaction and feedback
  */
 
-import Canvas from '../../canvas'
+import { XRayCanvas as Canvas } from '../../canvas'
 import { EnhancedGameManager, GameAction, GameEvent } from './EnhancedGameManager'
 import { DiagnosticUIFacade } from './DiagnosticUIFacade'
 import { MedicalCase } from '../medical/types'

@@ -1809,6 +1809,61 @@ export class DiagnosticUIManager {
     if (phaseElement) {
       phaseElement.textContent = phase
     }
+    
+    // Handle staged interface phases
+    this.handleStagedPhase(phase);
+  }
+  
+  // Handle staged interface phases
+  private handleStagedPhase(phase: string): void {
+    // Hide/show UI elements based on the current phase
+    const elementsToHide = [
+      'patient-info-section',
+      'ai-panel-container',
+      'investigation-panel-container'
+    ];
+    
+    // Reset visibility for all elements
+    elementsToHide.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.style.display = 'block';
+      }
+    });
+    
+    // Specific handling for staged phases
+    switch (phase) {
+      case 'patient_presentation':
+        // Show only patient info in presentation stage
+        ['ai-panel-container', 'investigation-panel-container'].forEach(id => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.style.display = 'none';
+          }
+        });
+        break;
+      case 'investigation':
+        // Show investigation tools in investigation stage
+        ['ai-panel-container'].forEach(id => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.style.display = 'none';
+          }
+        });
+        break;
+      case 'analysis':
+        // Show AI panel for analysis
+        ['investigation-panel-container'].forEach(id => {
+          const element = document.getElementById(id);
+          if (element) {
+            element.style.display = 'none';
+          }
+        });
+        break;
+      case 'diagnosis':
+        // Show treatment options in diagnosis stage
+        break;
+    }
   }
 
   // ENHANCEMENT FIRST: Update timer display
@@ -1854,6 +1909,12 @@ export class DiagnosticUIManager {
   showConsultationButton(): void {
     // The consultation button has been removed from the main panel to reduce clutter
     // Consultation is now handled through the dedicated AI panel
+  }
+  
+  // Method to integrate with staged interface
+  public updateForStagedInterface(stage: string): void {
+    // This method will be called by the StageController to update UI based on current stage
+    this.handleStagedPhase(stage);
   }
 
   updateButtonCount(buttonId: string, count: number | string): void {

@@ -11,7 +11,7 @@ import { DiagnosticUIManager } from './managers/DiagnosticUIManager'
 import { GamePhase, GamePhaseManager } from './game-phase-manager';
 import { GameManager } from './GameManager';
 import { MedicalCase, PatientCase } from '../medical/types';
-import Canvas from '../../canvas';
+import { XRayCanvas as Canvas } from '../../canvas';
 
 // Use both MedicalCase and PatientCase types for compatibility
 
