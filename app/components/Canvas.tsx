@@ -24,6 +24,7 @@ import {
 } from "../../src/components/ContextualPrompt";
 
 import { CrisisEventDisplay } from "../../src/components/CrisisEventDisplay";
+import { ExperienceDirector } from "../../src/domains/experience/ExperienceDirector";
 
 const Canvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -42,6 +43,8 @@ const Canvas: React.FC = () => {
     null
   );
   const hasShownOnboarding = useRef(false);
+
+  const directorRef = useRef<ExperienceDirector | null>(null);
 
   // ENHANCEMENT: MON Token Economy State
   const [showCaseSelection, setShowCaseSelection] = useState(false);
@@ -109,6 +112,7 @@ const Canvas: React.FC = () => {
     const handleGamePhaseChanged = (event: CustomEvent) => {
       const { newPhase } = event.detail;
       setCurrentGamePhase(newPhase);
+      directorRef.current?.setPhase(newPhase);
       
       // Show staged diagnostic interface for diagnostic phases
       const diagnosticPhases = [
@@ -127,6 +131,8 @@ const Canvas: React.FC = () => {
     const handleCaseSelected = (event: CustomEvent) => {
       // Show staged diagnostic interface when a case is selected
       setShowStagedDiagnostic(true);
+      directorRef.current?.releaseOverlay("case_selection");
+      directorRef.current?.setPhase("investigation");
     };
     
     // Add event listeners
@@ -142,6 +148,10 @@ const Canvas: React.FC = () => {
 
   // ENHANCEMENT FIRST: Show onboarding on first wallet connect (once per session)
   useEffect(() => {
+    if (!directorRef.current) {
+      directorRef.current = new ExperienceDirector();
+      directorRef.current.setPhase("intro");
+    }
     if (
       isConnected &&
       walletAddress &&
@@ -154,6 +164,7 @@ const Canvas: React.FC = () => {
       if (!hasCompletedOnboarding) {
         setShowOnboarding(true);
         hasShownOnboarding.current = true;
+        directorRef.current?.requestOverlay("onboarding");
       }
     }
   }, [isConnected, walletAddress, smartAccountAddress]);
@@ -162,6 +173,7 @@ const Canvas: React.FC = () => {
   useEffect(() => {
     const handleDiagnosisComplete = (event: CustomEvent) => {
       setDiagnosisCompleted(true);
+      directorRef.current?.requestOverlay("outcome");
       setLastDiagnosis({
         conditions: event.detail.conditions || [],
         accuracy: event.detail.accuracy || 0,
@@ -175,10 +187,12 @@ const Canvas: React.FC = () => {
     // ENHANCEMENT: Economic system events
     const handleShowCaseSelection = () => {
       setShowCaseSelection(true);
+      directorRef.current?.requestOverlay("case_selection");
     };
 
     const handleShowTreatmentMenu = () => {
       setShowTreatmentMenu(true);
+      directorRef.current?.requestOverlay("treatment");
     };
 
     const handleShowTreatmentMenuWithState = (event: CustomEvent) => {
@@ -241,6 +255,10 @@ const Canvas: React.FC = () => {
     );
     document.addEventListener("actionExecuted", handleActionExecuted as any);
     document.addEventListener("timerUpdate", handleTimerUpdate as any);
+    const handleRequestDelegated = () => {
+      document.dispatchEvent(new CustomEvent("showDelegationPanel"));
+    };
+    document.addEventListener("requestDelegatedAction", handleRequestDelegated as EventListener);
 
     return () => {
       window.removeEventListener(
@@ -273,6 +291,7 @@ const Canvas: React.FC = () => {
         handleActionExecuted as any
       );
       document.removeEventListener("timerUpdate", handleTimerUpdate as any);
+      document.removeEventListener("requestDelegatedAction", handleRequestDelegated as EventListener);
     };
   }, []);
 
@@ -403,16 +422,19 @@ const Canvas: React.FC = () => {
     const handleCrisisEvent = (event: CustomEvent) => {
       const crisis = event.detail;
       setActiveCrises((prev) => [...prev, crisis]);
+      directorRef.current?.requestOverlay("crisis");
     };
 
     const handleCrisisResolved = (event: CustomEvent) => {
       const { eventId } = event.detail;
       setActiveCrises((prev) => prev.filter((crisis) => crisis.id !== eventId));
+      if (activeCrises.length <= 1) directorRef.current?.releaseOverlay("crisis");
     };
 
     const handleCrisisIgnored = (event: CustomEvent) => {
       const { eventId } = event.detail;
       setActiveCrises((prev) => prev.filter((crisis) => crisis.id !== eventId));
+      if (activeCrises.length <= 1) directorRef.current?.releaseOverlay("crisis");
     };
 
     // ENHANCEMENT: Handle narrative events
@@ -532,6 +554,8 @@ const Canvas: React.FC = () => {
     );
   };
 
+  const hasActiveOverlay = directorRef.current?.hasActiveOverlay() || false;
+
   return (
     <div>
       <canvas
@@ -614,7 +638,10 @@ const Canvas: React.FC = () => {
 
           <TreatmentMenu
             isOpen={showTreatmentMenu}
-            onClose={() => setShowTreatmentMenu(false)}
+            onClose={() => {
+              setShowTreatmentMenu(false)
+              directorRef.current?.releaseOverlay("treatment")
+            }}
             currentBudget={budgetState.remaining}
             executedActions={executedActions}
             patientState={patientState}
@@ -671,6 +698,8 @@ const Canvas: React.FC = () => {
               onComplete={(config) => {
                 setShowOnboarding(false);
                 localStorage.setItem("xrai_onboarding_completed", "true");
+                directorRef.current?.releaseOverlay("onboarding");
+                directorRef.current?.setPhase("case_selection");
 
                 // Dispatch event with user's choice
                 document.dispatchEvent(
@@ -682,10 +711,13 @@ const Canvas: React.FC = () => {
                     },
                   })
                 );
+
+                setShowCaseSelection(true);
               }}
               onSkip={() => {
                 setShowOnboarding(false);
                 localStorage.setItem("xrai_onboarding_completed", "true");
+                directorRef.current?.releaseOverlay("onboarding");
               }}
             />
           )}
@@ -708,25 +740,35 @@ const Canvas: React.FC = () => {
           )}
 
           {/* ENHANCEMENT: Feature Discovery System */}
-          <TutorialSystem
-            currentMilestone={{
-              type: "time",
-              value: Math.floor((300 - gameState.timeRemaining) / 60), // Minutes elapsed
-            }}
-            onComplete={(stepId) => {
-              console.log(`Tutorial step completed: ${stepId}`);
-            }}
-            onSkip={() => {
-              console.log("Tutorial skipped");
-            }}
-          />
+          {!hasActiveOverlay && (
+            <>
+              {directorRef.current?.allowGuidance("tutorial") && (
+                <TutorialSystem
+                  currentMilestone={{
+                    type: "time",
+                    value: Math.floor((300 - gameState.timeRemaining) / 60),
+                  }}
+                  onComplete={(stepId) => {
+                    console.log(`Tutorial step completed: ${stepId}`);
+                  }}
+                  onSkip={() => {
+                    console.log("Tutorial skipped");
+                  }}
+                />
+              )}
 
-          <FeatureHighlightManager highlights={featureHighlights} />
+              {directorRef.current?.allowGuidance("highlight") && (
+                <FeatureHighlightManager highlights={featureHighlights} />
+              )}
 
-          <ContextualPromptManager
-            prompts={DEFAULT_PROMPTS}
-            gameState={gameState}
-          />
+              {directorRef.current?.allowGuidance("prompt") && (
+                <ContextualPromptManager
+                  prompts={DEFAULT_PROMPTS}
+                  gameState={gameState}
+                />
+              )}
+            </>
+          )}
 
           {/* ENHANCEMENT: Crisis Event Display */}
           <CrisisEventDisplay

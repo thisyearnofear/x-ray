@@ -42,19 +42,8 @@ export const PostLoginOnboardingFlow: React.FC<PostLoginOnboardingFlowProps> = (
   // CLEAN: Pause game on mount, resume on unmount
   useEffect(() => {
     onGamePause?.(true)
-    document.body.style.pointerEvents = 'none'
-    
-    // Allow interaction only with modal
-    setTimeout(() => {
-      const modal = document.querySelector('.onboarding-flow-modal')
-      if (modal) {
-        (modal as HTMLElement).style.pointerEvents = 'auto'
-      }
-    }, 100)
-
     return () => {
       onGamePause?.(false)
-      document.body.style.pointerEvents = 'auto'
     }
   }, [onGamePause])
 
@@ -90,7 +79,7 @@ export const PostLoginOnboardingFlow: React.FC<PostLoginOnboardingFlowProps> = (
         marginBottom: '1rem',
         textShadow: '0 0 20px rgba(0, 212, 255, 0.5)'
       }}>
-        Welcome to X-Ray AI!
+        Welcome to X-RAI — Immersive Medical Mystery
       </h1>
       
       <p style={{
@@ -100,7 +89,7 @@ export const PostLoginOnboardingFlow: React.FC<PostLoginOnboardingFlowProps> = (
         marginBottom: '2rem',
         opacity: 0.9
       }}>
-        We&apos;re setting up your Smart Account for gasless transactions and AI-powered features.
+        We&apos;re setting up your onchain Smart Account for gasless actions and AI-assisted diagnosis.
       </p>
 
       <div style={{
@@ -395,7 +384,7 @@ export const PostLoginOnboardingFlow: React.FC<PostLoginOnboardingFlowProps> = (
         marginBottom: '2rem',
         opacity: 0.9
       }}>
-        Your first AI-generated patient case is ready! Each case is uniquely created to match your skill level.
+        Your first case is ready. Every case adapts to your skill and choices.
       </p>
 
       <div style={{
@@ -496,7 +485,7 @@ export const PostLoginOnboardingFlow: React.FC<PostLoginOnboardingFlowProps> = (
           }
         }}
       >
-        Use Free Static Case
+        Start Free Case
       </button>
 
       <div style={{
@@ -629,7 +618,7 @@ export const PostLoginOnboardingFlow: React.FC<PostLoginOnboardingFlowProps> = (
           textAlign: 'center',
           color: 'white'
         }}>
-          🔒 Secured by MetaMask Smart Accounts • Powered by ERC-7710 Delegation • Monad Testnet
+          🔒 Secured by MetaMask Smart Accounts • ERC‑7710 Delegation • Monad Testnet
         </div>
       </div>
     </div>

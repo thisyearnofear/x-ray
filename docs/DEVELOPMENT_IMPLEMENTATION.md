@@ -26,10 +26,13 @@ This document covers the development workflow, implementation details, testing p
 git clone <repository-url>
 cd x-ray-medical-diagnostics
 
-# Install dependencies
-npm install
+# Recommended: pnpm (via Corepack)
+corepack enable && corepack prepare pnpm@latest --activate
+pnpm install
+pnpm dev
 
-# Start development server
+# Or npm
+npm install
 npm run dev
 ```
 
@@ -210,28 +213,28 @@ npm run test:e2e
 
 ```bash
 # Development server
-npm run dev
+pnpm dev
 
 # Production build
-npm run build
+pnpm build
 
 # Start production server
-npm run start
+pnpm start
 
 # Run tests
-npm run test
+pnpm test
 
 # Run tests with coverage
-npm run test:coverage
+pnpm test:coverage
 
 # Lint code
-npm run lint
+pnpm lint
 
 # Fix linting issues
-npm run lint:fix
+pnpm lint:fix
 
 # Type checking
-npm run typecheck
+pnpm typecheck
 ```
 
 ## Debugging Guide
@@ -318,16 +321,16 @@ DEBUG=viem:* npm run dev
 ### Local Development
 ```bash
 # Install dependencies
-npm install
+pnpm install
 
 # Start development server
-npm run dev
+pnpm dev
 
 # Build for production
-npm run build
+pnpm build
 
 # Start production server
-npm run start
+pnpm start
 ```
 
 ### Monad Testnet Deployment

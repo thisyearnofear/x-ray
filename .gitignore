@@ -27,6 +27,9 @@ yarn-error.log*
 .vscode/*
 !.vscode/extensions.json
 .idea/
+.trae
+.qoder
+.qodo
 
 # OS
 .DS_Store

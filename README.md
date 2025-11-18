@@ -12,11 +12,27 @@ Interactive 3D medical visualization combining **AI diagnostics**, **face-swappi
 ## 🚀 Quick Start
 
 ```bash
+# Recommended: pnpm
+corepack enable && corepack prepare pnpm@latest --activate
+pnpm install
+pnpm dev
+
+# Or with npm
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) - Connect MetaMask to enable smart account features.
+Open `http://localhost:3000` and connect MetaMask to enable smart account features.
+
+### Production Build
+
+```bash
+# pnpm
+pnpm build
+
+# npm
+npm run build
+```
 
 ## 📡 Deployed Contracts (Monad Testnet)
 

@@ -199,6 +199,17 @@ export class AIPanel {
     // Store container references
     this.insightContainer = this.panel.querySelector('#insights-container') as HTMLElement
     this.voiceContainer = this.panel.querySelector('#voice-control-section') as HTMLElement
+
+    if (this.insightContainer) {
+      this.insightContainer.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement
+        const btn = target.closest('[data-delegate-action]') as HTMLElement | null
+        if (btn) {
+          const label = btn.getAttribute('data-label') || 'action'
+          document.dispatchEvent(new CustomEvent('requestDelegatedAction', { detail: { label } }))
+        }
+      })
+    }
   }
 
   // Voice integration methods

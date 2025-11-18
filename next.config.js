@@ -9,12 +9,7 @@ const nextConfig = {
       use: ['raw-loader'],
     });
     
-    // Ensure React is available as a global for dynamic imports
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'react': require.resolve('react'),
-      'react-dom': require.resolve('react-dom'),
-    };
+    // Keep default React resolution managed by Next
     
     return config;
   },

@@ -20,6 +20,7 @@ import { DelegationPermissionsUI } from '../../web3/DelegationPermissionsUI'
 import { CaseRevelationService } from '../../medical/services/CaseRevelationService'
 import { NurseAmyPersonality } from '../../character/NurseAmyPersonality'
 import { DiagnosticConfidence } from '../../medical/services/DiagnosticConfidence'
+import { unifiedAnalyze, unifiedAnalyzeStream } from '../../medical/services/UnifiedAIAnalysisService'
 
 export interface DiagnosticUIConfig {
   onSolveClick?: () => void
@@ -46,6 +47,8 @@ export class DiagnosticUIManager {
   private onboardingActive: boolean = false
   private isSmartAccountConnected: boolean = false
   private revelationService: CaseRevelationService // ENHANCEMENT: Progressive disclosure service
+  private actionLog: any[] = []
+  private lastAnalysisAt: number = 0
 
   // Public getter to access the AI panel for voice integration
   public showTransitionOverlay(message: string): Promise<void> {
@@ -125,6 +128,19 @@ export class DiagnosticUIManager {
     this.addTimerStyles()
     this.isInitialized = true
     console.log('🏥 DiagnosticUIManager initialized')
+
+    document.addEventListener('crisisEventTriggered', (e: any) => {
+      this.recordAction({ type: 'crisis_trigger', detail: e.detail, timestamp: Date.now() })
+    })
+    document.addEventListener('crisisResolved', (e: any) => {
+      this.recordAction({ type: 'crisis_resolved', detail: e.detail, timestamp: Date.now() })
+    })
+    document.addEventListener('crisisIgnored', (e: any) => {
+      this.recordAction({ type: 'crisis_ignored', detail: e.detail, timestamp: Date.now() })
+    })
+    document.addEventListener('executeAction', (e: any) => {
+      this.recordAction({ type: 'treatment', detail: e.detail, timestamp: Date.now() })
+    })
   }
 
   private createUI(): void {
@@ -1086,6 +1102,7 @@ export class DiagnosticUIManager {
       timestamp: Date.now()
     })
     console.log('🔓 Interview unlocked:', unlocked)
+    this.recordAction({ type: 'investigation', detail: { tool: 'interview' }, timestamp: Date.now() })
 
     if (this.aiPanel) {
       this.aiPanel.addInsight({
@@ -1219,6 +1236,7 @@ export class DiagnosticUIManager {
 
           // Mark interview as complete
           this.investigationPanel?.updateToolStatus('interview', 'complete')
+          this.recordAction({ type: 'investigation_complete', detail: { tool: 'interview' }, timestamp: Date.now() })
           
           // Suggest next steps and mention Investigation Panel
           setTimeout(() => {
@@ -1247,6 +1265,7 @@ export class DiagnosticUIManager {
               }
             }
           }, 600);
+          this.runUnifiedAnalysisStream()
         }
       }, delayMs);
     }
@@ -1260,6 +1279,7 @@ export class DiagnosticUIManager {
       timestamp: Date.now()
     })
     console.log('🔓 Lab order unlocked:', unlocked)
+    this.recordAction({ type: 'investigation', detail: { tool: 'labs' }, timestamp: Date.now() })
 
     if (this.aiPanel) {
       this.aiPanel.addInsight({
@@ -1403,6 +1423,7 @@ export class DiagnosticUIManager {
 
           // Mark labs as complete
           this.investigationPanel?.updateToolStatus('labs', 'complete')
+          this.recordAction({ type: 'investigation_complete', detail: { tool: 'labs' }, timestamp: Date.now() })
           
           setTimeout(() => {
             if (this.aiPanel) {
@@ -1433,8 +1454,9 @@ export class DiagnosticUIManager {
               this.cleanupOldInsights(15);
             }
           }, 800);
+          this.runUnifiedAnalysisStream()
         }
-      }, 5000); // Reduced from complex calculation
+      }, 5000);
     }
   }
 
@@ -1446,6 +1468,7 @@ export class DiagnosticUIManager {
       timestamp: Date.now()
     })
     console.log('🔓 Imaging unlocked:', unlocked)
+    this.recordAction({ type: 'investigation', detail: { tool: 'imaging' }, timestamp: Date.now() })
 
     if (this.aiPanel) {
       this.aiPanel.addInsight({
@@ -1629,8 +1652,9 @@ export class DiagnosticUIManager {
               }, 2000);
             }
           }, 800);
+          this.runUnifiedAnalysisStream()
         }
-      }, 4000); // Reduced from complex calculation
+      }, 4000);
     }
   }
 
@@ -2098,6 +2122,7 @@ export class DiagnosticUIManager {
       timestamp: Date.now()
     })
     console.log('🔓 Physical exam unlocked:', unlocked)
+    this.recordAction({ type: 'investigation', detail: { tool: 'physical' }, timestamp: Date.now() })
 
     if (this.aiPanel) {
       this.aiPanel.addInsight({
@@ -2129,6 +2154,7 @@ export class DiagnosticUIManager {
 
           // Mark physical exam as complete
           this.investigationPanel?.updateToolStatus('physical', 'complete')
+          this.recordAction({ type: 'investigation_complete', detail: { tool: 'physical' }, timestamp: Date.now() })
           
           // Mention Investigation Panel
           setTimeout(() => {
@@ -2152,6 +2178,7 @@ export class DiagnosticUIManager {
     if (this.investigationPanel) {
       this.investigationPanel.addEvidence(evidence)
       console.log('📋 Evidence added:', evidence.content)
+      this.recordAction({ type: 'evidence', detail: evidence, timestamp: Date.now() })
     }
   }
 
@@ -2307,5 +2334,78 @@ export class DiagnosticUIManager {
   // ENHANCEMENT: Public getter for Investigation Panel
   public getInvestigationPanel(): InvestigationPanel | null {
     return this.investigationPanel
+  }
+
+  private async runUnifiedAnalysis() {
+    const gameState = this.getGameState() || {}
+    const patientState = gameState.patientState || {}
+    const timeRemaining = gameState.timeRemaining || 0
+    const budget = { remaining: 0, spent: 0, startingAmount: 0 }
+    const caseId = (gameState.patientCase && (gameState.patientCase.id || gameState.patientCase.title)) || 'unknown'
+    const onchain = { tier: this.accessManager.getUserStatus().currentTier }
+
+    try {
+      this.addAIInsight({
+        id: `unified_loading_${Date.now()}`,
+        timestamp: Date.now(),
+        content: '🔎 Analyzing case context...',
+        type: 'diagnostic',
+        confidence: 0.8
+      })
+      const result = await unifiedAnalyze({ patientState, actions: this.actionLog.slice(-50), timeRemaining, budget, caseId, onchain })
+      const diffList = result.differential.map(d => `• ${d.condition}${d.score ? ` (${Math.round(d.score * 100) / 100})` : ''}`).join('<br>')
+      const actionsList = result.next_actions.map(a => `• ${a.label}${a.risk ? ` — ${a.risk}` : ''} <button data-delegate-action data-label="${a.label}" style="margin-left:8px;border:1px solid #00d4ff;border-radius:8px;padding:4px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;">Delegate</button>`).join('<br>')
+      const citations = result.citations.length ? `<div style="margin-top:6px;opacity:0.7;font-size:0.85em;">Sources: ${result.citations.join(', ')}</div>` : ''
+      const confidenceBar = `<div style="margin-top:6px;background:rgba(255,255,255,0.2);height:8px;border-radius:4px;"><div style="width:${Math.round(result.confidence * 100)}%;height:100%;background:#00d4ff;border-radius:4px;"></div></div>`
+
+      this.addAIInsight({
+        id: `unified_${Date.now()}`,
+        timestamp: Date.now(),
+        content: `📊 <strong>Differential:</strong><br>${diffList}${confidenceBar}<br><br>🎯 <strong>Recommended Actions:</strong><br>${actionsList}<br><br>🧠 <strong>Rationale:</strong> ${result.rationale}${citations}`,
+        type: 'diagnostic',
+        confidence: Math.max(0.5, Math.min(1, result.confidence))
+      })
+    } catch (e: any) {
+      this.addAIInsight({
+        id: `unified_error_${Date.now()}`,
+        timestamp: Date.now(),
+        content: `AI analysis unavailable.`,
+        type: 'urgent',
+        confidence: 0.5
+      })
+    }
+  }
+
+  private async runUnifiedAnalysisStream() {
+    const now = Date.now()
+    if (now - this.lastAnalysisAt < 4000) return
+    this.lastAnalysisAt = now
+    const gameState = this.getGameState() || {}
+    const patientState = gameState.patientState || {}
+    const timeRemaining = gameState.timeRemaining || 0
+    const budget = { remaining: 0, spent: 0, startingAmount: 0 }
+    const caseId = (gameState.patientCase && (gameState.patientCase.id || gameState.patientCase.title)) || 'unknown'
+    const onchain = { tier: this.accessManager.getUserStatus().currentTier }
+    const input = { patientState, actions: this.actionLog.slice(-50), timeRemaining, budget, caseId, onchain }
+    await unifiedAnalyzeStream(input, (e) => {
+      if (e.type === 'start') {
+        this.addAIInsight({ id: `unified_loading_${Date.now()}`, timestamp: Date.now(), content: '🔎 Analyzing case context...', type: 'diagnostic', confidence: 0.8 })
+      }
+      if (e.type === 'final' && e.data) {
+        const diffList = e.data.differential.map(d => `• ${d.condition}${d.score ? ` (${Math.round(d.score * 100) / 100})` : ''}`).join('<br>')
+        const actionsList = e.data.next_actions.map(a => `• ${a.label}${a.risk ? ` — ${a.risk}` : ''} <button data-delegate-action data-label="${a.label}" style="margin-left:8px;border:1px solid #00d4ff;border-radius:8px;padding:4px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;">Delegate</button>`).join('<br>')
+        const citations = e.data.citations.length ? `<div style="margin-top:6px;opacity:0.7;font-size:0.85em;">Sources: ${e.data.citations.join(', ')}</div>` : ''
+        const confidenceBar = `<div style="margin-top:6px;background:rgba(255,255,255,0.2);height:8px;border-radius:4px;"><div style="width:${Math.round(e.data.confidence * 100)}%;height:100%;background:#00d4ff;border-radius:4px;"></div></div>`
+        this.addAIInsight({ id: `unified_${Date.now()}`, timestamp: Date.now(), content: `📊 <strong>Differential:</strong><br>${diffList}${confidenceBar}<br><br>🎯 <strong>Recommended Actions:</strong><br>${actionsList}<br><br>🧠 <strong>Rationale:</strong> ${e.data.rationale}${citations}`, type: 'diagnostic', confidence: Math.max(0.5, Math.min(1, e.data.confidence)) })
+      }
+      if (e.type === 'error') {
+        this.addAIInsight({ id: `unified_error_${Date.now()}`, timestamp: Date.now(), content: 'AI analysis unavailable.', type: 'urgent', confidence: 0.5 })
+      }
+    })
+  }
+
+  private recordAction(action: any) {
+    this.actionLog.push(action)
+    if (this.actionLog.length > 100) this.actionLog.splice(0, this.actionLog.length - 100)
   }
 }
