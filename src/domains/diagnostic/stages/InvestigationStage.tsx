@@ -48,7 +48,7 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
   // Handle tool selection
   const handleToolSelect = (toolId: string) => {
     setActiveTool(toolId);
-    
+
     // Generate proper evidence based on tool selection
     let evidenceContent = "";
     switch (toolId) {
@@ -76,7 +76,7 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
         evidenceContent = "Diagnostic tool activated. Gathering relevant information...";
         setScanFeedback("Diagnostic tool activated. Gathering relevant information...");
     }
-    
+
     // Create proper evidence object
     const newEvidence: Evidence = {
       id: `${toolId}-${Date.now()}`,
@@ -85,7 +85,7 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
       abnormal: true, // Most diagnostic findings are abnormal
       timestamp: Date.now()
     };
-    
+
     setCollectedEvidence(prev => [...prev, newEvidence]);
     if (onEvidenceCollected) {
       onEvidenceCollected(newEvidence);
@@ -121,7 +121,7 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
           margin: 0,
           lineHeight: 1.5
         }}>
-          Select diagnostic tools to gather evidence about {patientCase.patientName}'s condition.
+          Select diagnostic tools to gather evidence about {patientCase.patientName}&apos;s condition.
         </p>
       </div>
 
@@ -155,7 +155,7 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
             {budget.remaining.toFixed(2)} MON
           </div>
         </div>
-        
+
         <div style={{
           background: `${colors.info.base}20`,
           border: `${borders.width.thin} solid ${colors.info.base}40`,
@@ -208,7 +208,7 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
           }}>
             Diagnostic Tools
           </h3>
-          
+
           <div style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
@@ -225,12 +225,11 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
                 key={tool.id}
                 onClick={() => handleToolSelect(tool.id)}
                 style={{
-                  background: activeTool === tool.id ? 
+                  background: activeTool === tool.id ?
                     `${colors.primary.base}20` : `${colors.neutral.dark}80`,
-                  border: `${borders.width.thin} solid ${
-                    activeTool === tool.id ? 
+                  border: `${borders.width.thin} solid ${activeTool === tool.id ?
                       colors.primary.base : colors.neutral.dark
-                  }`,
+                    }`,
                   borderRadius: borders.radius.md,
                   padding: spacing.md,
                   cursor: "pointer",
@@ -239,11 +238,11 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
                   textAlign: "center"
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.background = activeTool === tool.id ? 
+                  e.currentTarget.style.background = activeTool === tool.id ?
                     `${colors.primary.base}30` : `${colors.neutral.dark}A0`;
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.background = activeTool === tool.id ? 
+                  e.currentTarget.style.background = activeTool === tool.id ?
                     `${colors.primary.base}20` : `${colors.neutral.dark}80`;
                 }}
               >
@@ -298,7 +297,7 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
             }}>
               Diagnostic Feedback
             </h3>
-            
+
             {scanFeedback ? (
               <div style={{
                 background: `${colors.primary.base}10`,
@@ -341,7 +340,7 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
             }}>
               Collected Evidence ({collectedEvidence.length})
             </h3>
-            
+
             {collectedEvidence.length > 0 ? (
               <div style={{
                 display: "flex",
@@ -349,7 +348,7 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
                 gap: spacing.xs
               }}>
                 {collectedEvidence.map((evidence) => (
-                  <div 
+                  <div
                     key={evidence.id}
                     style={{
                       background: `${colors.neutral.dark}80`,

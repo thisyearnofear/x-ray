@@ -521,6 +521,9 @@ export class GameManager {
         this.emit('pointsAwarded', { points: totalPoints, reason, metadata })
         this.emit('gameStateUpdated', this.gameState)
 
+        // PERFORMANT: Persist state change to session
+        this.updateSession()
+
         return totalPoints
     }
 
@@ -1639,6 +1642,37 @@ export class GameManager {
      */
     public checkWalletAchievements(): any[] {
         return this.walletIntegrationManager.checkAchievements();
+    }
+
+    /**
+     * PERFORMANT: Update session storage with current game state
+     * CLEAN: Ensures case consistency across page refreshes
+     */
+    private updateSession(): void {
+        if (!this.gameState.patientCase) return;
+
+        // Import CaseSessionManager dynamically to avoid circular dependencies
+        import('../medical/services/CaseSessionManager').then(({ CaseSessionManager }) => {
+            CaseSessionManager.updateGameState({
+                score: this.gameState.score,
+                timeRemaining: this.gameState.timeRemaining,
+                discoveredConditions: Array.from(this.gameState.discoveredConditions),
+                phase: this.gameState.phase,
+                patientState: this.gameState.patientState?.getState(),
+                budget: this.gameState.budget
+            });
+        });
+    }
+
+    /**
+     * PERFORMANT: Clear session when game ends
+     */
+    public endGame(): void {
+        // Import CaseSessionManager dynamically
+        import('../medical/services/CaseSessionManager').then(({ CaseSessionManager }) => {
+            CaseSessionManager.clearCase();
+            console.log('🎮 Game ended, session cleared');
+        });
     }
 
 }

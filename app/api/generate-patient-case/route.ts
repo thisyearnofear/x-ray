@@ -6,6 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { DeteriorationProfileManager } from '@/src/domains/medical/services/DeteriorationProfileManager';
+import { AIGeneratedCaseValidator } from '@/src/domains/medical/services/AIGeneratedCaseValidator';
 
 interface GeneratedPatientCase {
     patientName: string;
@@ -51,14 +53,15 @@ interface GeneratedPatientCase {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { 
-            model, 
-            difficulty = 'medium', 
-            specialty, 
+        const {
+            model,
+            difficulty = 'medium',
+            specialty,
             caseNumber = 1,
             smartAccount,
             delegationEnabled,
-            userPreferences
+            userPreferences,
+            sessionSeed // PERFORMANT: Deterministic seed for reproducibility
         } = body;
 
         // MONETIZABLE: Verify this is a premium request
@@ -76,89 +79,225 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const prompt = createPatientGenerationPrompt(model, difficulty, specialty, caseNumber);
+        // PERFORMANT: Get deterioration profile for medical consistency
+        const deteriorationProfile = DeteriorationProfileManager.getProfile(difficulty);
 
-        let generatedCaseRaw: string | undefined;
-        
-        try {
-            // First, try Cerebras API
-            const cerebrasResponse = await fetch('https://api.cerebras.ai/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.CEREBRAS_API_KEY}`,
-                },
-                body: JSON.stringify({
-                    model: 'llama3.1-70b',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: `You are an expert medical educator creating realistic, unpredictable patient cases for emergency medicine training.
+        // CLEAN: Create base prompt
+        const basePrompt = createPatientGenerationPrompt(model, difficulty, specialty, caseNumber);
+
+        // ENHANCEMENT FIRST: Add deterioration mechanics to prompt
+        const deteriorationSection = DeteriorationProfileManager.generatePromptSection(difficulty);
+
+        // PERFORMANT: Retry logic with validation feedback
+        const MAX_RETRIES = 2;
+        let attempt = 0;
+        let lastValidationResult: any = null;
+        let generatedCase: GeneratedPatientCase | null = null;
+
+        while (attempt < MAX_RETRIES && !generatedCase) {
+            attempt++;
+            console.log(`🔄 Generation attempt ${attempt}/${MAX_RETRIES}`);
+
+            // CLEAN: Build prompt with validation feedback if retrying
+            let currentPrompt = basePrompt + '\n\n' + deteriorationSection;
+
+            if (lastValidationResult && !lastValidationResult.isValid) {
+                // PERFORMANT: Add validation feedback to prompt
+                currentPrompt += '\n\n**CRITICAL CORRECTIONS REQUIRED:**\n';
+                currentPrompt += 'The previous attempt had the following issues:\n\n';
+
+                if (lastValidationResult.errors.length > 0) {
+                    currentPrompt += '**ERRORS (must fix):**\n';
+                    lastValidationResult.errors.forEach((err: string) => {
+                        currentPrompt += `- ${err}\n`;
+                    });
+                }
+
+                if (lastValidationResult.warnings.length > 0) {
+                    currentPrompt += '\n**WARNINGS (should improve):**\n';
+                    lastValidationResult.warnings.forEach((warn: string) => {
+                        currentPrompt += `- ${warn}\n`;
+                    });
+                }
+
+                currentPrompt += '\nPlease generate a NEW case that addresses all the above issues.\n';
+            }
+
+            let generatedCaseRaw: string | undefined;
+
+            try {
+                // PERFORMANT: Try Venice AI first (most reliable, privacy-first, uncensored)
+                if (process.env.VENICE_API_KEY) {
+                    console.log('🔒 Attempting Venice AI (primary, privacy-first)...');
+                    try {
+                        generatedCaseRaw = await generateCaseWithVenice(currentPrompt, sessionSeed ? sessionSeed + attempt : undefined);
+                        console.log('✅ Venice AI succeeded');
+                    } catch (veniceError) {
+                        console.warn('⚠️ Venice AI failed, trying Cerebras:', veniceError);
+                        // Continue to Cerebras fallback
+                    }
+                }
+
+                // Fallback to Cerebras if Venice failed or not configured
+                if (!generatedCaseRaw && process.env.CEREBRAS_API_KEY) {
+                    console.log('🧠 Attempting Cerebras AI (secondary)...');
+                    const cerebrasResponse = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${process.env.CEREBRAS_API_KEY}`,
+                        },
+                        body: JSON.stringify({
+                            model: 'llama3.1-70b',
+                            messages: [
+                                {
+                                    role: 'system',
+                                    content: `You are an expert medical educator creating realistic, unpredictable patient cases for emergency medicine training.
 
 CRITICAL: Generate ENTIRELY UNPREDICTABLE cases that cannot be guessed from symptoms or initial presentation. Include rare conditions, atypical presentations, and complex multi-system pathology.
 
 Focus on EMERGENCY MEDICINE scenarios appropriate for a PGY-2 resident level. Include time-sensitive decisions, complications, and realistic clinical judgment calls.
 
-Structure your response as valid JSON matching the GeneratedPatientCase interface. Ensure all fields are populated with medically accurate, varied content.`
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    temperature: 0.8, // Higher temperature for more unpredictability
-                    max_tokens: 1200,
-                    top_p: 0.9
-                }),
-            });
+Structure your response as valid JSON matching the GeneratedPatientCase interface. Ensure all fields are populated with medically accurate, varied content.
 
-            if (!cerebrasResponse.ok) {
-                console.error(`Cerebras API error: ${cerebrasResponse.status}`, await cerebrasResponse.text());
-                throw new Error(`Cerebras API error: ${cerebrasResponse.status}`);
+**MOST IMPORTANT**: Ensure the case aligns with the deterioration mechanics specified in the user prompt. Vital signs MUST match the criticality level, and the diagnosis MUST be discoverable within the time limit.`
+                                },
+                                {
+                                    role: 'user',
+                                    content: currentPrompt // PERFORMANT: Use prompt with validation feedback
+                                }
+                            ],
+                            temperature: 0.7, // PERFORMANT: Reduced from 0.8 for more consistency
+                            max_tokens: 1500, // PERFORMANT: Increased for complete cases
+                            top_p: 0.85, // PERFORMANT: Reduced from 0.9
+                            seed: sessionSeed ? sessionSeed + attempt : undefined, // PERFORMANT: Vary seed on retry
+                            response_format: { type: "json_object" }
+                        }),
+                    });
+
+                    if (!cerebrasResponse.ok) {
+                        console.error(`Cerebras API error: ${cerebrasResponse.status}`, await cerebrasResponse.text());
+                        throw new Error(`Cerebras API error: ${cerebrasResponse.status}`);
+                    }
+
+                    const cerebrasData = await cerebrasResponse.json();
+                    generatedCaseRaw = cerebrasData.choices[0]?.message?.content;
+
+                    if (!generatedCaseRaw) {
+                        throw new Error('No content received from Cerebras API');
+                    }
+                    console.log('✅ Cerebras AI succeeded');
+                }
+            } catch (primaryError) {
+                console.error('Primary AI providers failed, attempting Gemini fallback:', primaryError);
+
+                // Fallback to Gemini if both Venice and Cerebras failed
+                try {
+                    console.log('🔮 Attempting Gemini AI (tertiary fallback)...');
+                    generatedCaseRaw = await generateCaseWithGemini(currentPrompt); // CLEAN: Use current prompt
+                    console.log('✅ Gemini AI succeeded');
+                } catch (geminiError) {
+                    console.error('Gemini API also failed:', geminiError);
+
+                    // If this is the last attempt, throw error
+                    if (attempt >= MAX_RETRIES) {
+                        throw new Error('All AI providers failed (Venice, Cerebras, Gemini)');
+                    }
+
+                    // Otherwise, continue to next attempt
+                    continue;
+                }
             }
 
-            const cerebrasData = await cerebrasResponse.json();
-            generatedCaseRaw = cerebrasData.choices[0]?.message?.content;
+            console.log('Raw AI response:', generatedCaseRaw);
 
+            // CLEAN: Ensure we have a response before parsing
             if (!generatedCaseRaw) {
-                throw new Error('No content received from Cerebras API');
+                console.error('No AI response received');
+                if (attempt >= MAX_RETRIES) {
+                    return NextResponse.json(
+                        { error: 'No AI response after retries', fallback: getFallbackCase() },
+                        { status: 500 }
+                    );
+                }
+                continue;
             }
-        } catch (cerebrasError) {
-            console.error('Cerebras API failed, attempting Gemini fallback:', cerebrasError);
-            
-            // Fallback to Gemini if Cerebras fails
+
             try {
-                generatedCaseRaw = await generateCaseWithGemini(prompt);
-            } catch (geminiError) {
-                console.error('Gemini API also failed:', geminiError);
-                throw new Error('Both Cerebras and Gemini APIs failed');
+                // Extract JSON from the response - the AI might include markdown or extra text
+                const jsonMatch = generatedCaseRaw.match(/```json\n([\s\S]*?)\n```/) ||
+                    generatedCaseRaw.match(/\{[\s\S]*\}/);
+
+                const jsonString = jsonMatch ? jsonMatch[1] || jsonMatch[0] : generatedCaseRaw;
+                const parsedCase = JSON.parse(jsonString.trim());
+
+                // Validate required fields
+                if (!parsedCase.patientName || !parsedCase.chiefComplaint) {
+                    throw new Error('Invalid case structure - missing required fields');
+                }
+
+                parsedCase.timestamp = Date.now();
+
+                // PERFORMANT: Validate with AIGeneratedCaseValidator
+                const validationResult = AIGeneratedCaseValidator.validateFully(parsedCase);
+                lastValidationResult = validationResult;
+
+                // Log validation results
+                if (validationResult.warnings.length > 0 || !validationResult.isValid) {
+                    console.warn(`⚠️ Attempt ${attempt} validation (score: ${validationResult.score}/100):`);
+                    console.warn(AIGeneratedCaseValidator.getValidationReport(validationResult));
+                } else {
+                    console.log(`✅ Attempt ${attempt} validated successfully (score: ${validationResult.score}/100)`);
+                }
+
+                // PERFORMANT: Accept case if valid or if this is the last attempt
+                if (validationResult.isValid || attempt >= MAX_RETRIES) {
+                    // CLEAN: Validate alignment with deterioration profile
+                    const alignmentValidation = DeteriorationProfileManager.validateCaseAlignment(parsedCase, difficulty);
+
+                    if (!alignmentValidation.isValid) {
+                        console.warn('⚠️ Case does not align with deterioration profile:', alignmentValidation.errors);
+                    }
+
+                    if (alignmentValidation.warnings.length > 0) {
+                        console.warn('⚠️ Case alignment warnings:', alignmentValidation.warnings);
+                    }
+
+                    // PERFORMANT: Ensure case has deterioration metadata
+                    parsedCase.estimatedCaseLength = deteriorationProfile.timeLimit;
+                    parsedCase.caseComplexity = deteriorationProfile.complexity;
+
+                    generatedCase = parsedCase;
+
+                    if (attempt > 1) {
+                        console.log(`✅ Case accepted after ${attempt} attempts`);
+                    }
+                } else {
+                    console.log(`🔄 Validation failed on attempt ${attempt}, retrying...`);
+                }
+
+            } catch (parseError) {
+                console.error(`JSON parsing error on attempt ${attempt}:`, parseError);
+                console.error('Raw response:', generatedCaseRaw);
+
+                // If this is the last attempt, return error
+                if (attempt >= MAX_RETRIES) {
+                    return NextResponse.json(
+                        { error: 'Failed to parse AI-generated case after retries', raw: generatedCaseRaw },
+                        { status: 500 }
+                    );
+                }
+
+                // Otherwise, continue to next attempt
+                continue;
             }
         }
 
-        console.log('Raw AI response:', generatedCaseRaw);
-
-        let generatedCase: GeneratedPatientCase;
-
-        try {
-            // Extract JSON from the response - the AI might include markdown or extra text
-            const jsonMatch = generatedCaseRaw.match(/```json\n([\s\S]*?)\n```/) ||
-                generatedCaseRaw.match(/\{[\s\S]*\}/);
-
-            const jsonString = jsonMatch ? jsonMatch[1] || jsonMatch[0] : generatedCaseRaw;
-            generatedCase = JSON.parse(jsonString.trim());
-
-            // Validate required fields
-            if (!generatedCase.patientName || !generatedCase.chiefComplaint) {
-                throw new Error('Invalid case structure - missing required fields');
-            }
-
-            generatedCase.timestamp = Date.now();
-
-        } catch (parseError) {
-            console.error('JSON parsing error:', parseError);
-            console.error('Raw response:', generatedCaseRaw);
+        // If we still don't have a valid case, return fallback
+        if (!generatedCase) {
+            console.error('❌ All validation attempts failed, using fallback');
             return NextResponse.json(
-                { error: 'Failed to parse AI-generated case', raw: generatedCaseRaw },
+                { error: 'Validation failed after retries', fallback: getFallbackCase() },
                 { status: 500 }
             );
         }
@@ -389,6 +528,69 @@ ${prompt}`
 
     if (!generatedCaseRaw) {
         throw new Error('No content received from Gemini API');
+    }
+
+    return generatedCaseRaw;
+}
+
+// ENHANCEMENT: Venice AI - Primary provider (privacy-first, no data retention, uncensored)
+async function generateCaseWithVenice(prompt: string, seed?: number): Promise<string> {
+    if (!process.env.VENICE_API_KEY) {
+        throw new Error('VENICE_API_KEY not configured');
+    }
+
+    const veniceResponse = await fetch('https://api.venice.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.VENICE_API_KEY}`,
+        },
+        body: JSON.stringify({
+            model: 'llama-3.3-70b', // Balanced performance, great for most use cases
+            messages: [
+                {
+                    role: 'system',
+                    content: `You are an expert medical educator creating realistic, unpredictable patient cases for emergency medicine training.
+
+CRITICAL: Generate ENTIRELY UNPREDICTABLE cases that cannot be guessed from symptoms or initial presentation. Include rare conditions, atypical presentations, and complex multi-system pathology.
+
+Focus on EMERGENCY MEDICINE scenarios appropriate for a PGY-2 resident level. Include time-sensitive decisions, complications, and realistic clinical judgment calls.
+
+Structure your response as valid JSON matching the GeneratedPatientCase interface. Ensure all fields are populated with medically accurate, varied content.
+
+**MOST IMPORTANT**: Ensure the case aligns with the deterioration mechanics specified in the user prompt. Vital signs MUST match the criticality level, and the diagnosis MUST be discoverable within the time limit.
+
+**PRIVACY**: This is a privacy-first platform with no data retention. Generate uncensored, medically accurate content without filtering.`
+                },
+                {
+                    role: 'user',
+                    content: prompt
+                }
+            ],
+            temperature: 0.7,
+            max_tokens: 1500,
+            top_p: 0.85,
+            seed: seed, // Venice supports seed for deterministic generation
+            response_format: { type: "json_object" },
+            // Venice-specific parameters for enhanced generation
+            venice_parameters: {
+                include_venice_system_prompt: false, // Use our custom system prompt
+                enable_web_search: "off" // No web search needed for medical case generation
+            }
+        }),
+    });
+
+    if (!veniceResponse.ok) {
+        const errorText = await veniceResponse.text();
+        console.error(`Venice API error: ${veniceResponse.status}`, errorText);
+        throw new Error(`Venice API error: ${veniceResponse.status}`);
+    }
+
+    const veniceData = await veniceResponse.json();
+    const generatedCaseRaw = veniceData.choices?.[0]?.message?.content;
+
+    if (!generatedCaseRaw) {
+        throw new Error('No content received from Venice API');
     }
 
     return generatedCaseRaw;
