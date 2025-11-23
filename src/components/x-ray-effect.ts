@@ -207,15 +207,15 @@ export default class XRayEffect {
   scanProgress: Map<string, number> = new Map() // Track scanning progress per condition
   discoveredConditions: Set<string> = new Set() // Track discovered conditions
   visibleAnatomy: string[] = ['head', 'neck', 'cervical_spine', 'jaw', 'face'] // Current visible anatomy
-  
+
   // ENHANCEMENT: Advanced condition detection system
   private advancedDetection: AdvancedConditionDetection;
-  
+
   // ENHANCEMENT: Visual scanning feedback system
   scanRings: Map<string, THREE.Mesh> = new Map(); // Scanning rings around markers
   progressRings: Map<string, THREE.Mesh> = new Map(); // Progress rings for each marker
   activeScans: Set<string> = new Set(); // Track markers currently being scanned
-  
+
   // ENHANCEMENT: Hint and guidance system
   lastActivityTime: number = Date.now();
   hintTimeout: number = 10000; // 10 seconds
@@ -250,7 +250,7 @@ export default class XRayEffect {
   // HACKATHON: MetaMask Smart Accounts integration
   private smartAccount: MetaMaskSmartAccount;
   private envioIndexer: EnvioIndexer;
-  
+
   constructor({ scene, composer, renderer, camera, audioManager, scanFeedbackSystem, mobileCamera, gameManager }: Props) {
     this.scene = scene
     this.composer = composer
@@ -280,10 +280,10 @@ export default class XRayEffect {
       current: { x: 0, y: 0 },
       target: { x: 0, y: 0 },
     }
-    
+
     // ENHANCEMENT: Initialize advanced detection system
     this.advancedDetection = new AdvancedConditionDetection(this.scanFeedbackSystem);
-    
+
     this.createRenderTargets()
     this.setupPostprocessing()
     this.createLeePerry()
@@ -309,7 +309,7 @@ export default class XRayEffect {
       onDiagnosisSubmit: (conditions) => console.log('Diagnosis submitted:', conditions),
       onError: (message) => console.error('Error:', message)
     })
-    
+
     this.gameManager = gameManager;
 
     // PREVENT BLOAT: Single event listener with cleanup
@@ -358,11 +358,11 @@ export default class XRayEffect {
       if (distance < scanRadius) {
         // Mark this as an activity to reset hint timer
         this.lastActivityTime = Date.now();
-        
+
         // ENHANCEMENT FIRST: Use advanced detection system to calculate scan metrics
         const condition = MEDICAL_CONDITIONS.find(c => c.id === conditionId);
         if (!condition) return; // Skip if condition not found
-        
+
         // Calculate scan metrics using advanced detection system
         const scanPath = [mousePos3D]; // In this simplified case, we just use current position
         const scanMetrics = this.advancedDetection.calculateScanMetrics(
@@ -377,15 +377,15 @@ export default class XRayEffect {
 
         // ENHANCEMENT: Instead of linear progress, use advanced detection to determine progress rate
         const baseIncrement = deltaTime;
-        const qualityModifier = 
-          (scanMetrics.positionAccuracy * 0.3) + 
-          (scanMetrics.scanCoverage * 0.2) + 
-          (scanMetrics.focusQuality * 0.3) + 
+        const qualityModifier =
+          (scanMetrics.positionAccuracy * 0.3) +
+          (scanMetrics.scanCoverage * 0.2) +
+          (scanMetrics.focusQuality * 0.3) +
           (scanMetrics.timeEfficiency * 0.2);
-        
+
         const progressIncrement = baseIncrement * (0.5 + qualityModifier * 0.5); // Range: 0.5 to 1.0
         const newProgress = Math.min(currentProgress + progressIncrement, requiredTime);
-        
+
         this.scanProgress.set(conditionId, newProgress);
 
         // ENHANCEMENT: Update scan feedback system with scan data including clues
@@ -400,12 +400,12 @@ export default class XRayEffect {
         if (!this.scanRings.has(conditionId)) {
           this.createScanningVFX(conditionId, markerPos);
         }
-        
+
         // Create or update progress ring if it doesn't exist
         if (!this.progressRings.has(conditionId)) {
           this.createProgressRing(conditionId, markerPos);
         }
-        
+
         // Update progress ring based on current progress
         this.updateProgressRing(conditionId, newProgress / requiredTime)
 
@@ -436,7 +436,7 @@ export default class XRayEffect {
               type: 'first_scan',
               conditionId
             });
-            
+
             // Update game state to mark first scan as tracked
             this.gameManager.updateState({
               unlockedTechniques: new Set([...gameState.unlockedTechniques, 'first_scan_tracked'])
@@ -448,7 +448,7 @@ export default class XRayEffect {
         if (detectionResult.detected && !this.discoveredConditions.has(conditionId)) {
           this.discoverCondition(conditionId)
         }
-        
+
         // Add to active scans set
         this.activeScans.add(conditionId);
       } else {
@@ -456,12 +456,12 @@ export default class XRayEffect {
         const currentProgress = this.scanProgress.get(conditionId) || 0
         const condition = Object.values(MEDICAL_CONDITIONS).find(c => c.id === conditionId)
         const requiredTime = condition?.scanTimeRequired || 3
-        
+
         if (currentProgress < requiredTime) {
           // Only update visibility based on global toggle when not being actively scanned
           markerGroup.visible = this.areConditionsVisible
         }
-        
+
         // Remove scanning VFX if not actively scanning
         if (this.activeScans.has(conditionId)) {
           this.removeScanningVFX(conditionId);
@@ -469,18 +469,18 @@ export default class XRayEffect {
         }
       }
     })
-    
+
     // Check for hints after processing all markers - PREVENT BLOAT: Only check periodically
     if (Date.now() - this.lastHintCheckTime > 2000) { // Only check every 2 seconds
       this.lastHintCheckTime = Date.now();
       this.checkForHints();
     }
-    
+
     // Show directional guidance for new users
     if (this.discoveredConditions.size < 3 && Date.now() - this.lastActivityTime > 8000) {
       this.showDirectionalGuidance();
     }
-    
+
     // Update game objective UI
     this.updateGameObjectiveUI();
 
@@ -496,7 +496,7 @@ export default class XRayEffect {
   // INTEGRATION: Progressive marker revelation
   updateMarkerVisibility(medicalMarker: MedicalMarker, progress: number) {
     medicalMarker.updateDiscoveryProgress(progress);
-    
+
     // Make sure marker is visible during active scanning regardless of global toggle
     const markerGroup = medicalMarker.getMarkerGroup();
     if (progress > 0) {
@@ -544,7 +544,7 @@ export default class XRayEffect {
     if (this.mobileCamera && this.mobileCamera.getState && this.mobileCamera.getState().isActive) {
       return;
     }
-    
+
     if (event.key === "c" || event.key === "C") {
       this.toggleConditions()
     } else if (event.key === "e" || event.key === "E") {
@@ -564,7 +564,7 @@ export default class XRayEffect {
         this.expanded = true
       }
     }
-    
+
   }
 
   createLeePerry() {
@@ -602,25 +602,25 @@ export default class XRayEffect {
 
     // ENHANCEMENT FIRST: Only show markers for conditions relevant to current patient case
     let conditionsToDisplay: any[] = [];
-    
+
     // Get patient case conditions if available
     if (this.gameManager) {
       const gameState = this.gameManager.getGameState();
       const patientCase = gameState.patientCase;
-      
+
       if (patientCase && patientCase.conditions) {
         // Filter conditions to only those relevant to the current patient case
         const caseConditions = patientCase.conditions;
-        
+
         // Match case conditions with our medical conditions database
-        conditionsToDisplay = MEDICAL_CONDITIONS.filter(condition => 
+        conditionsToDisplay = MEDICAL_CONDITIONS.filter(condition =>
           caseConditions.includes(condition.id) &&
           (condition.requiredModel === this.currentModel ||
-           condition.visibleIn.some(part => this.visibleAnatomy.includes(part)))
+            condition.visibleIn.some(part => this.visibleAnatomy.includes(part)))
         );
       }
     }
-    
+
     // Fallback to all conditions if no patient case or debugging
     if (conditionsToDisplay.length === 0) {
       // PERFORMANT: Use consolidated condition filtering
@@ -740,13 +740,13 @@ export default class XRayEffect {
     if (this.mobileCamera && this.mobileCamera.getState && this.mobileCamera.getState().isActive) {
       return;
     }
-    
+
     // Toggle visibility of all medical markers based on current state
     const newState = !this.areConditionsVisible;
-    
+
     this.medicalMarkers.forEach((marker, conditionId) => {
       const markerGroup = marker.getMarkerGroup();
-      
+
       // Discovered markers should always be visible
       if (this.discoveredConditions.has(conditionId)) {
         markerGroup.visible = true;
@@ -755,12 +755,12 @@ export default class XRayEffect {
         markerGroup.visible = newState;
       }
     })
-    
+
     // Update our internal state
     this.areConditionsVisible = newState;
-    
+
     console.log(`Toggled conditions visibility - Now showing: ${newState}, Total markers: ${this.medicalMarkers.size}`);
-    
+
     // Mark as activity to prevent hint from showing immediately
     this.lastActivityTime = Date.now();
     this.hasPressedCToggle = true;
@@ -1010,7 +1010,7 @@ export default class XRayEffect {
     if (this.gameManager) {
       const gameState = this.gameManager.getGameState();
       const patientCase = gameState.patientCase;
-      
+
       if (patientCase && patientCase.conditions) {
         // Only allow discovery if the condition is in the current case's conditions
         isConditionValidForCase = patientCase.conditions.includes(conditionId);
@@ -1137,7 +1137,7 @@ export default class XRayEffect {
 
     // Trigger diagnostic UI
     this.diagnosticUI.discoverCondition(conditionId)
-    
+
     // Check for achievements related to this discovery
     if (this.gameManager) {
       const gameState = this.gameManager.getGameState();
@@ -1149,7 +1149,7 @@ export default class XRayEffect {
         type: 'discovery',
         conditionId
       });
-      
+
       // Record condition practice for spaced repetition
       this.gameManager.recordConditionPractice(conditionId, true);
     }
@@ -1273,8 +1273,8 @@ export default class XRayEffect {
     const profile = this.currentCaseProfile;
     const base = profile.potentialEarnings.basePayment * profile.potentialEarnings.complexityMultiplier;
     const maxBonus = profile.potentialEarnings.accuracyBonus +
-                    profile.potentialEarnings.efficiencyBonus +
-                    profile.potentialEarnings.treatmentBonus;
+      profile.potentialEarnings.efficiencyBonus +
+      profile.potentialEarnings.treatmentBonus;
 
     this.potentialBonus = base + maxBonus;
   }
@@ -1746,7 +1746,7 @@ export default class XRayEffect {
   completeTreatment(treatment: Treatment): void {
     // This method is no longer used
     console.log('completeTreatment is deprecated, using TreatmentMenu instead');
-  }  determineTreatmentOutcome(treatment: Treatment): TreatmentOutcome {
+  } determineTreatmentOutcome(treatment: Treatment): TreatmentOutcome {
     // Simple probability-based outcome selection
     const rand = Math.random();
     let cumulativeProb = 0;
@@ -2147,9 +2147,9 @@ export default class XRayEffect {
     };
 
     const totalPotential = caseProfile.potentialEarnings.basePayment * caseProfile.potentialEarnings.complexityMultiplier +
-                          caseProfile.potentialEarnings.accuracyBonus +
-                          caseProfile.potentialEarnings.efficiencyBonus +
-                          caseProfile.potentialEarnings.treatmentBonus;
+      caseProfile.potentialEarnings.accuracyBonus +
+      caseProfile.potentialEarnings.efficiencyBonus +
+      caseProfile.potentialEarnings.treatmentBonus;
 
     return `
       <div class="case-card" style="
@@ -2262,7 +2262,7 @@ export default class XRayEffect {
 
   renderCompactCaseCard(caseProfile: CaseProfile, userProgress: UserProgression): string {
     const isUnlocked = this.isCaseUnlocked(caseProfile, userProgress);
-    
+
     const difficultyStyles = {
       beginner: { color: '#00ff88', bg: 'rgba(0, 255, 136, 0.1)' },
       intermediate: { color: '#ffaa00', bg: 'rgba(255, 170, 0, 0.1)' },
@@ -2272,9 +2272,9 @@ export default class XRayEffect {
 
     const style = difficultyStyles[caseProfile.difficulty];
     const totalPotential = caseProfile.potentialEarnings.basePayment * caseProfile.potentialEarnings.complexityMultiplier +
-                          caseProfile.potentialEarnings.accuracyBonus +
-                          caseProfile.potentialEarnings.efficiencyBonus +
-                          caseProfile.potentialEarnings.treatmentBonus;
+      caseProfile.potentialEarnings.accuracyBonus +
+      caseProfile.potentialEarnings.efficiencyBonus +
+      caseProfile.potentialEarnings.treatmentBonus;
 
     return `
       <div class="compact-case-card" style="
@@ -2451,7 +2451,7 @@ export default class XRayEffect {
   // INTEGRATION: Switch between anatomical models with reality shift effects
 
 
-  
+
 
   // ENHANCEMENT: Visual scanning feedback systems
   createScanningVFX(conditionId: string, position: THREE.Vector3): THREE.Mesh {
@@ -2467,11 +2467,11 @@ export default class XRayEffect {
       metalness: 0.3,
       roughness: 0.4
     });
-    
+
     const ring = new THREE.Mesh(geometry, material);
     ring.position.copy(position);
     ring.rotation.x = Math.PI / 2; // Face the camera orientation
-    
+
     // Add pulsing animation
     if (typeof window !== 'undefined' && (window as any).gsap) {
       const gsap = (window as any).gsap;
@@ -2482,7 +2482,7 @@ export default class XRayEffect {
         yoyo: true,
         ease: "power2.inOut"
       });
-      
+
       // Add rotation animation for added visual interest
       gsap.to(ring.rotation, {
         z: Math.PI * 2,
@@ -2491,7 +2491,7 @@ export default class XRayEffect {
         ease: "none"
       });
     }
-    
+
     this.scene.add(ring);
     this.scanRings.set(conditionId, ring);
     return ring;
@@ -2510,11 +2510,11 @@ export default class XRayEffect {
       metalness: 0.2,
       roughness: 0.5
     });
-    
+
     const ring = new THREE.Mesh(geometry, material);
     ring.position.copy(position);
     ring.rotation.x = Math.PI / 2; // Face camera
-    
+
     this.scene.add(ring);
     this.progressRings.set(conditionId, ring);
     return ring;
@@ -2525,7 +2525,7 @@ export default class XRayEffect {
     if (ring) {
       // Update the ring to show progress as a partial circle
       const material = ring.material as THREE.MeshStandardMaterial;
-      
+
       // Change color based on progress with enhanced emissive glow
       if (progress < 0.33) {
         material.color.setHex(0xffff00); // Yellow for low progress
@@ -2540,25 +2540,25 @@ export default class XRayEffect {
         material.emissive.setHex(0x004400); // Green glow
         material.emissiveIntensity = 0.6;
       }
-      
+
       material.opacity = 0.6;
-      
+
       // Update to show partial ring based on progress
       // We'll recreate the ring geometry to show partial progress
       const ringObj = ring as THREE.Mesh;
       if (ringObj.parent) {
         const position = ringObj.position.clone();
         const rotation = ringObj.rotation.clone();
-        
+
         // Remove the old ring
         ringObj.parent.remove(ringObj);
-        
+
         // Create new partial ring based on progress
         const newGeometry = new THREE.RingGeometry(0.05, 0.07, 32, 1, 0, progress * Math.PI * 2);
         const newRing = new THREE.Mesh(newGeometry, (ringObj.material as THREE.MeshStandardMaterial).clone());
         newRing.position.copy(position);
         newRing.rotation.copy(rotation);
-        
+
         // Store the new ring in the map
         this.scene.add(newRing);
         this.progressRings.set(conditionId, newRing);
@@ -2569,12 +2569,12 @@ export default class XRayEffect {
   removeScanningVFX(conditionId: string): void {
     const scanRing = this.scanRings.get(conditionId);
     const progressRing = this.progressRings.get(conditionId);
-    
+
     if (scanRing) {
       if (scanRing.parent) scanRing.parent.remove(scanRing);
       this.scanRings.delete(conditionId);
     }
-    
+
     if (progressRing) {
       if (progressRing.parent) progressRing.parent.remove(progressRing);
       this.progressRings.delete(conditionId);
@@ -2586,41 +2586,46 @@ export default class XRayEffect {
     // PREVENT BLOAT: Only show hint if different from last one and enough time has passed
     const minTimeBetweenSameHints = 10000; // 10 seconds minimum between same hints
     const now = Date.now();
-    
+
     if (this.lastHintShown === message && (now - this.lastHintTime) < minTimeBetweenSameHints) {
       return; // Don't show the same hint too frequently
     }
-    
+
     // Also prevent any hint if we've shown one recently
     const minTimeBetweenAnyHints = 5000; // 5 seconds minimum between any hints
     if ((now - this.lastHintTime) < minTimeBetweenAnyHints) {
       return; // Don't show any hint too frequently
     }
-    
+
     this.lastHintShown = message;
     this.lastHintTime = now;
-    
+
     // Show visual hint in UI
     this.audioManager?.showFeedback(message, 'info');
-    
+
     console.log('Tutorial hint:', message);
   }
 
   checkForHints(): void {
-  const timeSinceLastActivity = Date.now() - this.lastActivityTime;
+    const timeSinceLastActivity = Date.now() - this.lastActivityTime;
 
-  // Progressive tutorial hints based on user progress
-  if (timeSinceLastActivity > this.hintTimeout + 3000) { // Reduced to 13 seconds for more responsive guidance
-  if (this.discoveredConditions.size === 0) {
-  if (!this.hasPressedCToggle) {
-      this.showTutorialHint('Press [C] to reveal condition markers on the patient');
-  } else {
-      this.showTutorialHint('Look for glowing markers. Hover over them and click to scan!');
-      }
+    // Progressive tutorial hints based on user progress
+    if (timeSinceLastActivity > this.hintTimeout + 3000) { // Reduced to 13 seconds for more responsive guidance
+      if (this.discoveredConditions.size === 0) {
+        if (!this.hasPressedCToggle) {
+          // CLEAN: More accurate description of what C does
+          this.showTutorialHint('💡 Press [C] to toggle condition markers on/off');
+        } else if (!this.areConditionsVisible) {
+          // CLEAN: Tell user markers are hidden
+          this.showTutorialHint('👁️ Markers are hidden. Press [C] again to show them');
+        } else {
+          // CLEAN: Markers are visible, guide user to interact
+          this.showTutorialHint('🔍 Look for glowing markers. Hover over them and click to scan!');
+        }
       } else if (this.discoveredConditions.size < 2) {
-        this.showTutorialHint('Great! Keep scanning - find more conditions before time runs out');
+        this.showTutorialHint('✨ Great! Keep scanning - find more conditions before time runs out');
       } else if (this.discoveredConditions.size >= 2 && !this.hasSubmittedDiagnosis) {
-        this.showTutorialHint('You\'ve found conditions! Check the Investigation Panel to submit diagnosis');
+        this.showTutorialHint('📋 You\'ve found conditions! Check the Investigation Panel to submit diagnosis');
       }
     }
   }
@@ -2629,7 +2634,7 @@ export default class XRayEffect {
   updateGameObjectiveUI(): void {
     const totalConditions = this.getVisibleConditions().length;
     const discoveredCount = this.discoveredConditions.size;
-    
+
     // Update diagnostic UI with objective
     if (this.diagnosticUI) {
       this.diagnosticUI.updateButtonCount('objective', `${discoveredCount}/${totalConditions} found`);
@@ -2641,15 +2646,15 @@ export default class XRayEffect {
   showDirectionalGuidance(): void {
     const undiscoveredMarkers = Array.from(this.medicalMarkers.entries())
       .filter(([id]) => !this.discoveredConditions.has(id));
-    
+
     if (undiscoveredMarkers.length > 0 && this.discoveredConditions.size < 3) {
       const [conditionId, medicalMarker] = undiscoveredMarkers[0];
       const position = medicalMarker.getMarkerGroup().position;
-      
+
       // Create a subtle arrow pointing towards the closest undiscovered marker
       const direction = new THREE.Vector3();
       direction.subVectors(position, this.camera.position).normalize();
-      
+
       // Create temporary guidance arrow
       const arrowHelper = new THREE.ArrowHelper(
         direction,
@@ -2659,18 +2664,19 @@ export default class XRayEffect {
         0.3, // head length
         0.15  // head width
       );
-      
+
       this.scene.add(arrowHelper);
-      
+
       // Remove arrow after 5 seconds
       setTimeout(() => {
         if (arrowHelper.parent) arrowHelper.parent.remove(arrowHelper);
       }, 5000);
-      
-      this.showTutorialHint('Move toward the arrow to find a condition!');
+
+      // CLEAN: More helpful guidance message
+      this.showTutorialHint('🎯 Follow the cyan arrow to find a hidden condition! (Arrow disappears in 5s)');
     }
   }
-  
+
   // INTEGRATION: Get conditions visible in current model (for diagnostic UI filtering)
   getVisibleConditions(): string[] {
     return Object.values(MEDICAL_CONDITIONS)
@@ -2695,13 +2701,13 @@ export default class XRayEffect {
     window.removeEventListener("keydown", this.keyHandler)
     this.instructionsPanel?.destroy()
     this.diagnosticUI?.destroy()
-    
+
     // Clean up scanning VFX
     this.scanRings.forEach(ring => {
       if (ring.parent) ring.parent.remove(ring);
     });
     this.scanRings.clear();
-    
+
     this.progressRings.forEach(ring => {
       if (ring.parent) ring.parent.remove(ring);
     });
