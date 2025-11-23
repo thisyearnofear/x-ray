@@ -17,7 +17,7 @@ import { StagedDiagnosticView } from "./domains/diagnostic/stages/StagedDiagnost
 import { AchievementDisplay } from "./domains/diagnostic/ui/AchievementDisplay"
 import { GameManager, GameState } from "./domains/diagnostic/GameManager"
 import { MedicalServiceFacade } from "./domains/medical/MedicalServiceFacade"
-import { MedicalCase } from "./domains/medical/types"
+import { MedicalCase, PatientState } from "./domains/medical/types"
 import { TutorialFacade } from "./domains/tutorial/TutorialFacade"
 import { VoiceConsultationManager } from "./domains/voice/VoiceConsultationManager"
 import { NurseAmyNudgeSystem } from "./domains/diagnostic/NurseAmyNudgeSystem"
@@ -77,7 +77,7 @@ export class XRayCanvas {
 
     // Create loading screen before initializing components
     this.createLoadingScreen()
-    
+
     this.createClock()
     this.createScene()
     this.createCamera()
@@ -97,17 +97,17 @@ export class XRayCanvas {
     this.createTutorialAndVoice()
     this.setupKeyboardShortcuts() // ENHANCEMENT: Minimal keyboard support
     this.createMobileComponents()
-    
+
     // Listen for wallet connection events to update MedicalServiceFacade
     this.setupWalletEventListeners();
-    
+
     // Remove loading screen and start render after a brief delay to ensure everything is initialized
     setTimeout(() => {
       this.removeLoadingScreen()
       this.render()
     }, 500)
   }
-  
+
   private createLoadingScreen(): void {
     // Create a stylish loading overlay
     const loadingScreen = document.createElement('div')
@@ -128,7 +128,7 @@ export class XRayCanvas {
       font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
       transition: opacity 0.5s ease;
     `
-    
+
     loadingScreen.innerHTML = `
       <div style="
         text-align: center;
@@ -225,10 +225,10 @@ export class XRayCanvas {
       }
       </style>
     `
-    
+
     document.body.appendChild(loadingScreen)
   }
-  
+
   private removeLoadingScreen(): void {
     const loadingScreen = document.getElementById('loading-screen')
     if (loadingScreen) {
@@ -240,50 +240,50 @@ export class XRayCanvas {
       }, 500)
     }
   }
-  
+
   // ENHANCEMENT: Wallet connection event listeners
   private setupWalletEventListeners(): void {
     // Listen for wallet connection events
     document.addEventListener('walletConnected', (event: any) => {
       const { address, preferredDifficulty } = event.detail;
-      
+
       console.log('💰 Wallet connected event received:', { address, preferredDifficulty });
-      
+
       // Update MedicalServiceFacade with new authentication status
       if (this.medicalService) {
         this.medicalService.updateAuthStatus(true, address, preferredDifficulty);
       }
-      
+
       // PERFORMANT: Don't auto-generate case on wallet connect
       // Wait for onboardingComplete event with user's choice
     });
-    
+
     // ENHANCEMENT FIRST: Listen for onboarding completion with user's case choice
     document.addEventListener('onboardingComplete', async (event: any) => {
       const { generateAICase, chargeTestnetMON } = event.detail;
-      
+
       console.log('🎓 Onboarding complete:', { generateAICase, chargeTestnetMON });
-      
+
       if (generateAICase && chargeTestnetMON) {
         // User chose to generate AI case and pay wMON
         try {
           // Get wallet client from window (set by useWeb3 hook)
           const walletClient = (window as any).walletClient;
-          
+
           if (!walletClient) {
             throw new Error('Wallet client not available');
           }
-          
+
           console.log('💰 Processing 0.1 wMON payment for AI case generation');
           this.audioManager?.showFeedback('💰 Processing payment...', 'info');
-          
+
           // Charge 0.1 wMON tokens to paymaster (virtuous flywheel)
           const txHash = await payForAICase(0.1, walletClient);
           console.log('✅ Payment successful:', txHash);
-          
+
           // Generate the AI case
           await this.generateAndIntroducePatientCase();
-          
+
           this.audioManager?.showFeedback('🎉 AI case generated! 0.1 wMON paid to paymaster.', 'success');
         } catch (error: any) {
           console.error('Payment error:', error);
@@ -300,16 +300,16 @@ export class XRayCanvas {
         this.audioManager?.showFeedback('🆓 Free case - NFT tracking enabled!', 'success');
       }
     });
-    
+
     // Listen for wallet disconnection events
     document.addEventListener('walletDisconnected', (event: any) => {
       console.log('🔒 Wallet disconnected event received');
-      
+
       // Update MedicalServiceFacade with new authentication status
       if (this.medicalService) {
         this.medicalService.updateAuthStatus(false, undefined, 'medium');
       }
-      
+
       // PERFORMANT: Don't reset case on disconnect - just update auth status
       // User can continue with their current case
     });
@@ -588,14 +588,14 @@ export class XRayCanvas {
         timeRemaining: 300,
         phase: 'scanning',
         score: 0,
-        patientCase: { 
+        patientCase: {
           patientName: 'Test Patient',
           chiefComplaint: 'Test complaint'
         }
       }
 
       // Use real patient case data if available, otherwise fall back to test
-      const patientCase = gameState.patientCase || { 
+      const patientCase = gameState.patientCase || {
         patientName: 'Test Patient',
         chiefComplaint: 'Test complaint'
       };
@@ -642,21 +642,21 @@ export class XRayCanvas {
 
     // MODULAR: Connect timer events to Nurse Amy nudges and UI
     this.gameManager.on('timer_update', (data: any) => {
-    const gameState = this.gameManager?.getGameState()
-    if (gameState && this.nurseAmyNudges) {
-    this.nurseAmyNudges.evaluateNudgeNeeds(gameState)
-    }
+      const gameState = this.gameManager?.getGameState()
+      if (gameState && this.nurseAmyNudges) {
+        this.nurseAmyNudges.evaluateNudgeNeeds(gameState)
+      }
 
-    // ENHANCEMENT FIRST: Update timer display in UI
-    if (this.diagnosticUI && data.timeRemaining !== undefined) {
-    this.diagnosticUI.getUIManager()?.updateTimer(data.timeRemaining, data.urgency || 'normal')
-    }
+      // ENHANCEMENT FIRST: Update timer display in UI
+      if (this.diagnosticUI && data.timeRemaining !== undefined) {
+        this.diagnosticUI.getUIManager()?.updateTimer(data.timeRemaining, data.urgency || 'normal')
+      }
     })
 
     // ENHANCED: Rich milestone events for immersive drama
     this.gameManager.on('timer_milestone', (data: any) => {
-    console.log(`🎭 Timer milestone: ${data.milestone} at ${data.timeRemaining}s`)
-    this.handleTimerMilestone(data)
+      console.log(`🎭 Timer milestone: ${data.milestone} at ${data.timeRemaining}s`)
+      this.handleTimerMilestone(data)
     })
 
     // ENHANCEMENT FIRST: Handle timer expiration with comprehensive end experience
@@ -751,7 +751,7 @@ export class XRayCanvas {
       // ENHANCEMENT FIRST: Generate AI-powered case for authenticated users, fallback to static for others
       let medicalCase: any;
       const userStatus = this.medicalService?.getAccessManager?.()?.getUserStatus?.();
-      
+
       if (userStatus?.isAuthenticated && userStatus?.currentTier === 'premium') {
         // Try to generate an AI-powered case for premium users
         try {
@@ -776,8 +776,11 @@ export class XRayCanvas {
           chiefComplaint: medicalCase.patientInfo.chiefComplaint
         };
 
+        // ENHANCEMENT: Initialize PatientState for real-time vitals monitoring
+        const patientState = new PatientState(patientCase);
+
         // DRY: Update game state (single call updates everything)
-        this.gameManager?.updateState({ patientCase })
+        this.gameManager?.updateState({ patientCase, patientState })
 
         // MODULAR: Connect case timer to game timer
         const estimatedCaseLength = medicalCase.estimatedCaseLength || 300; // Default to 5 minutes
@@ -789,7 +792,7 @@ export class XRayCanvas {
 
         // PERFORMANT: Immersive feedback with staggered notifications
         this.providePatientIntroductionFeedback(medicalCase)
-        
+
         // ENHANCEMENT FIRST: Different feedback for AI-generated vs static cases
         if (medicalCase.aiGenerated) {
           this.audioManager?.showFeedback('🤖 AI-Generated Case: Each case is uniquely created for you!', 'info');
@@ -1358,22 +1361,22 @@ export class XRayCanvas {
           font-size: ${typography.fontSize.lg};
           ">🎯 Tips</h3>
           <div style="font-size: ${typography.fontSize.sm}; line-height: 1.6;">
-          ${stats.conditionsFound === 0 ? 
-          `<div>🔍 Focus on glowing markers</div>
+          ${stats.conditionsFound === 0 ?
+        `<div>🔍 Focus on glowing markers</div>
           <div>🖱️ Use investigation tools</div>
-          <div>🎙️ Press 'V' for Nurse Amy</div>` : 
-          stats.accuracy < 0.5 ? 
+          <div>🎙️ Press 'V' for Nurse Amy</div>` :
+        stats.accuracy < 0.5 ?
           `<div>🖱️ Confirm with investigation tools</div>
           <div>🎙️ Consult Nurse Amy</div>
-          <div>📋 Gather more evidence</div>` : 
-          stats.efficiency < 0.5 ? 
-          `<div>⏰ Prioritize high-prob areas</div>
+          <div>📋 Gather more evidence</div>` :
+          stats.efficiency < 0.5 ?
+            `<div>⏰ Prioritize high-prob areas</div>
           <div>⌨️ Use shortcuts [C], [V]</div>
-          <div>🎙️ Get AI tips</div>` : 
-          `<div>🏆 Great work!</div>
+          <div>🎙️ Get AI tips</div>` :
+            `<div>🏆 Great work!</div>
           <div>📈 Try harder cases</div>
           <div>💎 Upgrade for more cases</div>`
-          }
+      }
           </div>
         </div>
         <!-- Feature Discovery -->
@@ -1603,17 +1606,17 @@ export class XRayCanvas {
       }
     })
   }
-  
+
   // Method to get the diagnostic UI manager for React integration
   public getDiagnosticUIManager() {
     return this.diagnosticUI?.getUIManager() || null;
   }
-  
+
   // Method to get the game manager for React integration
   public getGameManager() {
     return this.gameManager || null;
   }
-  
+
   // Method to get the current game phase
   public getCurrentGamePhase() {
     return this.gameManager?.getGameState()?.phase || null;

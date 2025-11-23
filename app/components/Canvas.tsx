@@ -25,6 +25,7 @@ import {
 
 import { CrisisEventDisplay } from "../../src/components/CrisisEventDisplay";
 import { ExperienceDirector } from "../../src/domains/experience/ExperienceDirector";
+import { VitalsMonitor } from "../../src/domains/medical/ui/VitalsMonitor";
 
 const Canvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -61,9 +62,9 @@ const Canvas: React.FC = () => {
   });
   const [adminMessage, setAdminMessage] = useState<
     | {
-        message: string;
-        urgency: "normal" | "warning" | "critical";
-      }
+      message: string;
+      urgency: "normal" | "warning" | "critical";
+    }
     | undefined
   >(undefined);
   const [executedActions, setExecutedActions] = useState<string[]>([]);
@@ -75,7 +76,7 @@ const Canvas: React.FC = () => {
     health: 100,
     evidenceCount: 0,
   });
-  
+
   // Staged diagnostic interface state
   const [showStagedDiagnostic, setShowStagedDiagnostic] = useState(false);
   const [currentGamePhase, setCurrentGamePhase] = useState<any>(null);
@@ -113,7 +114,7 @@ const Canvas: React.FC = () => {
       const { newPhase } = event.detail;
       setCurrentGamePhase(newPhase);
       directorRef.current?.setPhase(newPhase);
-      
+
       // Show staged diagnostic interface for diagnostic phases
       const diagnosticPhases = [
         'patient_arrival',
@@ -122,23 +123,23 @@ const Canvas: React.FC = () => {
         'diagnosis',
         'completed'
       ];
-      
+
       if (diagnosticPhases.includes(newPhase)) {
         setShowStagedDiagnostic(true);
       }
     };
-    
+
     const handleCaseSelected = (event: CustomEvent) => {
       // Show staged diagnostic interface when a case is selected
       setShowStagedDiagnostic(true);
       directorRef.current?.releaseOverlay("case_selection");
       directorRef.current?.setPhase("investigation");
     };
-    
+
     // Add event listeners
     document.addEventListener('gamePhaseChanged', handleGamePhaseChanged as EventListener);
     document.addEventListener('caseSelected', handleCaseSelected as EventListener);
-    
+
     // Cleanup event listeners
     return () => {
       document.removeEventListener('gamePhaseChanged', handleGamePhaseChanged as EventListener);
@@ -228,13 +229,17 @@ const Canvas: React.FC = () => {
       }));
     };
 
-    // ENHANCEMENT: Timer events
     const handleTimerUpdate = (event: CustomEvent) => {
       setGameState((prev) => ({
         ...prev,
         timeRemaining: event.detail.timeRemaining,
         health: event.detail.health,
       }));
+
+      // ENHANCEMENT: Sync patient state for VitalsMonitor
+      if (event.detail.patientState) {
+        setPatientState(event.detail.patientState);
+      }
     };
 
     window.addEventListener(
@@ -366,7 +371,7 @@ const Canvas: React.FC = () => {
       ) {
         try {
           canvasInstanceRef.current.dispose();
-        } catch {}
+        } catch { }
       }
       canvasInstanceRef.current = null;
       if (typeof window !== "undefined") {
@@ -524,7 +529,7 @@ const Canvas: React.FC = () => {
     // Remove from active crises
     setActiveCrises((prev) => prev.filter((crisis) => crisis.id !== eventId));
   };
-  
+
   // Staged diagnostic interface handlers
   const handleGamePhaseChange = (newPhase: any) => {
     setCurrentGamePhase(newPhase);
@@ -535,7 +540,7 @@ const Canvas: React.FC = () => {
       })
     );
   };
-  
+
   const handleEvidenceCollected = (evidence: any) => {
     // Emit event to update game state
     document.dispatchEvent(
@@ -544,7 +549,7 @@ const Canvas: React.FC = () => {
       })
     );
   };
-  
+
   const handleDiagnosisSubmitted = (diagnosis: any) => {
     // Emit event to submit diagnosis
     document.dispatchEvent(
@@ -608,6 +613,16 @@ const Canvas: React.FC = () => {
             />
           )}
 
+          {/* ENHANCEMENT: Patient Vitals Monitor (Infirmary Integrated Style) */}
+          {patientState && patientState.vitalSigns && (
+            <div className="fixed top-20 right-4 z-40 w-80 pointer-events-none">
+              <VitalsMonitor
+                vitalSigns={patientState.vitalSigns}
+                criticality={patientState.criticality || 'stable'}
+              />
+            </div>
+          )}
+
           <CaseSelectionHub
             isVisible={showCaseSelection}
             hasWallet={isConnected}
@@ -659,19 +674,19 @@ const Canvas: React.FC = () => {
             getDynamicPrice={
               gameManagerRef.current
                 ? (action: any) =>
-                    gameManagerRef.current.getDynamicPrice(action)
+                  gameManagerRef.current.getDynamicPrice(action)
                 : undefined
             }
             getPricingExplanation={
               gameManagerRef.current
                 ? (action: any) =>
-                    gameManagerRef.current.getPricingExplanation(action)
+                  gameManagerRef.current.getPricingExplanation(action)
                 : undefined
             }
           />
 
           <WalletConnection
-            onConnected={() => {}} // Handled by useWeb3 hook internally
+            onConnected={() => { }} // Handled by useWeb3 hook internally
           />
 
           {/* ENHANCEMENT FIRST: Smart Account HUD showing persistent status and balance */}
@@ -777,7 +792,7 @@ const Canvas: React.FC = () => {
             onDismiss={handleCrisisDismiss}
             onTimeout={handleCrisisTimeout}
           />
-          
+
           {/* Staged Diagnostic Interface */}
           {showStagedDiagnostic && currentGamePhase && canvasInstanceRef.current && (
             <StagedDiagnosticView

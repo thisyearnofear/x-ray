@@ -75,14 +75,14 @@ export class GameManager {
     private achievementSystem: AchievementSystem;
     public diagnosticUIManager: any; // DiagnosticUIManager reference (public to allow updates)
     private smartAccount: any = null; // For wallet address tracking
-    
+
     // ENHANCEMENT: MON Token Economy
     private budgetManager: BudgetManager | null = null;
     private hospitalAdmin: HospitalAdministrator | null = null;
     private dynamicPricingManager: DynamicPricingManager;
     private efficiencyBonusSystem: EfficiencyBonusSystem;
     private walletIntegrationManager: WalletIntegrationManager;
-    
+
     // ENHANCEMENT: Timer Narrative System
     private timerNarrativeManager: TimerNarrativeManager | null = null;
 
@@ -98,7 +98,7 @@ export class GameManager {
             }
         });
         this.gameState = this.initializeGameState()
-        
+
         // Initialize new economic systems
         this.dynamicPricingManager = new DynamicPricingManager();
         this.efficiencyBonusSystem = new EfficiencyBonusSystem();
@@ -195,7 +195,7 @@ export class GameManager {
 
             // ENHANCEMENT: Update patient state (1 second = 1/60 minute)
             if (this.gameState.patientState) {
-                this.gameState.patientState.update(1/60);
+                this.gameState.patientState.update(1 / 60);
             }
 
             // Update gameState criticality from patientState
@@ -203,7 +203,7 @@ export class GameManager {
                 const patientStateData = this.gameState.patientState.getState();
                 // Keep the old property for backward compatibility
                 this.gameState.patientCriticality = patientStateData.criticality as any;
-                
+
                 // ENHANCEMENT: Check for narrative events
                 this.checkForNarrativeEvents();
             }
@@ -212,9 +212,11 @@ export class GameManager {
             const timerEvent = {
                 timeRemaining: this.gameState.timeRemaining,
                 urgency: this.getTimerUrgency(),
-                percentage: this.getTimePercentage()
+                percentage: this.getTimePercentage(),
+                // ENHANCEMENT: Include patient state for real-time monitor
+                patientState: this.gameState.patientState?.getState()
             };
-            
+
             this.emit('timer_update', timerEvent)
 
             // ENHANCED: Rich milestone events for immersive drama experience
@@ -279,7 +281,7 @@ export class GameManager {
         if (this.gameState.timeRemaining <= 60) return 'warning'
         return 'normal'
     }
-    
+
     private getTimePercentage(): number {
         const initialTime = this.gameState.patientCase?.estimatedCaseLength || 300; // Default to 5 mins
         return Math.max(0, (this.gameState.timeRemaining / initialTime) * 100);
@@ -564,10 +566,10 @@ export class GameManager {
 
             // Update efficiency bonus system with current metrics
             const efficiencyData = this.efficiencyBonusSystem.getEfficiencySummary();
-            
+
             // Emit efficiency update event
             this.emit('efficiencyUpdated', efficiencyData);
-            
+
             if (typeof document !== 'undefined') {
                 document.dispatchEvent(new CustomEvent('efficiencyUpdated', {
                     detail: efficiencyData
@@ -654,10 +656,10 @@ export class GameManager {
         hasWallet: boolean = false
     ): void {
         const config = DIFFICULTY_CONFIGS[difficultyTier];
-        
+
         // Create budget manager
         this.budgetManager = new BudgetManager(config.startingBudget, difficultyTier);
-        
+
         // Create hospital administrator
         this.hospitalAdmin = new HospitalAdministrator(
             this.budgetManager,
@@ -678,14 +680,14 @@ export class GameManager {
         if (this.gameState.patientState) {
             const patientStateData = this.gameState.patientState.getState();
             this.gameState.patientCriticality = patientStateData.criticality as any;
-            
+
             // ENHANCEMENT: Initialize timer narrative manager
             if (this.gameState.patientCase) {
                 this.timerNarrativeManager = new TimerNarrativeManager(
                     this.gameState.patientState,
                     this.gameState.patientCase
                 );
-                
+
                 // Set up narrative event listeners
                 this.setupNarrativeEventListeners();
             }
@@ -837,7 +839,7 @@ export class GameManager {
      */
     private isWalletConnected(): boolean {
         return typeof window !== 'undefined' &&
-               (window as any).ethereum?.selectedAddress != null;
+            (window as any).ethereum?.selectedAddress != null;
     }
 
     /**
@@ -859,7 +861,7 @@ export class GameManager {
      */
     public updatePatientCriticality(criticality: 'stable' | 'deteriorating' | 'critical'): void {
         this.gameState.patientCriticality = criticality;
-        
+
         if (criticality === 'critical' && this.hospitalAdmin) {
             const emergencyMessage = this.hospitalAdmin.getEmergencyDialogue();
             this.emit('administratorMessage', {
@@ -867,7 +869,7 @@ export class GameManager {
                 urgency: 'critical'
             });
         }
-        
+
         this.emit('gameStateUpdated', this.gameState);
     }
 
@@ -1252,7 +1254,7 @@ export class GameManager {
             if (b.score !== a.score) return b.score - a.score;
             return b.timeRemaining - a.timeRemaining; // More time remaining = better
         });
-        
+
         const topScores = highScores.slice(0, 15); // Increased to top 15 for more engagement
 
         // Save to localStorage
@@ -1261,11 +1263,11 @@ export class GameManager {
         }
 
         // Emit detailed high score event
-        const rank = highScores.findIndex(entry => 
-            entry.score === newEntry.score && 
+        const rank = highScores.findIndex(entry =>
+            entry.score === newEntry.score &&
             entry.timeRemaining === newEntry.timeRemaining
         ) + 1;
-        
+
         const isPersonalBest = this.isPersonalBest(newEntry);
         const isNewRecord = rank === 1;
 
@@ -1276,7 +1278,7 @@ export class GameManager {
             isPersonalBest,
             totalScores: highScores.length
         });
-        
+
         // Additionally emit competitive events for UI engagement
         if (isNewRecord) {
             this.emit('newGlobalRecord', {
@@ -1290,18 +1292,18 @@ export class GameManager {
             });
         }
     }
-    
+
     // ENHANCED: Personal best tracking
     private isPersonalBest(newEntry: any): boolean {
         const walletAddress = this.smartAccount?.address;
         if (!walletAddress) return false; // Can't determine without wallet
-        
+
         const userScores = this.getUserScores(walletAddress);
         if (userScores.length === 0) return true;
-        
+
         return newEntry.score > Math.max(...userScores.map((s: any) => s.score));
     }
-    
+
     // ENHANCED: Get scores for a specific user
     private getUserScores(walletAddress: string): any[] {
         const allScores = this.getHighScores();
@@ -1344,7 +1346,7 @@ export class GameManager {
         // Listen for narrative events
         this.timerNarrativeManager.on('narrative_event_triggered', (event: any) => {
             this.emit('narrative_event_triggered', event);
-            
+
             // Forward to DOM for React components
             if (typeof document !== 'undefined') {
                 document.dispatchEvent(new CustomEvent('narrativeEventTriggered', {
@@ -1356,7 +1358,7 @@ export class GameManager {
         // Listen for crisis events
         this.timerNarrativeManager.on('crisis_event_triggered', (event: any) => {
             this.emit('crisis_event_triggered', event);
-            
+
             // Forward to DOM for React components
             if (typeof document !== 'undefined') {
                 document.dispatchEvent(new CustomEvent('crisisEventTriggered', {
@@ -1372,7 +1374,7 @@ export class GameManager {
                 // This would require a method in PatientState to adjust health directly
                 // For now, we'll emit an event for the canvas to handle
                 this.emit('patient_health_change', data);
-                
+
                 if (typeof document !== 'undefined') {
                     document.dispatchEvent(new CustomEvent('patientHealthChange', {
                         detail: data
