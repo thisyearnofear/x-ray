@@ -189,8 +189,15 @@ export class GameManager {
     }
 
     // ENHANCED: Timer system with urgency feedback and patient state progression
+    private isPaused: boolean = false;
+    private timerInterval: NodeJS.Timeout | null = null;
+
     public startTimer(): void {
-        const timerInterval = setInterval(() => {
+        if (this.timerInterval) clearInterval(this.timerInterval);
+
+        this.timerInterval = setInterval(() => {
+            if (this.isPaused) return;
+
             this.gameState.timeRemaining -= 1
 
             // ENHANCEMENT: Update patient state (1 second = 1/60 minute)
@@ -245,13 +252,23 @@ export class GameManager {
             }
 
             if (this.gameState.timeRemaining <= 0) {
-                clearInterval(timerInterval)
+                if (this.timerInterval) clearInterval(this.timerInterval);
                 this.emit('timer_expired', {
                     finalScore: this.gameState.score,
                     message: '⏰ Time\'s up! Great effort!'
                 })
             }
         }, 1000)
+    }
+
+    public pauseTimer(): void {
+        this.isPaused = true;
+        this.emit('timer_paused', { timeRemaining: this.gameState.timeRemaining });
+    }
+
+    public resumeTimer(): void {
+        this.isPaused = false;
+        this.emit('timer_resumed', { timeRemaining: this.gameState.timeRemaining });
     }
 
     // ENHANCEMENT: Check for narrative events

@@ -53,26 +53,30 @@ export const SmartAccountHUD: React.FC<SmartAccountHUDProps> = ({
         <div
           onClick={() => setIsExpanded(!isExpanded)}
           style={{
-            background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 153, 204, 0.15))',
-            border: '1px solid rgba(0, 212, 255, 0.4)',
+            background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 153, 204, 0.1))',
+            border: '1px solid rgba(0, 212, 255, 0.2)',
             borderRadius: '12px',
-            padding: '0.75rem 1rem',
+            padding: '0.5rem 0.75rem',
             display: 'flex',
             alignItems: 'center',
             gap: '0.75rem',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
-            backdropFilter: 'blur(10px)',
-            boxShadow: '0 4px 15px rgba(0, 212, 255, 0.2)',
+            backdropFilter: 'blur(5px)',
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
             position: 'relative'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 212, 255, 0.25), rgba(0, 153, 204, 0.25))'
             e.currentTarget.style.transform = 'translateY(-2px)'
+            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 212, 255, 0.2)'
+            e.currentTarget.style.border = '1px solid rgba(0, 212, 255, 0.4)'
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 153, 204, 0.15))'
+            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(0, 153, 204, 0.1))'
             e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.1)'
+            e.currentTarget.style.border = '1px solid rgba(0, 212, 255, 0.2)'
           }}
         >
           {/* Status Indicator */}
@@ -101,7 +105,7 @@ export const SmartAccountHUD: React.FC<SmartAccountHUDProps> = ({
               textTransform: 'uppercase',
               letterSpacing: '0.5px'
             }}>
-              Smart Account
+              Gasless Mode
             </div>
             <div style={{
               color: 'white',
@@ -163,7 +167,7 @@ export const SmartAccountHUD: React.FC<SmartAccountHUDProps> = ({
               }}>
                 Account Details
               </div>
-              
+
               <div style={{
                 background: 'rgba(0, 0, 0, 0.3)',
                 borderRadius: '8px',
@@ -233,7 +237,7 @@ export const SmartAccountHUD: React.FC<SmartAccountHUDProps> = ({
               }}>
                 Active Features
               </div>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <div style={{
                   display: 'flex',

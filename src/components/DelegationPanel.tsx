@@ -20,14 +20,14 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
   isVisible,
   onClose
 }) => {
-  const { 
-    createMedicalConsultationDelegation, 
-    createDataSharingDelegation, 
+  const {
+    createMedicalConsultationDelegation,
+    createDataSharingDelegation,
     error: web3Error,
     address: contextWalletAddress,
     isConnected: contextIsConnected
   } = useWeb3()
-  
+
   // Use the context wallet address instead of prop to ensure consistency
   const effectiveWalletAddress = contextWalletAddress || propWalletAddress
   const effectiveIsConnected = contextIsConnected || isConnected
@@ -99,9 +99,9 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
         marginBottom: '20px'
       }}>
         <h3 style={{ margin: 0, fontSize: '18px', color: '#00d4ff' }}>
-          🔐 Gasless Transaction Permissions
+          🔐 Enable Gasless Mode
         </h3>
-        <button 
+        <button
           onClick={onClose}
           style={{
             background: 'transparent',
@@ -120,9 +120,9 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
           ×
         </button>
       </div>
-      
+
       <p style={{ margin: '0 0 25px 0', fontSize: '13px', opacity: 0.8, textAlign: 'center', lineHeight: '1.4' }}>
-        Grant permissions for gasless transactions and data sharing
+        Activate one-click transactions and eliminate gas fees for a seamless experience.
       </p>
 
       {!effectiveWalletAddress && (
@@ -222,7 +222,7 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
                 opacity: (!effectiveWalletAddress || !delegateAddress) ? 0.5 : 1
               }}
             >
-              {isDelegating ? '🔄 Setting up...' : '🔐 Enable Gasless Transactions'}
+              {isDelegating ? '🔄 Activating...' : '⚡ Activate Gasless Mode'}
             </button>
 
             <button
@@ -255,15 +255,15 @@ export const DelegationPanel: React.FC<DelegationPanelProps> = ({
             lineHeight: '1.4'
           }}>
             <div style={{ marginBottom: '8px' }}>
-              🎯 <strong>Gasless Transactions:</strong> Delegates can perform actions without you paying gas fees
+              🎯 <strong>Zero Gas Fees:</strong> We cover the cost of all your medical actions
             </div>
             <div>
-              🔒 <strong>Controlled Access:</strong> You maintain full control over permissions
+              ⚡ <strong>Instant Actions:</strong> No more signing popups for every move
             </div>
           </div>
         </>
       )}
-      
+
       <div style={{
         marginTop: '20px',
         padding: '15px',

@@ -87,10 +87,22 @@ const Canvas: React.FC = () => {
     address: walletAddress,
     web3Facade,
     getMonBalance,
+    isConnecting
   } = useWeb3();
 
   // State for MON balance
   const [monBalance, setMonBalance] = useState<string>("0.00");
+
+  // ENHANCEMENT: Pause timer when wallet is connecting or delegation panel is open
+  useEffect(() => {
+    if (gameManagerRef.current) {
+      if (isConnecting || showDelegationPanel) {
+        gameManagerRef.current.pauseTimer();
+      } else {
+        gameManagerRef.current.resumeTimer();
+      }
+    }
+  }, [isConnecting, showDelegationPanel]);
 
   // ENHANCEMENT FIRST: Get smart account address when wallet connects
   useEffect(() => {
