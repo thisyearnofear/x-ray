@@ -26,6 +26,7 @@ interface DiagnosisStageProps {
   timeRemaining: number;
   gameManager: any;
   onComplete: (diagnosis: any) => void;
+  diagnosticData?: any;
 }
 
 interface DiagnosisData {
@@ -40,7 +41,8 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
   budget,
   timeRemaining,
   gameManager,
-  onComplete
+  onComplete,
+  diagnosticData
 }) => {
   const [selectedTreatment, setSelectedTreatment] = useState<MedicalAction | null>(null);
   const [outcomePrediction, setOutcomePrediction] = useState<any>(null);
@@ -51,8 +53,8 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
   // Mock patient state - in a real implementation this would come from the patient case
   // const mockPatientState = new PatientState(patientCase);
 
-  // Mock diagnostic confidence - in a real implementation this would come from analysis stage
-  const mockDiagnosticConfidence = new DiagnosticConfidence();
+  // Use diagnostic confidence from previous stage or fallback
+  const diagnosticConfidence = diagnosticData?.diagnosticConfidence || new DiagnosticConfidence();
 
   // Initialize with outcome prediction
   useEffect(() => {
@@ -67,7 +69,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
 
   const handleTreatmentSelect = (treatment: MedicalAction) => {
     setSelectedTreatment(treatment);
-    
+
     // Mock updated outcome prediction based on treatment selection
     setOutcomePrediction({
       successProbability: treatment.id === "appendectomy" ? 0.95 : 0.85,
@@ -84,7 +86,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
       notes: treatmentNotes,
       predictedOutcome: outcomePrediction
     };
-    
+
     onComplete(diagnosis);
   };
 
@@ -224,7 +226,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
                 Browse All Treatments
               </button>
             </div>
-            
+
             {/* Quick Treatment Options */}
             <div style={{
               display: "grid",
@@ -236,23 +238,22 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
                   key={treatment.id}
                   onClick={() => handleTreatmentSelect(treatment)}
                   style={{
-                    background: selectedTreatment?.id === treatment.id ? 
+                    background: selectedTreatment?.id === treatment.id ?
                       `${colors.primary.base}20` : `${colors.neutral.dark}80`,
-                    border: `${borders.width.thin} solid ${
-                      selectedTreatment?.id === treatment.id ? 
-                        colors.primary.base : colors.neutral.dark
-                    }`,
+                    border: `${borders.width.thin} solid ${selectedTreatment?.id === treatment.id ?
+                      colors.primary.base : colors.neutral.dark
+                      }`,
                     borderRadius: borders.radius.md,
                     padding: spacing.md,
                     cursor: "pointer",
                     transition: "all 0.2s ease"
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.background = selectedTreatment?.id === treatment.id ? 
+                    e.currentTarget.style.background = selectedTreatment?.id === treatment.id ?
                       `${colors.primary.base}30` : `${colors.neutral.dark}A0`;
                   }}
                   onMouseOut={(e) => {
-                    e.currentTarget.style.background = selectedTreatment?.id === treatment.id ? 
+                    e.currentTarget.style.background = selectedTreatment?.id === treatment.id ?
                       `${colors.primary.base}20` : `${colors.neutral.dark}80`;
                   }}
                 >
@@ -347,7 +348,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
             }}>
               Predicted Outcome
             </h3>
-            
+
             {outcomePrediction ? (
               <div style={{
                 display: "flex",
@@ -380,7 +381,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
                     borderRadius: borders.radius.full,
                     overflow: "hidden"
                   }}>
-                    <div 
+                    <div
                       style={{
                         height: "100%",
                         width: `${outcomePrediction.successProbability * 100}%`,
@@ -390,7 +391,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
                     />
                   </div>
                 </div>
-                
+
                 {/* Recovery Time */}
                 <div style={{
                   display: "flex",
@@ -412,7 +413,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
                     {outcomePrediction.recoveryTime}
                   </div>
                 </div>
-                
+
                 {/* Complications Risk */}
                 <div style={{
                   display: "flex",
@@ -434,7 +435,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
                     {Math.round(outcomePrediction.complicationsRisk * 100)}%
                   </div>
                 </div>
-                
+
                 {/* Cost */}
                 <div style={{
                   display: "flex",
@@ -456,7 +457,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
                     {outcomePrediction.cost.toFixed(2)} MON
                   </div>
                 </div>
-                
+
                 {/* Budget Impact */}
                 <div style={{
                   padding: spacing.sm,
@@ -484,16 +485,16 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
                         {budget.remaining.toFixed(2)} MON remaining
                       </div>
                       <div style={{
-                        color: budget.remaining > outcomePrediction.cost ? 
+                        color: budget.remaining > outcomePrediction.cost ?
                           colors.primary.base : colors.error.base,
                         fontSize: typography.fontSize.sm
                       }}>
-                        {budget.remaining > outcomePrediction.cost ? 
+                        {budget.remaining > outcomePrediction.cost ?
                           "Sufficient funds" : "Insufficient funds"}
                       </div>
                     </div>
                     <div style={{
-                      color: budget.remaining > outcomePrediction.cost ? 
+                      color: budget.remaining > outcomePrediction.cost ?
                         colors.primary.base : colors.error.base,
                       fontSize: typography.fontSize.xl
                     }}>
@@ -531,7 +532,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
             }}>
               Confirm Diagnosis
             </h3>
-            
+
             <div style={{
               display: "flex",
               alignItems: "center",
@@ -547,7 +548,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
                   accentColor: colors.primary.base
                 }}
               />
-              <label 
+              <label
                 htmlFor="diagnosisConfirmation"
                 style={{
                   color: colors.neutral.light,
@@ -557,7 +558,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
                 I confirm my diagnosis of <strong>appendicitis</strong> and selected treatment plan
               </label>
             </div>
-            
+
             <button
               onClick={handleSubmitDiagnosis}
               disabled={!selectedTreatment}
@@ -661,7 +662,7 @@ export const DiagnosisStage: React.FC<DiagnosisStageProps> = ({
                   setShowTreatmentMenu(false);
                 }}
                 executedActions={[]}
-                diagnosticConfidence={mockDiagnosticConfidence}
+                diagnosticConfidence={diagnosticConfidence}
                 timeRemaining={timeRemaining}
                 getDynamicPrice={gameManager?.getDynamicPrice}
                 getPricingExplanation={gameManager?.getPricingExplanation}

@@ -18,7 +18,7 @@ import { GamePhase } from "../GameManager";
 import { colors, spacing, typography, effects } from "../../../styles/design-tokens";
 
 // Stage definitions following the 4-stage diagnostic workflow
-export type DiagnosticStage = 
+export type DiagnosticStage =
   | "patient_presentation"
   | "investigation"
   | "analysis"
@@ -101,10 +101,19 @@ export const StageController: React.FC<StageControllerProps> = ({
   }, [currentGamePhase]);
 
   // Handle stage completion
-  const handleStageComplete = useCallback((stage: DiagnosticStage) => {
+  const handleStageComplete = useCallback((stage: DiagnosticStage, data?: any) => {
     setCompletedStages(prev => new Set(prev).add(stage));
+
+    // Store stage data if provided
+    if (data) {
+      setStageData(prev => ({
+        ...prev,
+        [stage]: data
+      }));
+    }
+
     onStageComplete(stage);
-    
+
     // Auto-advance to next stage in sequence
     const stageOrder: DiagnosticStage[] = ["patient_presentation", "investigation", "analysis", "diagnosis"];
     const currentIndex = stageOrder.indexOf(stage);
@@ -137,6 +146,17 @@ export const StageController: React.FC<StageControllerProps> = ({
     }
   }, [completedStages, currentStage, onGamePhaseChange]);
 
+  // Track collected evidence across stages
+  const [collectedEvidence, setCollectedEvidence] = useState<any[]>([]);
+
+  // Handle evidence collection
+  const handleEvidenceCollected = useCallback((evidence: any) => {
+    setCollectedEvidence(prev => [...prev, evidence]);
+    if (onEvidenceCollected) {
+      onEvidenceCollected(evidence);
+    }
+  }, [onEvidenceCollected]);
+
   // Render current stage component
   const renderCurrentStage = () => {
     switch (currentStage) {
@@ -144,7 +164,7 @@ export const StageController: React.FC<StageControllerProps> = ({
         return (
           <PatientPresentationStage
             patientCase={patientCase}
-            onComplete={() => handleStageComplete("patient_presentation")}
+            onComplete={(data) => handleStageComplete("patient_presentation", data)}
             timeRemaining={timeRemaining}
             budget={budget}
             nurseAmyNudges={nurseAmyNudges}
@@ -156,8 +176,8 @@ export const StageController: React.FC<StageControllerProps> = ({
             patientCase={patientCase}
             budget={budget}
             timeRemaining={timeRemaining}
-            onComplete={() => handleStageComplete("investigation")}
-            onEvidenceCollected={onEvidenceCollected}
+            onComplete={(data) => handleStageComplete("investigation", data)}
+            onEvidenceCollected={handleEvidenceCollected}
           />
         );
       case "analysis":
@@ -166,7 +186,8 @@ export const StageController: React.FC<StageControllerProps> = ({
             patientCase={patientCase}
             budget={budget}
             timeRemaining={timeRemaining}
-            onComplete={() => handleStageComplete("analysis")}
+            onComplete={(data) => handleStageComplete("analysis", data)}
+            collectedEvidence={collectedEvidence}
           />
         );
       case "diagnosis":
@@ -176,8 +197,9 @@ export const StageController: React.FC<StageControllerProps> = ({
             budget={budget}
             timeRemaining={timeRemaining}
             gameManager={gameManager}
+            diagnosticData={stageData.analysis}
             onComplete={(diagnosis) => {
-              handleStageComplete("diagnosis");
+              handleStageComplete("diagnosis", diagnosis);
               if (onDiagnosisSubmitted) {
                 onDiagnosisSubmitted(diagnosis);
               }
@@ -204,7 +226,7 @@ export const StageController: React.FC<StageControllerProps> = ({
         timeRemaining={timeRemaining}
         budget={budget}
       />
-      
+
       {/* Stage Content */}
       <div style={{
         flex: 1,

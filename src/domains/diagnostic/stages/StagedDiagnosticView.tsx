@@ -47,30 +47,13 @@ export const StagedDiagnosticView: React.FC<StagedDiagnosticViewProps> = ({
   // Handle stage completion
   const handleStageComplete = useCallback((stage: string) => {
     setCompletedStages(prev => new Set(prev).add(stage));
-    
+
     // Update the diagnostic UI manager for backward compatibility
     diagnosticUIManager.updateForStagedInterface(stage);
   }, [diagnosticUIManager]);
 
-  // Effect to hide traditional UI elements when staged interface is active
+  // Effect to show staged interface container
   useEffect(() => {
-    // Hide traditional diagnostic UI elements
-    const hideElements = () => {
-      const elementsToHide = [
-        'diagnostic-panel',
-        'ai-panel-container',
-        'investigation-panel-container',
-        'patient-info-section'
-      ];
-      
-      elementsToHide.forEach((id) => {
-        const element = document.getElementById(id);
-        if (element) {
-          element.style.display = 'none';
-        }
-      });
-    };
-    
     // Show staged interface container
     const showStagedInterface = () => {
       const container = document.getElementById('staged-diagnostic-container');
@@ -78,26 +61,11 @@ export const StagedDiagnosticView: React.FC<StagedDiagnosticViewProps> = ({
         container.style.display = 'block';
       }
     };
-    
-    hideElements();
+
     showStagedInterface();
-    
-    // Cleanup function to restore traditional UI if needed
+
+    // Cleanup function
     return () => {
-      const elementsToHide = [
-        'diagnostic-panel',
-        'ai-panel-container',
-        'investigation-panel-container',
-        'patient-info-section'
-      ];
-      
-      elementsToHide.forEach((id) => {
-        const element = document.getElementById(id);
-        if (element) {
-          element.style.display = 'block';
-        }
-      });
-      
       const container = document.getElementById('staged-diagnostic-container');
       if (container) {
         container.style.display = 'none';
@@ -106,7 +74,7 @@ export const StagedDiagnosticView: React.FC<StagedDiagnosticViewProps> = ({
   }, []);
 
   return (
-    <div 
+    <div
       id="staged-diagnostic-container"
       style={{
         position: "fixed",

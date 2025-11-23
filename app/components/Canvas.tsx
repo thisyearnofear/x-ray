@@ -588,7 +588,8 @@ const Canvas: React.FC = () => {
       {isLoaded && (
         <>
           {/* ENHANCEMENT: Economic System UI - MasterHUD */}
-          {budgetState.startingAmount > 0 && (
+          {/* Only show MasterHUD if Staged View is NOT active to prevent UI clutter */}
+          {budgetState.startingAmount > 0 && !showStagedDiagnostic && (
             <MasterHUD
               budget={{
                 remaining: budgetState.remaining,

@@ -14,7 +14,7 @@ import { colors, spacing, typography, borders, effects } from "../../../styles/d
 
 interface PatientPresentationStageProps {
   patientCase: any; // This should be PatientCase type
-  onComplete: () => void;
+  onComplete: (data?: any) => void;
   timeRemaining: number;
   budget: {
     remaining: number;
@@ -125,7 +125,7 @@ export const PatientPresentationStage: React.FC<PatientPresentationStageProps> =
           }}>
             Patient Information
           </h3>
-          
+
           <div style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
@@ -149,7 +149,7 @@ export const PatientPresentationStage: React.FC<PatientPresentationStageProps> =
                 {patientCase.patientName}
               </div>
             </div>
-            
+
             <div>
               <div style={{
                 color: colors.neutral.base,
@@ -167,7 +167,7 @@ export const PatientPresentationStage: React.FC<PatientPresentationStageProps> =
               </div>
             </div>
           </div>
-          
+
           <div>
             <div style={{
               color: colors.neutral.base,
@@ -186,7 +186,7 @@ export const PatientPresentationStage: React.FC<PatientPresentationStageProps> =
             </div>
           </div>
         </div>
-        
+
         {patientCase.historyOfPresentIllness && (
           <div style={{
             background: colors.background.gradient.panel,
@@ -213,7 +213,7 @@ export const PatientPresentationStage: React.FC<PatientPresentationStageProps> =
             </div>
           </div>
         )}
-        
+
         {(patientCase.pastMedicalHistory || patientCase.medications || patientCase.allergies) && (
           <div style={{
             background: colors.background.gradient.panel,
@@ -231,7 +231,7 @@ export const PatientPresentationStage: React.FC<PatientPresentationStageProps> =
             }}>
               Medical History
             </h3>
-            
+
             <div style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr 1fr",
@@ -256,7 +256,7 @@ export const PatientPresentationStage: React.FC<PatientPresentationStageProps> =
                   </div>
                 </div>
               )}
-              
+
               {patientCase.medications && (
                 <div>
                   <div style={{
@@ -276,7 +276,7 @@ export const PatientPresentationStage: React.FC<PatientPresentationStageProps> =
                   </div>
                 </div>
               )}
-              
+
               {patientCase.allergies && (
                 <div>
                   <div style={{
@@ -319,7 +319,7 @@ export const PatientPresentationStage: React.FC<PatientPresentationStageProps> =
         }}>
           Case Context
         </h3>
-        
+
         <div style={{
           color: colors.neutral.light,
           lineHeight: 1.5,
@@ -327,7 +327,7 @@ export const PatientPresentationStage: React.FC<PatientPresentationStageProps> =
         }}>
           {patientCase.stakes || "This case requires careful diagnostic reasoning to identify the underlying condition and determine appropriate treatment."}
         </div>
-        
+
         <div style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
@@ -356,7 +356,7 @@ export const PatientPresentationStage: React.FC<PatientPresentationStageProps> =
               {patientCase.estimatedCaseLength || "15-20 minutes"}
             </div>
           </div>
-          
+
           <div style={{
             background: `${colors.accent.base}20`,
             border: `${borders.width.thin} solid ${colors.accent.base}40`,

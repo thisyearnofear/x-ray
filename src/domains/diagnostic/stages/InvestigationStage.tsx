@@ -21,7 +21,7 @@ interface InvestigationStageProps {
     startingAmount: number;
   };
   timeRemaining: number;
-  onComplete: () => void;
+  onComplete: (data?: any) => void;
   onEvidenceCollected?: (evidence: Evidence) => void;
 }
 
@@ -228,7 +228,7 @@ export const InvestigationStage: React.FC<InvestigationStageProps> = ({
                   background: activeTool === tool.id ?
                     `${colors.primary.base}20` : `${colors.neutral.dark}80`,
                   border: `${borders.width.thin} solid ${activeTool === tool.id ?
-                      colors.primary.base : colors.neutral.dark
+                    colors.primary.base : colors.neutral.dark
                     }`,
                   borderRadius: borders.radius.md,
                   padding: spacing.md,
