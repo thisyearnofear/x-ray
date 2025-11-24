@@ -18,17 +18,17 @@ export interface AchievementData {
 }
 
 export interface PerformanceMetrics {
-accuracy: number
-efficiency: number
-streak: number
-discoveryStreak?: number
-achievementsCount: number
+  accuracy: number
+  efficiency: number
+  streak: number
+  discoveryStreak?: number
+  achievementsCount: number
   totalAchievements: number
 }
 
 export class AchievementDisplay {
   private element: HTMLElement | null = null
-  private isMinimized: boolean = false
+  private isMinimized: boolean = true // Start collapsed by default
   private onRevealConditions?: () => void
   private onCaseHub?: () => void
 
@@ -40,11 +40,17 @@ export class AchievementDisplay {
   create(): HTMLElement {
     this.element = document.createElement('div')
     this.element.className = 'achievement-display'
+
+    // Calculate initial styles based on minimized state
+    const initialHeight = this.isMinimized ? '60px' : 'auto'
+    const initialWidth = this.isMinimized ? '200px' : '380px'
+
     this.element.style.cssText = `
       position: fixed;
-      bottom: ${spacing.xl};
+      top: 360px; /* Positioned below the collapsed Nurse Amy panel (approx 270px + 70px + 20px) */
       right: ${spacing.xl};
-      width: 380px;
+      width: ${initialWidth};
+      height: ${initialHeight};
       max-height: 600px;
       background: ${colors.background.gradient.panel};
       border: ${borders.width.base} solid ${colors.primary.base};
@@ -125,22 +131,22 @@ export class AchievementDisplay {
 
   minimize(): void {
     if (!this.element) return
-    
+
     this.isMinimized = true
     this.element.style.height = '60px'
     this.element.style.width = '200px'
-    
+
     const content = this.element.querySelector('.panel-content') as HTMLElement
     if (content) content.style.display = 'none'
   }
 
   restore(): void {
     if (!this.element) return
-    
+
     this.isMinimized = false
     this.element.style.height = 'auto'
     this.element.style.width = '380px'
-    
+
     const content = this.element.querySelector('.panel-content') as HTMLElement
     if (content) content.style.display = 'flex'
   }
@@ -170,7 +176,7 @@ export class AchievementDisplay {
       </div>
 
       <div class="panel-content" style="
-        display: flex;
+        display: ${this.isMinimized ? 'none' : 'flex'};
         flex-direction: column;
         padding: ${spacing.base};
         gap: ${spacing.sm};
