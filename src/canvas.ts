@@ -432,15 +432,22 @@ export class XRayCanvas {
     const xRayX = event.clientX / window.innerWidth
     const xRayY = 1 - event.clientY / window.innerHeight
 
-    this.xRayEffect?.onMouseMove({ x: xRayX, y: xRayY })
-    this.scanFeedbackSystem?.updateMousePosition(this.mouse);
-
     // Use NDC coordinates for raycasting
     this.mouse.x = ndcX
     this.mouse.y = ndcY
     this.raycaster.setFromCamera(this.mouse, this.camera)
 
-    const intersects = this.raycaster.intersectObjects(this.scene.children)
+    const intersects = this.raycaster.intersectObjects(this.scene.children, true) // Recursive for groups
+
+    // Find the first intersection point for 3D tracking
+    let worldPosition: THREE.Vector3 | undefined
+    if (intersects.length > 0) {
+      worldPosition = intersects[0].point
+    }
+
+    this.xRayEffect?.onMouseMove({ x: xRayX, y: xRayY }, worldPosition)
+    this.scanFeedbackSystem?.updateMousePosition(this.mouse);
+
     this.xRayEffect?.handleMedicalConditionHover(intersects)
   }
 

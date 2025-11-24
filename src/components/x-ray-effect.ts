@@ -331,15 +331,15 @@ export default class XRayEffect {
     )
   }
 
-  onMouseMove(position: Position) {
+  onMouseMove(position: Position, worldPosition?: THREE.Vector3) {
     this.mouse.target = position
     // INTEGRATION: Update scanning progress for progressive discovery
-    this.updateScanProgress(position)
+    this.updateScanProgress(position, worldPosition)
   }
 
   // INTEGRATION: Advanced progressive discovery through scanning
-  updateScanProgress(mousePosition: Position) {
-    const scanRadius = 0.15 // Radius around mouse for scanning
+  updateScanProgress(mousePosition: Position, worldPosition?: THREE.Vector3) {
+    const scanRadius = 0.3 // Increased radius for better usability (was 0.15)
     const deltaTime = 0.016 // Approximate frame time (60fps)
 
     this.medicalMarkers.forEach((medicalMarker, conditionId) => {
@@ -347,11 +347,20 @@ export default class XRayEffect {
 
       const markerGroup = medicalMarker.getMarkerGroup();
       const markerPos = markerGroup.position;
-      const mousePos3D = new THREE.Vector3(
-        (mousePosition.x - 0.5) * 4, // Convert to world coordinates
-        (mousePosition.y - 0.5) * 4,
-        0
-      )
+
+      let mousePos3D: THREE.Vector3;
+
+      if (worldPosition) {
+        // Use actual raycast intersection point for accurate 3D tracking
+        mousePos3D = worldPosition;
+      } else {
+        // Fallback to approximate projection if no intersection
+        mousePos3D = new THREE.Vector3(
+          (mousePosition.x - 0.5) * 4, // Convert to world coordinates
+          (mousePosition.y - 0.5) * 4,
+          0
+        )
+      }
 
       const distance = markerPos.distanceTo(mousePos3D)
 
